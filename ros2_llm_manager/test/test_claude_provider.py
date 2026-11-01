@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Unit tests for ClaudeProvider: schema adaptation, message mapping, request
 parameters and result handling, against a fake client (no network)."""
 

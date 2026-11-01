@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Launch file for the LLM Manager node with a configurable params file."""
 
 import os

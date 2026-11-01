@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 OpenAIProvider — inference backend for the OpenAI API (Chat Completions).
 

@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 OllamaProvider — inference backend for locally-served Ollama models.
 
@@ -7,7 +11,16 @@ repeated cold-start penalties during a dialog session.
 
 Reasoning models (Qwen 3.5, DeepSeek-R1...) think before answering unless the
 request sends think=false; `think` (False by default) keeps spoken replies
-fast. Models without thinking accept the flag and ignore it.
+fast. Models without thinking accept the flag and ignore it. `think` can also
+be a level ("low", "medium", "high") for the models that cannot switch their
+reasoning off (gpt-oss): their reasoning tokens count toward num_predict, so a
+request that lets the model think gets REASONING_ALLOWANCE tokens more than
+its cap (a cap of 30-80 tokens would otherwise be spent thinking and the answer
+would come back empty). The evaluation's offline benchmarks ask the same way.
+
+Every request carries the context window (`num_ctx`, 8192 by default): the
+server's own default depends on its version and configuration, and a prompt
+longer than it is cut silently.
 
 Requests with a JSON schema are NLU calls (classify, extract): they run at
 temperature 0, so the same utterance always gets the same answer. The model
@@ -23,15 +36,34 @@ import httpx
 
 from ..base_provider import BaseProvider, GenerateResult
 
+# Tokens added to num_predict when the model may think (see the module docstring)
+REASONING_ALLOWANCE = 1024
+DEFAULT_NUM_CTX = 8192
+
+
+def normalize_think(think) -> bool | str:
+    """The `think` of a request: a bool, or a reasoning level ("low"...). Strings that spell a
+    bool ("true", "false", "") are read as one (a ROS parameter may hold either type)."""
+    if isinstance(think, str):
+        text = think.strip().lower()
+        if text in ("", "false", "0", "no", "off", "none"):
+            return False
+        if text in ("true", "1", "yes", "on"):
+            return True
+        return text
+    return bool(think)
+
 
 class OllamaProvider(BaseProvider):
 
     def __init__(
-        self, host: str, port: int, timeout: float, default_model: str, think: bool = False
+        self, host: str, port: int, timeout: float, default_model: str,
+        think: bool | str = False, num_ctx: int = DEFAULT_NUM_CTX,
     ):
         self._base_url = f"http://{host}:{port}"
         self._timeout = timeout
-        self._think = think
+        self._think = normalize_think(think)
+        self._num_ctx = int(num_ctx) if num_ctx else 0
         self.default_model = default_model
         self._http: Optional[httpx.Client] = None
 
@@ -65,11 +97,11 @@ class OllamaProvider(BaseProvider):
         last_error = "unknown error"
         for attempt in range(3):
             try:
-                r = self._http.post(
-                    "/api/generate",
-                    json={"model": model, "prompt": "", "keep_alive": -1},
-                    timeout=180.0,
-                )
+                payload = {"model": model, "prompt": "", "keep_alive": -1}
+                if self._num_ctx:
+                    # Loaded with the context of the requests (otherwise the first one reloads it)
+                    payload["options"] = {"num_ctx": self._num_ctx}
+                r = self._http.post("/api/generate", json=payload, timeout=180.0)
                 if r.status_code == 200:
                     return True, f"Model '{model}' loaded into memory."
                 return False, f"Load failed: HTTP {r.status_code}"
@@ -105,7 +137,9 @@ class OllamaProvider(BaseProvider):
         }
         options: dict = {}
         if max_tokens > 0:
-            options["num_predict"] = max_tokens
+            options["num_predict"] = max_tokens + (REASONING_ALLOWANCE if self._think else 0)
+        if self._num_ctx:
+            options["num_ctx"] = self._num_ctx
         if format_schema:
             payload["format"] = format_schema
             options["temperature"] = 0

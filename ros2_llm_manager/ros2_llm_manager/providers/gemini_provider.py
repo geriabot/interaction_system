@@ -1,8 +1,16 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 GeminiProvider — inference backend for Google Gemini cloud models.
 
 Wraps the google-genai SDK. Thinking is disabled unconditionally
 (thinking_budget=0) to keep latency predictable for dialog applications.
+
+`base_url` (empty by default: Google's API) sends the SDK's requests to another
+server that speaks the same REST API, e.g. a local stand-in used to test the
+whole chain without a paid call.
 """
 
 import os
@@ -21,9 +29,10 @@ except ImportError:
 
 class GeminiProvider(BaseProvider):
 
-    def __init__(self, api_key: str, timeout: float, default_model: str):
+    def __init__(self, api_key: str, timeout: float, default_model: str, base_url: str = ""):
         self._api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
         self._timeout = timeout
+        self._base_url = base_url
         self.default_model = default_model
         self._client = None
 
@@ -35,6 +44,12 @@ class GeminiProvider(BaseProvider):
         if not self._api_key:
             return False, "GEMINI_API_KEY not set."
         try:
+            if self._base_url:
+                self._client = genai.Client(
+                    api_key=self._api_key,
+                    http_options=types.HttpOptions(base_url=self._base_url),
+                )
+                return True, f"Gemini client initialised (at {self._base_url})."
             self._client = genai.Client(api_key=self._api_key)
             return True, "Gemini client initialised."
         except Exception as exc:

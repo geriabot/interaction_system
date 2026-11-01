@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 LLMManagerNode — ROS2 node for multi-provider LLM inference.
 
@@ -15,6 +19,7 @@ at startup, otherwise the node will log an error and reject all goals.
 import json
 import time
 
+from rcl_interfaces.msg import ParameterDescriptor
 import rclpy
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -97,12 +102,16 @@ class LLMManagerNode(Node):
         self.declare_parameter("ollama.port", 11434)
         self.declare_parameter("ollama.model", "llama3.2:3b")
         self.declare_parameter("ollama.timeout", 120.0)
-        self.declare_parameter("ollama.think", False)
+        # A bool, or a reasoning level ("low") for the models that cannot switch it off: either
+        # type is accepted
+        self.declare_parameter("ollama.think", False, ParameterDescriptor(dynamic_typing=True))
+        self.declare_parameter("ollama.num_ctx", 8192)
 
         self.declare_parameter("gemini.enable", False)
         self.declare_parameter("gemini.api_key", "")
-        self.declare_parameter("gemini.model", "gemini-2.0-flash")
+        self.declare_parameter("gemini.model", "gemini-2.5-flash")
         self.declare_parameter("gemini.timeout", 60.0)
+        self.declare_parameter("gemini.base_url", "")
 
         self.declare_parameter("claude.enable", False)
         self.declare_parameter("claude.api_key", "")
@@ -135,6 +144,7 @@ class LLMManagerNode(Node):
                 timeout=p("ollama.timeout").value,
                 default_model=p("ollama.model").value,
                 think=p("ollama.think").value,
+                num_ctx=p("ollama.num_ctx").value,
             )
             ok, msg = ollama.connect()
             self._log(f"[ollama] {msg}") if ok else self.get_logger().warning(f"[ollama] {msg}")
@@ -153,6 +163,7 @@ class LLMManagerNode(Node):
                 api_key=p("gemini.api_key").value,
                 timeout=p("gemini.timeout").value,
                 default_model=p("gemini.model").value,
+                base_url=p("gemini.base_url").value,
             )
             ok, msg = gemini.connect()
             self._log(f"[gemini] {msg}") if ok else self.get_logger().warning(f"[gemini] {msg}")
@@ -283,7 +294,10 @@ class LLMManagerNode(Node):
             return response
 
         provider = self._providers[provider_name]
-        model = request.model.strip() or provider.default_model
+        # default_model applies to the default provider only (a model name belongs to one provider)
+        model = request.model.strip() or (
+            self._default_model if self._default_model
+            and provider_name == self._default_provider else "") or provider.default_model
 
         ok, sid_or_error, _ = self._sessions.create(
             session_id=request.session_id,

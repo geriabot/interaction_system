@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Unit tests for OpenAIProvider: schema adaptation, request parameters and
 stream handling, against a fake client (no network)."""
 

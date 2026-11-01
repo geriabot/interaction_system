@@ -3,8 +3,8 @@ llm_manager_node:
   ros__parameters:
 
     # Default provider used when a session request does not specify one.
-    # Must match one of the enabled providers below: "gemini", "ollama" or "claude".
-    default_provider: "gemini"
+    # Must match one of the enabled providers below: "ollama", "gemini", "claude" or "openai".
+    default_provider: "ollama"
 
     # Default model override. Leave empty to use the provider's own default.
     default_model: ""
@@ -21,22 +21,30 @@ llm_manager_node:
       host: "127.0.0.1"
       port: 11434
       # Model to pre-load into VRAM on startup.
-      model: "llama3.2:3b"
+      model: "qwen2.5:7b"
       # Request timeout in seconds for inference calls.
       timeout: 120.0
       # Let reasoning models (qwen3.5, deepseek-r1...) think before answering.
-      # Slower; false keeps spoken replies fast. Ignored by other models.
+      # Slower; false keeps spoken replies fast. Ignored by other models. A level
+      # ("low") for the models that cannot switch it off (gpt-oss); a model that
+      # thinks gets 1024 tokens more than the cap of each request.
       think: false
+      # Context window of every request, in tokens (the server's own default
+      # depends on its version; a longer prompt would be cut silently).
+      num_ctx: 8192
 
     gemini:
       # Set to true to enable the Gemini provider and connect at startup.
-      enable: true
+      enable: false
       # API key for Google Gemini. Prefer setting the GEMINI_API_KEY
       # environment variable and leaving this field empty.
       api_key: ""
       model: "gemini-2.5-flash"
       # Request timeout in seconds for inference calls.
       timeout: 60.0
+      # Optional server with Gemini's REST API instead of Google's (e.g. a local
+      # stand-in for testing); empty uses Google's API.
+      base_url: ""
 
     claude:
       # Set to true to enable the Anthropic Claude provider and connect at startup.
