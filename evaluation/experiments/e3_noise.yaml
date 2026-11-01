@@ -1,0 +1,59 @@
+# E3, the noise: the method (bounded) and the LLM-led conversation (B) with speech recognition
+# errors injected on the simulated user's lines at a word error rate of 0, 10, 20 and 30 %
+# (simulation/interaction_sim/asr_noise.py: substitutions by sound-alike or frequent words,
+# deletions, insertions). The question is how the proposed system degrades against the
+# alternative, not how each ablation degrades, so only these two run with noise. One noise level
+# per condition (asr_noise of the condition); the level 0 is run here too, with the same
+# scenarios, personas and seeds, so that the four levels differ only in the noise.
+#
+# The scenarios of E1 (scenarios/dialogues.yaml), four of each strategy (the same as the E1
+# variants, listed below), whole dialogues without planned events. English only: the sound-alike substitutions
+# of the injector are English words (decided 2026-10-30).
+#
+# Paid calls (the simulated user only): run_experiment.py --dry-run counts them; the run needs
+# --allow-cloud.
+name: e3_noise
+scenarios: scenarios/dialogues.yaml
+# The scenarios: four of each strategy, chosen by id so that the subset keeps the mechanisms that
+# only one scenario of E1 provokes (decided 2026-10-30; until then the first four of each
+# strategy in file order, which left out the explanation that fails, the stuck step, the step
+# repeated and the step back, among others): slot filling with a planned correction (sf_library);
+# the explanation not understood, the one said back with a wrong point, the decline answered with
+# a targeted question and the one that fails (ex_walker); the quiz answers in the user's own
+# words, a number in words and "I don't remember"; the procedure question, repeat and skip, back
+# and stuck step; the role play ended by the limit, by the user, by the scene and with a coach
+# hint; the questionnaire answer between options, the clarification with a reversed item, the
+# declined item and the repeated item
+scenario_ids: [sf_coffee, sf_clinic, sf_pizza, sf_library,
+               ex_fasting, ex_bus, ex_fire, ex_walker,
+               qz_geography, qz_memory, qz_animals, qz_health,
+               pr_handwash, pr_breathing, pr_plants, pr_alarm,
+               rp_interview, rp_doctor, rp_restaurant, rp_return,
+               qa_museum, qa_station, qa_hospital_reception, qa_library,
+               qn_museum_satisfaction, qn_robot_service, qn_loneliness, qn_event_feedback]
+personas_file: personas.yaml
+personas: [cooperative, terse, older_adult]
+repetitions: 1
+language: English
+# The local model (provisional until E0a chooses the model (one model for every question, no routes))
+models: [qwen3:8b]
+conditions:
+  bounded_wer00: {}
+  bounded_wer10: {asr_noise: {wer: 0.10}}
+  bounded_wer20: {asr_noise: {wer: 0.20}}
+  bounded_wer30: {asr_noise: {wer: 0.30}}
+  llm_led_wer00: &llm_led
+    ablation: monolithic
+    skill_modules: ["interaction_ablations.skills"]
+  llm_led_wer10: {<<: *llm_led, asr_noise: {wer: 0.10}}
+  llm_led_wer20: {<<: *llm_led, asr_noise: {wer: 0.20}}
+  llm_led_wer30: {<<: *llm_led, asr_noise: {wer: 0.30}}
+simulator:
+  # As in E1 (see e1_bounded_vs_llm_led.yaml for the choice of the model)
+  provider: gemini
+  model: gemini-2.5-flash-lite
+  temperature: 0.7
+ollama: {host: 127.0.0.1, port: 11434, timeout: 120.0}
+limits: {wait_timeout: 60.0}
+dialogue_timeout: 900
+max_turns: 25

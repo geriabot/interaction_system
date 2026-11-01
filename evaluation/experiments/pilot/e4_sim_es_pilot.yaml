@@ -1,0 +1,29 @@
+# PILOT FILE, NOT AN EXPERIMENT (doc/PILOT.md): its results are never reported. It is derived
+# from the experiment file it pilots (pilot_of) when it is loaded: the same conditions, limits,
+# wait for the model, simulator, timeouts and launch options; only the dialogues below, the
+# models (the pilot's system model, qwen2.5:32b, for every local model and every cloud system
+# model) and the stand-ins of the cloud providers change. The stand-ins (scripts/pilot_standin.py,
+# started by scripts/run_pilot.py) answer in the providers' own REST shapes: the simulated user is
+# a goal-driven script, the judges are synthetic, the cloud system cells are qwen2.5:32b, so the
+# pilot makes no paid call. A pilot finding may only fix a program or pipeline error; anything
+# that would change the method, its prompts or a scenario is recorded for the author.
+#
+# The simulated twin of E4 (Spanish). Its machinery depends on the scenario (the cards' events),
+# so the pilot takes the smallest subset of the eight test scenarios that covers every strategy,
+# every kind of event (silence, cancel, a reply) and every kind of detour (off_task, decline,
+# not_allowed): seven of them (sf_coffee only repeats a cancellation and an off-task detour that
+# rp_interview and qa_museum already have). One of the four personas each, in turn (7 dialogues).
+# Test scenarios: a finding may only fix a program or pipeline error.
+pilot_of: ../e4_sim_es.yaml
+name: e4_sim_es_pilot
+models: {"<local>": qwen2.5:32b}
+pairs:
+  - [sf_pizza, cooperative]
+  - [ex_bus, terse]
+  - [qz_geography, self_correcting]
+  - [pr_tea, boundary_testing]
+  - [rp_interview, cooperative]
+  - [qa_museum, terse]
+  - [qn_museum_satisfaction, self_correcting]
+repetitions: 1
+standins: {gemini_base_url: "http://127.0.0.1:8766", openai_base_url: "http://127.0.0.1:8766/v1"}

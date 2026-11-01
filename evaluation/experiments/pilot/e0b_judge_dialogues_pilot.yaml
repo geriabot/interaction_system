@@ -1,0 +1,31 @@
+# PILOT FILE, NOT AN EXPERIMENT (doc/PILOT.md): its results are never reported. It is derived
+# from the experiment file it pilots (pilot_of) when it is loaded: the same conditions, limits,
+# wait for the model, simulator, timeouts and launch options; only the dialogues below, the
+# models (the pilot's system model, qwen2.5:32b, for every local model and every cloud system
+# model) and the stand-ins of the cloud providers change. The stand-ins (scripts/pilot_standin.py,
+# started by scripts/run_pilot.py) answer in the providers' own REST shapes: the simulated user is
+# a goal-driven script, the judges are synthetic, the cloud system cells are qwen2.5:32b, so the
+# pilot makes no paid call. A pilot finding may only fix a program or pipeline error; anything
+# that would change the method, its prompts or a scenario is recorded for the author.
+#
+# E0b, English. The experiment draws its dialogues from the test scenarios of E1
+# (dialogues.yaml); its machinery (dialogues, split into halves, labels, sheets, report) does not
+# depend on the scenario, so the pilot uses development scenarios instead: one per strategy (7,
+# others than the E0a pilot's), with the three personas of E0b in turn, in both conditions (14
+# dialogues). run_pilot.py then runs the whole chain of E0b on them (split, a local judge on the
+# development half and on every dialogue, small sheets, the cloud judges of the ladder through
+# the stand-in on the sheets, synthetic annotations, report and combine).
+pilot_of: ../e0b_judge_dialogues.yaml
+name: e0b_judge_dialogues_pilot
+scenarios: ../scenarios/e0a_dev.yaml
+models: {"<local>": qwen2.5:32b}
+pairs:
+  - [sf_dev_plumber, cooperative]
+  - [ex_dev_laundrette, boundary_testing]
+  - [qz_dev_planets, mild_cognitive_impairment]
+  - [pr_dev_button, cooperative]
+  - [rp_dev_mechanic, boundary_testing]
+  - [qa_dev_ski, mild_cognitive_impairment]
+  - [qn_dev_parks, cooperative]
+repetitions: 1
+standins: {gemini_base_url: "http://127.0.0.1:8766", openai_base_url: "http://127.0.0.1:8766/v1"}

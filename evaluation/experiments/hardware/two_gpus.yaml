@@ -1,0 +1,14 @@
+# The GPU server for the system, and a second GPU server for the open simulated user, which can
+# then be larger (it does not share memory with the system). Choose open_simulator by the
+# memory of the second GPU (docs: evaluation/README.md, "Hardware"): 16 GB gemma3:12b, 24 GB
+# mistral-small3.2:24b, 48 GB llama3.3:70b. The second server through its own tunnel:
+# ssh -N -L 11436:localhost:11434 <user>@<second gpu server>.
+# See single_gpu.yaml for the meaning of each key.
+name: two_gpus
+servers:
+  gpu: {host: 127.0.0.1, port: 11434, memory_gb: 24, ssh: "${GPU_SERVER_SSH}"}
+  second: {host: 127.0.0.1, port: 11436, memory_gb: 16, ssh: "${SECOND_GPU_SSH}"}
+open_simulator: gemma3:12b    # for 16 GB; raise it with the memory of the second GPU
+lanes:
+  local: {system: gpu, simulator: second, models: local, ros_domain_id: 74}
+  cloud: {system: gpu, simulator: second, models: cloud, ros_domain_id: 75}

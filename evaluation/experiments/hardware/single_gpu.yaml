@@ -1,0 +1,22 @@
+# One GPU server (24 GB) for everything local. The experiments run from this computer (the
+# runner, the ROS system and the simulation harness); the LLMs run where the profile says.
+#
+#   servers   the Ollama servers, as this computer reaches them (an SSH tunnel to the GPU
+#             server: ssh -N -L 11434:localhost:11434 <user>@<gpu server>). `ssh` lets the
+#             runner check that the GPU is free before running; it is read from the
+#             environment so that no host name is written here (unset: not checked).
+#   open_simulator  the open simulated user that fits this hardware (used by the experiments
+#             with simulator.model: hardware); here it shares the GPU with the system's model.
+#   lanes     the parts of an experiment that run at once (run_parallel.py), each with its own
+#             ROS_DOMAIN_ID: which system models (local: Ollama, cloud: provider/model, all, a
+#             list) on which server, and where its open simulated user runs.
+#
+# Here: the local models run in one lane on the GPU; the cloud models in another lane at the
+# same time (they need no GPU; with a cloud simulated user they do not touch the GPU at all).
+name: single_gpu
+servers:
+  gpu: {host: 127.0.0.1, port: 11434, memory_gb: 24, ssh: "${GPU_SERVER_SSH}"}
+open_simulator: gemma3:12b    # ~8 GB, next to a 14B system model (~10 GB) in 24 GB
+lanes:
+  local: {system: gpu, simulator: gpu, models: local, ros_domain_id: 74}
+  cloud: {system: gpu, simulator: gpu, models: cloud, ros_domain_id: 75}

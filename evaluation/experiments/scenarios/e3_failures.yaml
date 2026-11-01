@@ -1,0 +1,504 @@
+# The scenarios of E3 with injected failures of the system's model (e3_failures.yaml): the shared
+# mechanisms and the strategies' fallbacks against their specification when the model fails or
+# hangs mid-dialogue (docs/behaviors: the "LLM fails" rows of each strategy, endings.md,
+# no_progress.md, cancellation.md). English only: what is checked is the code that runs when the
+# model fails (fallbacks, fixed phrases, the trees' endings), the same in every language; the
+# Spanish fixed phrases are the same keys (decided 2026-10-30, as for the noise).
+#
+# Keys: as in e3.yaml (goal, user_goal, goal_items, events, expect with ending and mechanisms),
+# plus `faults`: the failures of the system's model by user turn, applied by code
+# (simulation/interaction_sim/interaction_sim/llm_faults.py):
+#   {turn, kind: error | invalid | hang | crash | freeze, questions: [...], turns, hang_s}
+# turn counts the user's turns from 1 as the events do (0: the opening); questions are methods of
+# LLMDialogClient (empty: every question); turns 0 = until the end of the dialogue. A failure is
+# independent of what the user says at that turn, so a scenario can plan an event and a failure
+# at the same turn (e.g. an ambiguous cancel request while the cancel detection fails). The
+# lines at the failed turns are events, so that each failure lands on a known content; the
+# simulated user plays the rest. expect.mechanisms adds faults_hit (planned failures that made at
+# least one call fail: the failure was provoked), error_closing_said, skill_failures and
+# reply_wait_ok (every reply came within the bound of the method after the user's line)
+# (analysis/mechanisms.py).
+#
+# The wait for the model is bounded (decided 2026-10-30; docs/behaviors/endings.md): each call
+# waits at most llm_timeout (15 s), a call that times out is not repeated and the other calls of
+# the same skill fall back at once, and the questions of one reply share its time budget
+# (reply_budget, 20 s from the end of the user's turn; opening_budget, 30 s, for the opening).
+# A hung model (hang, which never answers: the call ends when the client stops waiting) therefore
+# gets the robot's fallback within the budget (f_hang_fallback) and never reaches
+# intelligence_timeout (30 s, the hard limit of a request to the intelligence); that limit is
+# provoked with a question frozen beyond the client's limits (f_intelligence_timeout, freeze,
+# hang_s 40).
+scenarios:
+
+  # ==== The spoken cancellation when the model fails (C10, and C1 without the model) ====
+
+  - id: f_cancel_detect_error
+    strategy: slot_filling
+    goal:
+      task_description: "Sign the user up for the evening pottery class"
+      dialog_mode: slot_filling
+      domain: community centre
+      frame_schema_json: >
+        {"slots": [
+          {"name": "student_name", "type": "str"},
+          {"name": "day", "type": "str", "canonical_values": ["Tuesday", "Thursday"]}]}
+    user_goal: >
+      You want to sign up for the pottery class on Thursday; your name is Lucía Ferrer. At first
+      you hesitate, but if the robot goes on with the registration you go along with it: give
+      your details and confirm when the robot reads them back and they are right.
+    goal_items:
+      - {id: student_name, value: Lucía Ferrer}
+      - {id: day, value: Thursday}
+    faults:
+      - {turn: 1, kind: error, questions: [detect_cancel_intent]}
+    expect:
+      mechanisms: {cancel_asked: 0, faults_hit: 1, events_applied: 1, closing_said: true}
+      outcome: success
+      frame: {student_name: Lucía Ferrer, day: Thursday}
+      ending: completed
+    mechanism: "the cancel detection fails on an ambiguous request: no cancellation, the strategy handles the turn"
+    events:
+      - {turn: 1, kind: cancel, text: "I'm not sure about this, maybe we should just leave it."}
+
+  - id: f_cancel_exact_down
+    strategy: slot_filling
+    goal:
+      task_description: "Book a seat on the airport shuttle"
+      dialog_mode: slot_filling
+      domain: hotel reception
+      frame_schema_json: >
+        {"slots": [
+          {"name": "departure", "type": "str", "canonical_values": ["6:00", "9:00", "13:00"]},
+          {"name": "guest_name", "type": "str"}]}
+    user_goal: >
+      You wanted a seat on the 9:00 shuttle, but you change your mind: you ask to stop, and when
+      the robot asks whether you want to stop, you say yes.
+    faults:
+      - {turn: 1, kind: error}
+    expect:
+      mechanisms: {cancel_asked: 1, cancel_confirmed: 1, faults_hit: 1, events_applied: 2,
+                   closing_said: true}
+      outcome: cancelled
+      ending: cancelled
+    mechanism: "an exact stop command while every question to the model fails: decided without the model, the confirmation question falls back to its fixed phrase"
+    events:
+      - {turn: 1, kind: cancel, text: "Stop."}
+      - {turn: 2, kind: text, text: "Yes."}
+
+  - id: f_cancel_reply_error
+    strategy: slot_filling
+    goal:
+      task_description: "Take an order of a birthday cake"
+      dialog_mode: slot_filling
+      domain: bakery
+      frame_schema_json: >
+        {"slots": [
+          {"name": "cake", "type": "str", "canonical_values": ["chocolate", "carrot", "cheesecake"]},
+          {"name": "name_on_cake", "type": "str"}]}
+    user_goal: >
+      You want a carrot cake with the name Marta written on it. You hesitate and half agree to
+      stopping, but if the robot goes on with the order anyway, you go along with it, finish the
+      order and confirm it when the robot reads it back and it is right.
+    goal_items:
+      - {id: name_on_cake, value: Marta}
+    faults:
+      - {turn: 3, kind: invalid, questions: [classify_cancel_reply]}
+    expect:
+      mechanisms: {cancel_asked: 1, cancel_withdrawn: 1, cancel_confirmed: 0, faults_hit: 1,
+                   events_applied: 3, closing_said: true}
+      outcome: success
+      frame: {cake: carrot, name_on_cake: Marta}
+      ending: completed
+    # The request at turn 2 comes while an open slot is asked (not strict mode), as in e3.yaml
+    # The answer is not exactly a yes word ("Yes." would be read as yes by the fallback, decided
+    # 2026-10-30: docs/behaviors/cancellation.md), so the fallback reads it as something else
+    mechanism: "the reading of the answer to the confirmation fails and the answer is not exactly a yes or no word: read as something else, the cancellation is withdrawn and the strategy takes the turn"
+    events:
+      - {turn: 1, kind: text, text: "A carrot cake, please."}
+      - {turn: 2, kind: cancel, text: "Oh, maybe I should just forget about it..."}
+      - {turn: 3, kind: text, text: "Yes, I guess so."}
+
+  # ==== Endings: error mid-dialogue (O9) ====
+
+  - id: f_skill_crash
+    strategy: procedure
+    goal:
+      task_description: "Guide the user to change the bag of the vacuum cleaner"
+      dialog_mode: procedure
+      domain: household appliances
+      resources_json: >
+        [{"name": "steps", "description": "changing the bag",
+          "content": "[\"Unplug the vacuum cleaner\", \"Open the front cover with the button on top\", \"Take out the full bag and put in a new one\", \"Close the cover until it clicks\"]"}]
+    user_goal: >
+      You are changing the bag of the vacuum cleaner. Do each step and say when you have done it.
+    expect:
+      mechanisms: {error_closing_said: true, skill_failures: 1, faults_hit: 1, events_applied: 2,
+                   closing_said: true}
+      outcome: failed
+      ending: error
+    mechanism: "a skill fails mid-dialogue (the question raises): the robot says the error closing and the outcome is error"
+    faults:
+      - {turn: 2, kind: crash, questions: [classify_step_turn]}
+    events:
+      - {turn: 1, kind: text, text: "Done, it's unplugged."}
+      - {turn: 2, kind: text, text: "Done, the cover is open."}
+
+  - id: f_intelligence_timeout
+    strategy: quiz
+    goal:
+      task_description: "A short quiz about the solar system"
+      dialog_mode: quiz
+      resources_json: >
+        [{"name": "questions", "description": "quiz bank",
+          "content": "[{\"question\": \"How many moons does the Earth have?\", \"answer\": \"one\"}, {\"question\": \"Which planet is known as the red planet?\", \"answer\": \"Mars\"}, {\"question\": \"Which is the largest planet?\", \"answer\": \"Jupiter\"}]"}]
+    user_goal: >
+      Answer every question correctly.
+    expect:
+      mechanisms: {error_closing_said: true, skill_failures: 0, faults_hit: 1, events_applied: 2,
+                   closing_said: true}
+      outcome: failed
+      ending: error
+    mechanism: "the intelligence does not answer within intelligence_timeout (the grading is frozen for longer, beyond the client's own time limits): the robot says the error closing fetched at the start, outcome error"
+    faults:
+      - {turn: 2, kind: freeze, hang_s: 40, questions: [evaluate_quiz_answer]}
+    events:
+      - {turn: 1, kind: text, text: "One."}
+      - {turn: 2, kind: text, text: "Mars."}
+
+  - id: f_hang_fallback
+    strategy: slot_filling
+    goal:
+      task_description: "Book a court at the tennis club"
+      dialog_mode: slot_filling
+      domain: tennis club
+      frame_schema_json: >
+        {"slots": [
+          {"name": "court", "type": "str", "canonical_values": ["clay", "hard"]},
+          {"name": "hour", "type": "str", "canonical_values": ["10:00", "12:00", "18:00"]}]}
+    user_goal: >
+      You want a clay court at 18:00. If the robot asks you again for something you already
+      said, say it again. Confirm when the robot reads the booking back and it is right.
+    goal_items:
+      - {id: hour, value: "18:00"}
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 2, closing_said: true, reply_wait_ok: true}
+      outcome: success
+      frame: {court: clay, hour: "18:00"}
+      ending: completed
+    mechanism: "the model hangs for a whole turn (it never answers): the cancel check waits llm_timeout and is not asked again, the extraction waits for what is left of the reply's budget (not understood), the next question makes no call (its fixed phrase); the robot asks again when the budget is spent (20 s after the user's line), with at most two fillers, and the dialogue goes on"
+    faults:
+      - {turn: 2, kind: hang}
+    events:
+      - {turn: 1, kind: text, text: "A clay court, please."}
+      - {turn: 2, kind: text, text: "At six in the evening, 18:00."}
+
+  - id: f_frame_design_error
+    strategy: slot_filling
+    goal:
+      # No schema: the frame is designed by the model, which fails
+      task_description: "Register a lost umbrella at the lost property office: the owner's name and the umbrella's colour"
+      dialog_mode: slot_filling
+      domain: lost property office
+    user_goal: >
+      You lost a red umbrella; your name is Andrés Molina.
+    expect:
+      mechanisms: {error_closing_said: false, faults_hit: 1, events_applied: 0,
+                   closing_said: false}
+      outcome: failed
+      ending: error
+    mechanism: "designing the frame fails (no schema): outcome error before the robot speaks (the conversation never started: no closing line)"
+    faults:
+      - {turn: 0, kind: error, questions: [create_frame]}
+
+  # ==== The strategies' fallbacks (Q5, G9 and the "LLM fails" rows) ====
+
+  - id: f_quiz_grading
+    strategy: quiz
+    goal:
+      task_description: "A short quiz about the planets"
+      dialog_mode: quiz
+      resources_json: >
+        [{"name": "questions", "description": "quiz bank",
+          "content": "[{\"question\": \"How many moons does the Earth have?\", \"answer\": \"one\"}, {\"question\": \"Which planet is known as the red planet?\", \"answer\": \"Mars\"}, {\"question\": \"Which planet is closest to the Sun?\", \"answer\": \"Mercury\"}]"}]
+    user_goal: >
+      Answer the questions as you can.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 3, closing_said: true}
+      outcome: success
+      # The fallback grading: right only when the reply is the expected answer itself
+      # (normalised). A right answer in other words is graded wrong (the conservative error);
+      # a wrong answer that contains the expected one is not graded right
+      quiz_correct: [true, false, false]
+      ending: completed
+    mechanism: "the grading fails on every answer: the exact answer is right, a right answer in other words is graded wrong, a wrong answer containing the expected one is not accepted"
+    faults:
+      - {turn: 1, kind: error, turns: 3, questions: [evaluate_quiz_answer]}
+    events:
+      - {turn: 1, kind: text, text: "One."}
+      - {turn: 2, kind: text, text: "That would be Mars, I think."}
+      - {turn: 3, kind: text, text: "Mercury... no, wait, Venus."}
+
+  - id: f_qa_verify
+    strategy: grounded_qa
+    goal:
+      task_description: "Answer the visitors' questions at the castle"
+      dialog_mode: grounded_qa
+      domain: castle museum
+      resources_json: '[{"name": "information", "description": "what the robot may answer from", "content":
+        "The castle opens from 9:30 to 18:00. The guided tour starts at 11:00 and at 16:00 and lasts one
+        hour. Children under 12 enter free."}, {"name": "handover", "description": "who can help",
+        "content": "The ticket desk can help you with that."}]'
+    user_goal: >
+      You are visiting the castle. Ask when the guided tour starts, then when the castle opens;
+      then say you have no more questions.
+    expect:
+      mechanisms: {faults_hit: 2, events_applied: 4, closing_said: true}
+      outcome: success
+      qa_resolutions: [abstained, answered]
+      qa_facts: [null, ["9:30"]]
+      ending: completed
+    mechanism: "the verification of an answer fails: the robot abstains (G9); the reading of a turn fails: not understood, asked to repeat"
+    faults:
+      - {turn: 1, kind: error, questions: [verify_answer]}
+      - {turn: 2, kind: invalid, questions: [answer_from_material]}
+    events:
+      - {turn: 1, kind: text, text: "When does the guided tour start?"}
+      - {turn: 2, kind: text, text: "And what time does the castle open?"}
+      - {turn: 3, kind: text, text: "What time does the castle open?"}
+      - {turn: 4, kind: text, text: "No more questions, thank you."}
+
+  - id: f_sf_extract
+    strategy: slot_filling
+    goal:
+      task_description: "Order a taxi to the train station"
+      dialog_mode: slot_filling
+      domain: taxi company
+      frame_schema_json: >
+        {"slots": [
+          {"name": "passengers", "type": "int", "minimum": 1, "maximum": 6},
+          {"name": "luggage", "type": "str", "canonical_values": ["none", "small", "large"]}]}
+    user_goal: >
+      You are three passengers with large luggage. If the robot asks you again for something you
+      already said, say it again. Confirm when the robot reads the order back and it is right.
+    goal_items:
+      - {id: passengers, value: 3}
+      - {id: luggage, value: large}
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 1, closing_said: true}
+      outcome: success
+      frame: {passengers: 3, luggage: large}
+      ending: completed
+    mechanism: "the extraction of a turn fails: the turn is not understood (no value) and the slot is asked again"
+    faults:
+      - {turn: 1, kind: error, questions: [extract_turn]}
+    events:
+      - {turn: 1, kind: text, text: "We are three, with large suitcases."}
+
+  - id: f_qn_map
+    strategy: questionnaire
+    goal:
+      task_description: "Ask the visitor the satisfaction survey of the swimming pool"
+      dialog_mode: questionnaire
+      domain: public swimming pool
+      resources_json: '[{"name": "instrument", "description": "the questionnaire", "content": "{\"name\":
+        \"Pool visit\", \"instructions\": \"I will ask you three short questions about your visit.\",
+        \"options\": [\"Not at all\", \"A little\", \"Quite\", \"Very\"], \"items\": [\"How clean were the
+        changing rooms?\", \"How friendly was the staff?\", \"How likely are you to come back?\"]}"}]'
+    user_goal: >
+      Answer the survey: the changing rooms were very clean, the staff was quite friendly, and you
+      are very likely to come back. If the robot asks a question again, answer it again.
+    goal_items:
+      - {id: item_2, value: Quite}
+      - {id: item_3, value: Very}
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 2, closing_said: true}
+      outcome: success
+      answers: ["Very", "Quite", "Very"]
+      ending: completed
+    mechanism: "the mapping of an answer fails: nothing is recorded and the item is asked again"
+    faults:
+      - {turn: 1, kind: invalid, questions: [map_scale_answer]}
+    events:
+      - {turn: 1, kind: text, text: "Very."}
+      - {turn: 2, kind: text, text: "Very, they were very clean."}
+
+  - id: f_pr_classify
+    strategy: procedure
+    goal:
+      task_description: "Guide the user to descale the kettle"
+      dialog_mode: procedure
+      domain: kitchen
+      resources_json: >
+        [{"name": "steps", "description": "descaling the kettle",
+          "content": "[\"Fill the kettle halfway with water and white vinegar\", \"Boil it and leave it for half an hour\", \"Empty it and rinse it with clean water\"]"}]
+    user_goal: >
+      You are descaling the kettle. Do each step and say when you have done it.
+    goal_items:
+      - {id: step_2, value: done}
+      - {id: step_3, value: done}
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 2, closing_said: true}
+      outcome: success
+      step_status: [done, done, done]
+      ending: completed
+    mechanism: "the reading of a step report fails: unclear, a reminder, and the step is still open"
+    faults:
+      - {turn: 1, kind: error, questions: [classify_step_turn]}
+    events:
+      - {turn: 1, kind: text, text: "Done, it's filled."}
+      - {turn: 2, kind: text, text: "Yes, I've filled it with water and vinegar."}
+
+  - id: f_ex_judge
+    strategy: explanation
+    goal:
+      task_description: "Explain how to top up the transport card at the station machine"
+      dialog_mode: explanation
+      domain: train station
+      resources_json: >
+        [{"name": "instructions", "description": "topping up the card",
+          "content": "Place the card on the yellow reader of the machine. Choose the amount on the screen. Pay with coins or a bank card and wait for the beep before taking the card."},
+         {"name": "key points", "description": "what the person must be able to say back", "content": "{\"key_points\": [\"Place the card on the yellow reader\", \"Choose the amount on the screen\", \"Pay and wait for the beep before taking the card\"]}"}]
+    user_goal: >
+      You want to top up your transport card. When the robot asks you to say it in your own
+      words, say it all correctly.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 2, closing_said: true}
+      outcome: success
+      understood: true
+      ending: completed
+    mechanism: "the judgement of a teach-back fails: read as other, the check is asked again; the next teach-back is judged"
+    faults:
+      - {turn: 1, kind: error, questions: [judge_teach_back]}
+    events:
+      - {turn: 1, kind: text, text: "I put the card on the yellow reader, choose the amount, pay, and wait for the beep before I take it."}
+      - {turn: 2, kind: text, text: "Card on the yellow reader, choose the amount on the screen, pay, and wait for the beep before taking the card."}
+
+  # ==== A sustained failure ends as a breakdown, not a loop (N4) ====
+  # Every question fails from the turn given to the end (turns 0). The LLM-led conversation (B)
+  # runs these too: with no count of turns without progress, it asks to repeat until another
+  # ending (the turn limit, the user's silence).
+
+  - id: n4_slot_filling
+    strategy: slot_filling
+    goal:
+      task_description: "Book a room for a meeting at the coworking space"
+      dialog_mode: slot_filling
+      domain: coworking space
+      frame_schema_json: >
+        {"slots": [
+          {"name": "room", "type": "str", "canonical_values": ["small room", "large room"]},
+          {"name": "day", "type": "str", "canonical_values": ["Monday", "Wednesday", "Friday"]}]}
+    user_goal: >
+      You want the large room on Wednesday. Confirm when the robot reads the booking back; if it
+      keeps asking, keep answering politely.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 1, closing_said: true}
+      outcome: failed
+      ending: breakdown
+    mechanism: "the model fails from the read-back on: every confirmation is unclear, breakdown at max_stalled (a model down from the first turn would first leave each slot unanswered, which is progress)"
+    faults:
+      - {turn: 2, kind: error, turns: 0}
+    events:
+      - {turn: 1, kind: text, text: "The large room on Wednesday, please."}
+
+  - id: n4_explanation
+    strategy: explanation
+    goal:
+      task_description: "Explain how to request a parking card for residents"
+      dialog_mode: explanation
+      domain: town hall
+      resources_json: >
+        [{"name": "instructions", "description": "the residents' parking card",
+          "content": "Residents ask for the parking card at the citizen service office. They bring the car's registration document and a recent bill with their address. The card is sent by post within ten days."},
+         {"name": "key points", "description": "what the person must be able to say back", "content": "{\"key_points\": [\"Ask for it at the citizen service office\", \"Bring the registration document and a recent bill with the address\", \"It arrives by post within ten days\"]}"}]
+    user_goal: >
+      You want a residents' parking card. When the robot asks you to say it in your own words,
+      say it all correctly; if it keeps asking, keep answering politely.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 0, closing_said: true}
+      outcome: failed
+      ending: breakdown
+    mechanism: "the model fails from the first turn on: every teach-back is read as other, breakdown at max_stalled"
+    faults:
+      - {turn: 1, kind: error, turns: 0}
+
+  - id: n4_procedure
+    strategy: procedure
+    goal:
+      task_description: "Guide the user to reset the wifi router"
+      dialog_mode: procedure
+      domain: home internet
+      resources_json: >
+        [{"name": "steps", "description": "resetting the router",
+          "content": "[\"Unplug the router from the power\", \"Wait thirty seconds\", \"Plug it in again and wait until the lights are steady\"]"}]
+    user_goal: >
+      You are resetting the router. Do each step and say when you have done it; if the robot
+      keeps asking, keep answering politely.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 0, closing_said: true}
+      outcome: failed
+      ending: breakdown
+    mechanism: "the model fails from the first turn on: every report is unclear (a reminder), breakdown at max_stalled"
+    faults:
+      - {turn: 1, kind: invalid, turns: 0}
+
+  - id: n4_grounded_qa
+    strategy: grounded_qa
+    goal:
+      task_description: "Answer the visitors' questions at the zoo"
+      dialog_mode: grounded_qa
+      domain: zoo
+      resources_json: '[{"name": "information", "description": "what the robot may answer from", "content":
+        "The zoo opens from 10:00 to 18:30. The penguins are fed at 12:00. A day ticket costs 18 euros."},
+        {"name": "handover", "description": "who can help", "content": "The information point can help
+        you with that."}]'
+    user_goal: >
+      Ask when the penguins are fed and how much a ticket costs; if the robot does not
+      understand, ask again politely.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 0, closing_said: true}
+      outcome: failed
+      ending: breakdown
+    mechanism: "the model fails from the first turn on: every turn is not understood, breakdown at max_stalled"
+    faults:
+      - {turn: 1, kind: error, turns: 0}
+
+  - id: n4_questionnaire
+    strategy: questionnaire
+    goal:
+      task_description: "Ask the user the survey about the library"
+      dialog_mode: questionnaire
+      domain: public library
+      resources_json: '[{"name": "instrument", "description": "the questionnaire", "content": "{\"name\":
+        \"Library\", \"instructions\": \"I will ask you two questions about the library.\", \"options\":
+        [\"Bad\", \"Fair\", \"Good\", \"Very good\"], \"items\": [\"How would you rate the opening hours?\",
+        \"How would you rate the reading room?\"]}"}]'
+    user_goal: >
+      Answer the survey: the opening hours are good and the reading room is very good. If the
+      robot asks again, answer again politely.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 0, closing_said: true}
+      outcome: failed
+      ending: breakdown
+    mechanism: "the model fails from the first turn on: every answer is not understood (the item again), breakdown at max_stalled"
+    faults:
+      - {turn: 1, kind: invalid, turns: 0}
+
+  - id: n4_roleplay
+    strategy: roleplay
+    goal:
+      task_description: "Practise returning a faulty toaster at an electronics shop"
+      dialog_mode: roleplay
+      resources_json: >
+        [{"name": "scene", "description": "roleplay scene",
+          "content": "{\"scenario\": \"The returns desk of an electronics shop\", \"role\": \"The shop assistant: friendly, asks what is wrong\", \"user_goal\": \"Return a toaster that does not heat\", \"criteria\": [\"Explains the fault\", \"Shows the receipt\", \"Asks clearly for a replacement or a refund\"], \"max_exchanges\": 6}"}]
+    user_goal: >
+      You want to return a toaster that does not heat; you have the receipt and you would like a
+      refund. Stay in the scene.
+    expect:
+      mechanisms: {faults_hit: 1, events_applied: 0, closing_said: true}
+      outcome: failed
+      ending: breakdown
+    mechanism: "the model fails from the first turn on: every turn is unclear (the robot asks to repeat, no progress), breakdown at max_stalled (decided 2026-10-30: until then each failed turn was read as continue, and the scene ran to max_exchanges and closed as completed without scores)"
+    faults:
+      - {turn: 1, kind: error, turns: 0}

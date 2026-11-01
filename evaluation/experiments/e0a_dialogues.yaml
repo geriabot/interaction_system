@@ -1,0 +1,41 @@
+# E0a, phase B, in English: whole dialogues of the finalist local models (those that pass phase
+# A, the narrow questions offline) with simulated users, on the development scenarios
+# (scenarios/e0a_dev.yaml: three per strategy, disjoint from the scenarios of E1-E4). Only the
+# method (the bounded conversation): E0a chooses the model the method runs with. It measures the
+# two criteria of phase B of the decision rule (doc/EXPERIMENTS.md, E0a): the 95th percentile of
+# the system's time per turn, and task success (analysis/score_runs.py). No judge. The simulated
+# user's adherence to its goal items is checked on every dialogue.
+# e0a_dialogues_es.yaml runs the same in Spanish.
+#
+# The models are the finalists of phase A, known only after it: give them with --models
+# (run_experiment.py and run_parallel.py); the run refuses the placeholder below.
+#
+# Paid calls (the simulated user only): run_experiment.py --dry-run counts them; the run needs
+# --allow-cloud.
+name: e0a_dialogues
+scenarios: scenarios/e0a_dev.yaml
+personas_file: personas.yaml
+# cooperative (the reference), mild_cognitive_impairment (silences, misunderstandings, answers
+# to a previous question: the shared mechanisms) and boundary_testing (pulls the robot out of
+# its task)
+personas: [cooperative, mild_cognitive_impairment, boundary_testing]
+repetitions: 3      # 3 per scenario x persona, seeds differ per repetition (the author, decision 3)
+language: English
+# The finalists of phase A (Ollama models), given with --models
+models: ["<finalists of phase A>"]
+conditions:
+  # The method: the Behavior Trees with the default parameters (no routes: one model)
+  bounded: {}
+simulator:
+  # A third family, neither the local system's nor the cloud system's (OpenAI in E1). The model
+  # version that answered is logged in every turn (user_log[].model_version)
+  provider: gemini
+  # gemini-2.0-flash, the most faithful user simulator of the proprietary models in Zhou et al.
+  # 2026 (COLM, Table 4), is no longer served by Google; by the rule fixed before running (the most
+  # faithful Gemini model of that table that is still served), gemini-2.5-flash-lite
+  model: gemini-2.5-flash-lite
+  temperature: 0.7
+ollama: {host: 127.0.0.1, port: 11434, timeout: 120.0}
+limits: {wait_timeout: 60.0}   # the same limits as E1
+dialogue_timeout: 900
+max_turns: 25     # turn limit of every dialogue (the same as E1)

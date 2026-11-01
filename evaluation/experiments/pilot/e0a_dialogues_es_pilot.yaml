@@ -1,0 +1,26 @@
+# PILOT FILE, NOT AN EXPERIMENT (doc/PILOT.md): its results are never reported. It is derived
+# from the experiment file it pilots (pilot_of) when it is loaded: the same conditions, limits,
+# wait for the model, simulator, timeouts and launch options; only the dialogues below, the
+# models (the pilot's system model, qwen2.5:32b, for every local model and every cloud system
+# model) and the stand-ins of the cloud providers change. The stand-ins (scripts/pilot_standin.py,
+# started by scripts/run_pilot.py) answer in the providers' own REST shapes: the simulated user is
+# a goal-driven script, the judges are synthetic, the cloud system cells are qwen2.5:32b, so the
+# pilot makes no paid call. A pilot finding may only fix a program or pipeline error; anything
+# that would change the method, its prompts or a scenario is recorded for the author.
+#
+# E0a, phase B, Spanish: the same seven development scenarios as the English pilot (one per
+# strategy, the events of the development set), with the personas shifted by one, so that each
+# persona meets other strategies than in English.
+pilot_of: ../e0a_dialogues_es.yaml
+name: e0a_dialogues_es_pilot
+models: {"<local>": qwen2.5:32b}
+pairs:
+  - [sf_dev_hair, mild_cognitive_impairment]
+  - [ex_dev_beach_flags, boundary_testing]
+  - [qz_dev_road, cooperative]
+  - [pr_dev_lamp, mild_cognitive_impairment]
+  - [rp_dev_neighbour, boundary_testing]
+  - [qa_dev_theatre, cooperative]
+  - [qn_dev_volunteering, mild_cognitive_impairment]
+repetitions: 1
+standins: {gemini_base_url: "http://127.0.0.1:8766", openai_base_url: "http://127.0.0.1:8766/v1"}

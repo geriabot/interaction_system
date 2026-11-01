@@ -1,0 +1,47 @@
+# PILOT FILE, NOT AN EXPERIMENT (doc/PILOT.md): its results are never reported. It is derived
+# from the experiment file it pilots (pilot_of) when it is loaded: the same conditions, limits,
+# wait for the model, simulator, timeouts and launch options; only the dialogues below, the
+# models (the pilot's system model, qwen2.5:32b, for every local model and every cloud system
+# model) and the stand-ins of the cloud providers change. The stand-ins (scripts/pilot_standin.py,
+# started by scripts/run_pilot.py) answer in the providers' own REST shapes: the simulated user is
+# a goal-driven script, the judges are synthetic, the cloud system cells are qwen2.5:32b, so the
+# pilot makes no paid call. A pilot finding may only fix a program or pipeline error; anything
+# that would change the method, its prompts or a scenario is recorded for the author.
+#
+# E1 (about 20 dialogues per condition, EXPERIMENTS.md: 21 per cell of the 2x2, 84 in all). The
+# conditions do not depend on the scenario, so the pilot runs the 21 development scenarios (three
+# per strategy, disjoint from E1's), each once, with the eight personas of E1 in turn (each two or
+# three times), the same pairs in the four cells (paired, as E1): A and B with qwen2.5:32b, C and
+# D with the large-model stand-in (the gateway's OpenAI provider, through the stand-in's
+# OpenAI-compatible endpoint, answered by qwen2.5:32b), with E1's open wait for the model.
+# Social robotics: service (bakery, hairdresser, plumber), guidance (theatre, ski resort,
+# funfair, campsite, beach), education (planets, road safety, calendar), assistance at home
+# (lamp, button, paper boat), social practice (neighbour, garage, market), surveys.
+pilot_of: ../e1_bounded_vs_llm_led.yaml
+name: e1_bounded_vs_llm_led_pilot
+scenarios: ../scenarios/e0a_dev.yaml
+models: {"<local>": qwen2.5:32b, "<openai>": openai/qwen2.5:32b}
+pairs:
+  - [sf_dev_cake, cooperative]
+  - [sf_dev_hair, terse]
+  - [sf_dev_plumber, self_correcting]
+  - [ex_dev_laundrette, older_adult]
+  - [ex_dev_campsite, non_native]
+  - [ex_dev_beach_flags, mild_cognitive_impairment]
+  - [qz_dev_planets, uncooperative]
+  - [qz_dev_road, boundary_testing]
+  - [qz_dev_calendar, cooperative]
+  - [pr_dev_lamp, terse]
+  - [pr_dev_button, self_correcting]
+  - [pr_dev_boat, older_adult]
+  - [rp_dev_neighbour, non_native]
+  - [rp_dev_mechanic, mild_cognitive_impairment]
+  - [rp_dev_market, uncooperative]
+  - [qa_dev_theatre, boundary_testing]
+  - [qa_dev_ski, cooperative]
+  - [qa_dev_funfair, terse]
+  - [qn_dev_parks, self_correcting]
+  - [qn_dev_hobbies, older_adult]
+  - [qn_dev_volunteering, mild_cognitive_impairment]
+repetitions: 1
+standins: {gemini_base_url: "http://127.0.0.1:8766", openai_base_url: "http://127.0.0.1:8766/v1"}

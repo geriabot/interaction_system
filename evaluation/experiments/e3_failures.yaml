@@ -1,0 +1,59 @@
+# E3, the model failures: the shared mechanisms and the strategies' fallbacks against their
+# specification when the system's model fails mid-dialogue (an error, an answer that is not what
+# was asked, a call that hangs, a question that raises or freezes). The failures are planned by the
+# scenarios (scenarios/e3_failures.yaml, key `faults`) at fixed user turns and injected by code
+# (simulation/interaction_sim/interaction_sim/llm_faults.py): the same in every dialogue and
+# condition. run_experiment.py loads the injector (skill module interaction_sim.fault_injection)
+# in every condition that runs these scenarios; without a planned failure every call goes to the
+# model unchanged.
+#
+#   cancellation (f_cancel_*):   the detection fails (no cancel), the reading of the answer fails
+#                                (withdrawn), an exact command while the model is down
+#   endings (f_skill_crash, f_intelligence_timeout, f_hang_fallback, f_frame_design_error):
+#                                error with the error closing; a hung model answered with the
+#                                fallback within the reply's time budget
+#   fallbacks (f_quiz_grading, f_qa_verify, f_sf_extract, f_qn_map, f_pr_classify, f_ex_judge)
+#   sustained failure (n4_*):    breakdown, not a loop; also run by B (llm_led), which has no
+#                                count of turns without progress: what it does instead is reported
+#
+# The method with its default parameters (no routes: one model). B runs only the sustained
+# failures: its single question per turn has its own fallback ("Sorry, could you repeat that?"),
+# so the targeted failures of the method's questions have no counterpart in it; a sustained
+# failure is the one situation both face alike (decided 2026-10-30). English only (see the
+# scenario file).
+#
+# Paid calls (the simulated user only): run_experiment.py --dry-run counts them; the run needs
+# --allow-cloud.
+name: e3_failures
+scenarios: scenarios/e3_failures.yaml
+personas_file: personas.yaml
+# As e3_mechanisms.yaml: the events and the failures decide the mechanism; the personas vary the
+# rest of the dialogue, and none stops or falls silent on its own
+personas: [cooperative, terse, older_adult]
+repetitions: 3
+language: English
+# The local model (provisional until E0a chooses the model (one model for every question, no routes))
+models: [qwen3:8b]
+conditions:
+  # The method: the Behavior Trees with the default parameters
+  bounded: {}
+  # B: the LLM-led conversation, on the sustained failures only
+  llm_led:
+    ablation: monolithic
+    skill_modules: ["interaction_ablations.skills"]
+    scenario_ids: [n4_slot_filling, n4_explanation, n4_procedure, n4_grounded_qa,
+                   n4_questionnaire, n4_roleplay]
+simulator:
+  # As in E1 and the other E3 files (see e3_mechanisms.yaml for the choice of the model)
+  provider: gemini
+  model: gemini-2.5-flash-lite
+  temperature: 0.7
+# timeout is the gateway's limit for one request to the server; the intelligence's own limits
+# (llm_timeout 15 s per call, reply_budget 20 s, opening_budget 30 s, intelligence_timeout 30 s)
+# are the system's defaults, the same in every experiment: f_hang_fallback's turn takes the
+# reply's budget, f_intelligence_timeout's freeze (40 s) outlasts intelligence_timeout
+ollama: {host: 127.0.0.1, port: 11434, timeout: 120.0}
+# The defaults of the system, as in e3_mechanisms.yaml
+limits: {wait_timeout: 15.0, max_silence: 90.0}
+dialogue_timeout: 900
+max_turns: 25

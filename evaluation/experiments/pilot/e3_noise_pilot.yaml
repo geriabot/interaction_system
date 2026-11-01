@@ -1,0 +1,28 @@
+# PILOT FILE, NOT AN EXPERIMENT (doc/PILOT.md): its results are never reported. It is derived
+# from the experiment file it pilots (pilot_of) when it is loaded: the same conditions, limits,
+# wait for the model, simulator, timeouts and launch options; only the dialogues below, the
+# models (the pilot's system model, qwen2.5:32b, for every local model and every cloud system
+# model) and the stand-ins of the cloud providers change. The stand-ins (scripts/pilot_standin.py,
+# started by scripts/run_pilot.py) answer in the providers' own REST shapes: the simulated user is
+# a goal-driven script, the judges are synthetic, the cloud system cells are qwen2.5:32b, so the
+# pilot makes no paid call. A pilot finding may only fix a program or pipeline error; anything
+# that would change the method, its prompts or a scenario is recorded for the author.
+#
+# E3, the noise. The injector works on any line of the simulated user, so the pilot uses
+# development scenarios (English, as the injector): one per strategy (7), with the three personas
+# of the file in turn, in the eight conditions (the method and B at 0, 10, 20 and 30 % word error
+# rate: 56 dialogues).
+pilot_of: ../e3_noise.yaml
+name: e3_noise_pilot
+scenarios: ../scenarios/e0a_dev.yaml
+models: {"<local>": qwen2.5:32b}
+pairs:
+  - [sf_dev_plumber, cooperative]
+  - [ex_dev_campsite, terse]
+  - [qz_dev_calendar, older_adult]
+  - [pr_dev_button, cooperative]
+  - [rp_dev_mechanic, terse]
+  - [qa_dev_theatre, older_adult]
+  - [qn_dev_volunteering, cooperative]
+repetitions: 1
+standins: {gemini_base_url: "http://127.0.0.1:8766", openai_base_url: "http://127.0.0.1:8766/v1"}

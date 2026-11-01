@@ -1,0 +1,42 @@
+# PILOT FILE, NOT AN EXPERIMENT (doc/PILOT.md): its results are never reported. It is derived
+# from the experiment file it pilots (pilot_of) when it is loaded: the same conditions, limits,
+# wait for the model, simulator, timeouts and launch options; only the dialogues below, the
+# models (the pilot's system model, qwen2.5:32b, for every local model and every cloud system
+# model) and the stand-ins of the cloud providers change. The stand-ins (scripts/pilot_standin.py,
+# started by scripts/run_pilot.py) answer in the providers' own REST shapes: the simulated user is
+# a goal-driven script, the judges are synthetic, the cloud system cells are qwen2.5:32b, so the
+# pilot makes no paid call. A pilot finding may only fix a program or pipeline error; anything
+# that would change the method, its prompts or a scenario is recorded for the author.
+#
+# E3, the mechanisms. The machinery depends on the scenario (events at fixed turns), so the pilot
+# takes the smallest subset of the test scenarios (scenarios/e3.yaml) that runs every condition
+# and every kind of event and ending: a cancellation by exact command (c_taxi_exact_closed) and
+# by a phrase that is denied (c_explanation_denied), both in the three cancellation ablations;
+# the confirmation of the data with its ablation (d_post_question); recovery and breakdown, also
+# in B (r_sf_ladder, b_grounded_qa); the silence prompts and the user who stays silent
+# (s_three_waits, s_user_silent); the turn limit (t_turn_limit); and the strategies' own
+# mechanisms (seven m_ scenarios: every check of analysis/strategy_checks.py; the second teach-back
+# scenario checks the same as the first). Every strategy runs in the method. One persona each, in
+# turn (24 dialogues: the method 15, each cancellation ablation 2, no_confirmation 1, B 2). These
+# are test scenarios: a finding here may only fix a program or pipeline error.
+pilot_of: ../e3_mechanisms.yaml
+name: e3_mechanisms_pilot
+models: {"<local>": qwen2.5:32b}
+pairs:
+  - [c_taxi_exact_closed, cooperative]
+  - [c_explanation_denied, terse]
+  - [d_post_question, older_adult]
+  - [r_sf_ladder, cooperative]
+  - [b_grounded_qa, terse]
+  - [s_three_waits, older_adult]
+  - [s_user_silent, cooperative]
+  - [t_turn_limit, terse]
+  - [m_sf_out_of_range, older_adult]
+  - [m_sf_llm_frame, cooperative]
+  - [m_sf_condition_unanswered, terse]
+  - [m_ex_llm_key_points, older_adult]
+  - [m_ex_teach_back_one_wrong, cooperative]
+  - [m_pr_check_contradicted, terse]
+  - [m_rp_repeat, older_adult]
+repetitions: 1
+standins: {gemini_base_url: "http://127.0.0.1:8766", openai_base_url: "http://127.0.0.1:8766/v1"}
