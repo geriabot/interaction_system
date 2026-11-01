@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Unit tests for DialogContext: prompt block rendering for domain, resources,
 and user emotional state, plus thread-safe state updates."""
 

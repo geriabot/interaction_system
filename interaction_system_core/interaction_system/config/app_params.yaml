@@ -1,48 +1,24 @@
-speech_to_text_node:
-  ros__parameters:
-    output_topic: /transcription
-    is_speaking_topic: /is_speaking
-    input_device: ''
-    model_size: small
-    language: en
-    device: auto
-    compute_type: auto
-    cpu_threads: 4
-    sample_rate: 16000
-    vad_threshold: 0.5
-    grace_period: 0.8
-    max_phrase_secs: 8.0
-    silent_mode: false
-
-text_to_speech_node:
-  ros__parameters:
-    action_name: /speak
-    is_speaking_topic: /is_speaking
-    # Piper voice filename, resolved under DIALOSTACK_MODELS_DIR
-    # (default ~/.local/share/dialostack/models; run scripts/download_models.sh).
-    # An absolute path is also accepted.
-    model_path: en_US-lessac-medium.onnx
-    sample_rate: 22050
-    audio_device: default
-
 llm_manager_node:
   ros__parameters:
-    default_provider: "gemini"
+    default_provider: "ollama"
     default_model: ""
     max_concurrent: 4
     silent_mode: false
 
     ollama:
-      enable: false
+      enable: true
       host: "127.0.0.1"
       port: 11434
-      model: "qwen2.5"
+      model: "qwen2.5:7b"
       timeout: 120.0
-      # Reasoning models think before answering when true (slower).
+      # Reasoning models think before answering when true (slower); a level
+      # ("low") for the models that cannot switch it off (gpt-oss).
       think: false
+      # Context window of every request (the same in E0a's phases A and B and in E1).
+      num_ctx: 8192
 
     gemini:
-      enable: true
+      enable: false
       # Leave empty — the provider picks up GEMINI_API_KEY from the environment.
       api_key: ""
       model: "gemini-2.5-flash"
@@ -68,16 +44,21 @@ llm_manager_node:
       # Optional OpenAI-compatible server URL; empty = api.openai.com.
       base_url: ""
 
-dialog_manager_node:
+interaction_intelligence:
   ros__parameters:
-    # Topics.
-    transcription_topic: "/transcription"
-    user_emotion_topic: "/user_emotion"
-    # Set to "" to disable barge-in.
-    user_speaking_topic: "/user_speaking"
+    # Topics. What the user says: /listened_text (simple_hri's transcriptions) and
+    # /transcription (typed text, e.g. from the GUI).
+    transcription_topics: ["/listened_text", "/transcription"]
+    # The state of the user (emotion), from the perception subsystem. Off: the emotion detector is
+    # preliminary work, not validated (interaction_perception's README); set it to
+    # "/interaction_perception/get_user_state" to try it.
+    user_state_service: ""
 
-    # Language for LLM generation and fallback phrases.
-    # Change to "Spanish" (or any language name) to switch the dialog language.
+    # The language of the conversation: a language file of interaction_intelligence
+    # (config/languages/*.yaml: English, Spanish), by name or code. It sets the language of the
+    # generated replies and every language-dependent resource (fixed phrases, acknowledgments,
+    # fillers, exact stop commands, speech settings). A language without a file stops the node;
+    # how to add one: docs/ADDING_A_LANGUAGE.md.
     language: "English"
 
     # Maximum number of turns kept in the dialog history buffer.
@@ -86,25 +67,20 @@ dialog_manager_node:
 
     # Acknowledgment phrases injected by the system (not the LLM) after each
     # successful slot extraction (slot-filling only).
-    # Leave empty ([""]) to use the language-aware defaults that follow
-    # `language` above; set an explicit list here to override them.
+    # Leave empty ([""]) to use those of the language file of `language`
+    # above; set an explicit list here to override them.
     ack_phrases: [""]
     # Set to false to drop the acknowledgments entirely (a capable model's
     # reply already reads naturally without them).
     ack_enabled: true
 
-    # Timing.
-    wait_timeout: 20.0
-    llm_timeout: 120.0
-    tts_timeout: 60.0
+    # Longest wait for one call to the LLM (s). A call that times out is not repeated, and the
+    # other questions of the same skill fail at once (the model is taken as unresponsive); the
+    # reply's time budget (reply_budget, an orchestrator parameter) can cut a call shorter.
+    llm_timeout: 15.0
     # Prompt spoken when the user doesn't respond within wait_timeout seconds.
-    # Empty = language-aware default (follows `language`); set to override.
+    # Empty = the phrase of the language file of `language`; set to override.
     timeout_prompt: ""
-
-    # FSM limits.
-    max_timeouts: 2
-    max_unclear: 3
-    max_attempts: 3
 
     # LLM Manager binding. Empty → node picks its own defaults.
     llm_provider: ""
@@ -116,3 +92,32 @@ dialog_manager_node:
     conversation_log_path: "/tmp/dialog_conversations.log"
     # Rotate transcript when it exceeds this size. 0 = never rotate.
     conversation_log_max_mb: 10.0
+
+interaction_orchestrator:
+  ros__parameters:
+    # Timing.
+    wait_timeout: 15.0
+    tts_timeout: 60.0
+    # The wait for the model: the intelligence may spend reply_budget seconds asking it for the
+    # reply to a user turn (opening_budget for the opening); once spent, the pending questions fall
+    # back, so a hung model never keeps the user waiting longer. intelligence_timeout is the hard
+    # limit of every request to the intelligence: past it, the error closing. 0 = no budget.
+    reply_budget: 20.0
+    opening_budget: 30.0
+    intelligence_timeout: 30.0
+
+    # Limits of a dialogue (the defaults of the requests that leave them unset).
+    max_silence: 90.0
+    max_stalled: 4
+    max_turns: 0
+    max_attempts: 3
+    max_off_task: 6
+
+    # Set to "" to disable barge-in.
+    user_speaking_topic: "/user_speaking"
+
+    # Conversational fillers: a reply not ready after filler_after_s seconds is preceded by a
+    # fixed filler ("Hmm..."), and by one more filler_repeat_s seconds later. 0 = none.
+    filler_after_s: 2.0
+    filler_repeat_s: 4.0
+

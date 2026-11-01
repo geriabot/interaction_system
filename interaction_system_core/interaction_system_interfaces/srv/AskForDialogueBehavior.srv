@@ -1,0 +1,12 @@
+# Which dialogue behavior fits a request that does not name one. The intelligence offers only
+# the behaviors whose needs the request provides; if more than one is offered, the LLM chooses
+string task_description
+string domain
+string resources_json
+DialogueBehaviorDetails[] behaviors
+---
+bool success
+string message
+# The chosen behavior, or -1 if none of the catalog can be offered
+int8 behavior_id
+int8[] offered_ids

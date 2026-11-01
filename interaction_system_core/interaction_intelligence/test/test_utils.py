@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Unit tests for text utilities: accent removal, normalisation, input cleaning,
 local cancel detection, snake_case conversion, and loose JSON parsing."""
 
@@ -116,30 +120,37 @@ def test_cancel_check_exact_abort():
     assert local_cancel_check("abort") is True
 
 
-def test_cancel_check_no_cancel_phrase():
-    assert local_cancel_check("quiero una pizza") is False
+def test_cancel_check_spanish_exact_commands():
+    # The whole utterance, normalised (case, accents, punctuation), or one command repeated
+    for text in ("Para.", "¡Para!", "Para, para.", "Para ya.", "Cancela.", "Cancelar.",
+                 "Déjalo.", "dejalo", "Basta.", "Basta ya.", "Detente."):
+        assert local_cancel_check(text, "Spanish") is True, text
 
 
-def test_cancel_check_unrelated_para():
-    # "para mi" is not a cancel command.
-    assert local_cancel_check("para mi es suficiente") is False
+def test_cancel_check_spanish_not_a_command():
+    # A command word inside a longer utterance, or an answer: the LLM decides
+    for text in ("Para mí un café.", "No, para el martes.", "No.", "no", "Para llevar.",
+                 "Cancela la segunda.", "Terminar.", "Alto."):
+        assert local_cancel_check(text, "Spanish") is None, text
 
 
-def test_cancel_check_ambiguous_pattern_returns_none():
-    # "cancel please" contains a cancel-coloured token → ambiguous → None.
+def test_cancel_check_uses_the_language_of_the_dialogue():
+    # The commands of the dialogue's language only
+    assert local_cancel_check("Para.", "English") is None
+    assert local_cancel_check("stop", "Spanish") is None
+    assert local_cancel_check("Stop, stop!", "English") is True
+    # The language by name, code or alias, any case
+    assert local_cancel_check("Para.", "es") is True
+    assert local_cancel_check("Para.", "español") is True
+
+
+def test_cancel_check_anything_else_goes_to_the_llm():
+    # Not an exact command: the LLM decides, with or without a cancel-like word
+    # (a word list missed "para, no quiero seguir" and "let's drop this").
+    assert local_cancel_check("quiero una pizza") is None
+    assert local_cancel_check("para, no quiero seguir") is None
+    assert local_cancel_check("let's drop this") is None
     assert local_cancel_check("cancel please") is None
-
-
-def test_cancel_check_strict_suppresses_ambiguous():
-    assert local_cancel_check("cancel please", strict=True) is False
-
-
-def test_cancel_check_strict_exact_still_true():
-    assert local_cancel_check("cancel", strict=True) is True
-
-
-def test_cancel_check_strict_non_cancel():
-    assert local_cancel_check("quiero continuar", strict=True) is False
 
 
 # ==== TO_SNAKE_CASE ====

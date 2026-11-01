@@ -1,0 +1,125 @@
+# The language-dependent resources of the interaction system for one language: Spanish.
+#
+# Every language has one file like this in config/languages/, with exactly the same keys (the
+# loader refuses a file with a key missing or extra, or a phrase whose {placeholders} differ from
+# English's; test/test_languages.py checks every file). The `language` parameter of the
+# interaction intelligence selects the file by `name`, `code`, an alias or the file name (any
+# case). How to add a language: docs/ADDING_A_LANGUAGE.md. The comments of each key are in
+# english.yaml.
+
+name: Spanish
+code: es
+aliases: ["español", "castellano", "spa"]
+
+speech:
+  stt_language: es
+  piper_voice: es_ES-sharvard-medium
+  piper_speaker: -1
+  mms_voice: spa
+
+# Only the whole utterance counts (normalised: "¡Para, para!" is "para para", a repeated
+# command): "Para." stops, "Para mí un café." or "No, para el martes." do not (the model decides
+# them). Left out on purpose: "no" (an answer), "alto" and "salir" (answers to a question),
+# "olvídalo" (may drop only the last value), "terminar" (the role play's way to end the practice,
+# evaluated: roleplay_intro).
+cancel_commands:
+  - "para"
+  - "para ya"
+  - "para por favor"
+  - "por favor para"
+  - "basta"
+  - "basta ya"
+  - "ya basta"
+  - "cancela"
+  - "cancelar"
+  - "cancélalo"
+  - "cancela por favor"
+  - "déjalo"
+  - "déjalo ya"
+  - "dejémoslo"
+  - "detente"
+
+# Only fallbacks (english.yaml): "vale" and "correcto" confirmed by the author (2026-10-30)
+yes_words: ["sí", "si", "vale", "correcto"]
+no_words: ["no"]
+
+# Only a whole utterance made of these is noise (english.yaml). Left out on purpose: "próxima
+# semana" and "hasta la próxima (vez / semana)", which a user may say as an answer or a goodbye
+asr_noise_phrases:
+  - "gracias por ver"
+  - "gracias por ver el vídeo"
+  - "gracias por verlo"
+  - "gracias por su atención"
+  - "suscríbete"
+  - "no olvides suscribirte"
+  - "no olvides"
+  - "dale like"
+  - "dale me gusta"
+  - "subtítulos"
+  - "subtítulos por la comunidad de amara.org"
+  - "subtítulos realizados por la comunidad de amara.org"
+  - "amara"
+  - "música"
+  - "silencio"
+  - "aplausos"
+  - "continuará"
+  - "nos vemos en el próximo"
+  - "próximo vídeo"
+  - "próximos vídeos"
+  - "eh"
+  - "mm"
+
+ack_phrases: ["Anotado.", "Hecho.", "Perfecto.", "Entendido.", "De acuerdo."]
+
+filler_phrases: ["Mmm…", "Un momento…", "Déjame pensar…"]
+
+phrases:
+  opening: "Hola, ¿en qué puedo ayudarte?"
+  resume: "Continuamos donde lo dejamos."
+  unclear: "¿Podrías repetirlo?"
+  confirm_q: "¿Es correcta esta información?"
+  good_question: "Buena pregunta."
+  intent_response: "De acuerdo."
+  confirmed_closing: "Perfecto, ya está todo listo."
+  explain_open: "Déjame explicarte esto."
+  teach_back: "Quiero asegurarme de que me he explicado bien. ¿Me lo cuentas con tus palabras?"
+  teach_back_again: "¿Me lo cuentas otra vez con tus palabras?"
+  key_points_summary: "Te recuerdo lo más importante: {points}."
+  understand_ok: "¡Perfecto! Adelante."
+  understand_fail: "No te preocupes, puedes preguntarme de nuevo cuando quieras."
+  quiz_opening: "¡Empezamos el cuestionario!"
+  quiz_summary: "Cuestionario completado."
+  quiz_correct: "¡Correcto!"
+  quiz_wrong: "No, la respuesta era {expected}."
+  quiz_unanswered: "La dejamos sin responder."
+  cancel_ask: "¿Seguro que quieres cancelar?"
+  cancel_ok: "De acuerdo, cancelado."
+  cancel_no: "Perfecto, continuamos."
+  timeout: "Tómate tu tiempo, sigo aquí."
+  silence_ready: "Cuando quieras, aquí estoy."
+  close_user_silent: "Lo dejamos aquí. Cuando quieras, lo retomamos."
+  close_breakdown: "Parece que no nos estamos entendiendo bien. Lo dejamos aquí y lo retomamos en otro momento."
+  close_off_task: "Parece que buscas algo con lo que no puedo ayudarte aquí. Lo dejamos aquí."
+  close_turn_limit: "Hemos llegado al tiempo previsto, así que lo dejamos aquí."
+  close_error: "Lo siento, ha habido un problema y tengo que parar aquí."
+  slot_skipped: "De acuerdo, lo dejamos sin rellenar."
+  qa_invite: "¿Qué quieres saber?"
+  qa_more: "¿Quieres saber algo más?"
+  qa_abstain: "No dispongo de esa información."
+  qa_decline: "Eso queda fuera de lo que tratamos aquí, así que no puedo ayudarte con ello; solo puedo responder dudas sobre la información que tengo."
+  qa_bye: "De acuerdo. ¡Que vaya bien!"
+  questionnaire_intro: "Te voy a hacer {total} preguntas. En cada una, elige una de las opciones."
+  questionnaire_item: "Pregunta {n} de {total}:"
+  questionnaire_options: "Las opciones son: {options}."
+  questionnaire_or: "o"
+  questionnaire_end: "Hemos terminado. Gracias por tus respuestas."
+  procedure_opening: "Vamos a hacerlo paso a paso."
+  procedure_step: "Paso {n} de {total}: {step}"
+  procedure_remind: "Avísame cuando lo hayas hecho."
+  procedure_summary: "Hemos terminado el procedimiento."
+  roleplay_intro: "Vamos a practicar. Di «terminar» cuando quieras acabar."
+  roleplay_reply: "Continúa, te escucho."
+  roleplay_coach: "Intenta responder con calma y con un ejemplo concreto."
+  roleplay_feedback: "Hemos terminado la práctica. ¡Buen trabajo!"
+  roleplay_scores: "Tus notas: {scores}."
+  roleplay_score_item: "{criterion}, {score} de 5"

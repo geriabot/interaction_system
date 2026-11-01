@@ -1,0 +1,139 @@
+# The language-dependent resources of the interaction system for one language: English.
+#
+# Every language has one file like this in config/languages/, with exactly the same keys (the
+# loader refuses a file with a key missing or extra, or a phrase whose {placeholders} differ from
+# English's; test/test_languages.py checks every file). The `language` parameter of the
+# interaction intelligence selects the file by `name`, `code`, an alias or the file name (any
+# case). How to add a language: docs/ADDING_A_LANGUAGE.md.
+#
+# What is NOT here: the prompts (config/prompts.yaml) are written in English for every language
+# and ask the model to answer in {language}, the `name` below.
+
+# The name of the language: the value of the `language` parameter, and what the prompts say
+# ({language}: "Reply in English").
+name: English
+# ISO 639-1 code: the launch argument (main.launch.py language:=en)
+code: en
+# Other names accepted for the language (any case), besides the name, the code and the file name
+aliases: ["inglés", "eng"]
+
+# The speech capability (simple_hri) in this language, set by main.launch.py
+speech:
+  # Language of the speech recognition (Whisper / faster-whisper `language`)
+  stt_language: en
+  # Piper voice (simple_hri tts_piper `voice`, a voice of the Piper catalogue) and its speaker
+  # (`speaker`, for a voice with several; -1: the voice's own)
+  piper_voice: en_US-lessac-medium
+  piper_speaker: -1
+  # MMS-TTS voice (simple_hri tts_mms `lang_code`)
+  mms_voice: eng
+
+# Exact stop commands: an utterance that is exactly one of these (after normalisation: case,
+# accents and punctuation removed, whitespace collapsed), or one of them repeated ("Stop, stop!"),
+# is a request to stop decided without the model; the confirmation question follows, as for any
+# request. Only the whole utterance counts: anything else is decided by the model. Keep the list
+# to words that are never an answer on their own (docs/behaviors/cancellation.md).
+cancel_commands: ["stop", "exit", "cancel", "quit", "abort"]
+
+# Words read as yes / no, lowercase, only as fallbacks (like the fixed phrases said when the
+# model fails; the model decides whenever it answers): (1) when a yes/no (bool) value comes back
+# as text, a last-resort parsing fallback; the words of every language file are accepted there
+# (the value is the model's output, which may use either); (2) when the model fails to read the
+# answer to "do you want to stop?", the whole answer, normalised, is exactly one of these words
+# of the dialogue's language (utils.local_yes_no; decided by the author, 2026-10-30). A word
+# cannot be yes in one file and no in another.
+yes_words: ["yes", "ok", "okay", "correct"]
+no_words: ["no", "nope"]
+
+# Transcriptions discarded as noise when the WHOLE utterance is made of these (one or more,
+# normalised as the cancel commands; decided by the author, 2026-10-30): fillers and the
+# recognizer's recurrent hallucinations on silence (video outros). A phrase inside a real
+# utterance never discards it ("Hmm, stop." is kept), so list only what is never a turn on its
+# own: not a goodbye a user may say ("see you next time" was removed for this reason). The
+# phrases of every language file are discarded in any dialogue: the recognizer may hallucinate
+# in another language than the one it was set to.
+asr_noise_phrases:
+  - "thanks for watching"
+  - "thank you for watching"
+  - "please subscribe"
+  - "like and subscribe"
+  - "subtitles by"
+  - "see you in the next video"
+  - "eh"
+  - "mm"
+  - "hmm"
+
+# Acknowledgments said before slot filling's reply after it takes a value (one is chosen);
+# ack_phrases / phrases.ack of the node override them
+ack_phrases: ["Noted.", "Done.", "Got it.", "Understood.", "Alright."]
+
+# Conversational fillers said while the reply is being prepared (never the same twice in a row);
+# filler_phrases / phrases.filler override them
+filler_phrases: ["Hmm…", "Just a moment…", "Let me think…"]
+
+# The fixed phrases: what the robot says when the model fails (the fallback of each generated
+# line), and the lines that are never generated (silence prompts, closings of the endings,
+# fixed parts of the strategies). {placeholders} are filled by the system and must be kept.
+# The Strategies editor of the GUI (phrases.* parameters) overrides them one by one.
+phrases:
+  # Shared: the opening, a turn not understood, the slot-filling confirmation
+  opening: "Hello, how can I help you?"
+  resume: "Let's continue where we left off."
+  unclear: "Could you repeat that?"
+  confirm_q: "Is this information correct?"
+  good_question: "Good question."
+  intent_response: "Understood."
+  confirmed_closing: "Perfect, it's all done."
+  # Explanation and its teach-back
+  explain_open: "Let me explain this."
+  teach_back: "I want to make sure I explained it well. Could you tell me in your own words?"
+  teach_back_again: "Could you tell me again in your own words?"
+  key_points_summary: "Let me remind you of the most important points: {points}."
+  understand_ok: "Great, let's proceed."
+  understand_fail: "No worries, feel free to ask me again."
+  # Quiz
+  quiz_opening: "Let's start the quiz!"
+  quiz_summary: "Quiz completed."
+  quiz_correct: "Correct!"
+  quiz_wrong: "No, the answer was {expected}."
+  quiz_unanswered: "We'll leave that one unanswered."
+  # Spoken cancellation (the question, the cancelled closing, the denied cancellation)
+  cancel_ask: "Are you sure you want to cancel?"
+  cancel_ok: "Alright, cancelled."
+  cancel_no: "OK, let's continue."
+  # Silence: the first prompt ("take your time"; timeout_prompt / phrases.timeout override it)
+  # and the later ones
+  timeout: "Take your time, I'm still here."
+  silence_ready: "Whenever you're ready, I'm here."
+  # The closings of the endings decided by the trees (docs/behaviors/endings.md)
+  close_user_silent: "Let's leave it here. We can pick it up whenever you like."
+  close_breakdown: "It seems we are not understanding each other well. Let's leave it here and pick it up another time."
+  close_off_task: "It seems you are looking for something I cannot help you with here. Let's leave it here."
+  close_turn_limit: "We have reached the time we had, so let's leave it here."
+  close_error: "I'm sorry, something went wrong and I have to stop here."
+  # Slot filling: a slot left blank
+  slot_skipped: "Alright, we'll leave that one blank."
+  # Grounded question answering
+  qa_invite: "What would you like to know?"
+  qa_more: "Is there anything else you'd like to know?"
+  qa_abstain: "I don't have that information."
+  qa_decline: "That is outside what we are talking about here, so I can't help you with it; I can only answer questions about the information I have."
+  qa_bye: "Alright. Have a good day!"
+  # Questionnaire (questionnaire_or joins the last two options: "a, b or c")
+  questionnaire_intro: "I will ask you {total} questions. For each one, choose one of the options."
+  questionnaire_item: "Question {n} of {total}:"
+  questionnaire_options: "The options are: {options}."
+  questionnaire_or: "or"
+  questionnaire_end: "We have finished. Thank you for your answers."
+  # Procedure
+  procedure_opening: "Let's go through it step by step."
+  procedure_step: "Step {n} of {total}: {step}"
+  procedure_remind: "Tell me when you have done it."
+  procedure_summary: "We have finished the procedure."
+  # Role play
+  roleplay_intro: "Let's practise. Say \"finish\" whenever you want to end."
+  roleplay_reply: "Go on, I'm listening."
+  roleplay_coach: "Try answering calmly and with a concrete example."
+  roleplay_feedback: "We have finished the practice. Well done!"
+  roleplay_scores: "Your scores: {scores}."
+  roleplay_score_item: "{criterion}, {score} out of 5"

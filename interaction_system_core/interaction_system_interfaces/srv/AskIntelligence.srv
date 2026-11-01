@@ -1,0 +1,29 @@
+# One skill of the interaction intelligence, asked by a Behavior Tree: a question to the LLM
+# (understand an utterance, phrase a reply) or an operation on the data of the dialogue.
+# The intelligence keeps no state: the state of the dialogue (JSON) comes in and goes out.
+string dialogue_id
+string skill
+string state
+string user_text
+# Skill-specific inputs: a word (e.g. who ended a roleplay), a number (e.g. the attempts so
+# far) and a JSON object (the request, for "begin")
+string option
+int32 number
+string args
+# The time the skill may still spend waiting for the model (s): what is left of the time budget
+# of the reply being prepared (reply_budget after a user turn, opening_budget for the opening).
+# Once it is spent, the skill's remaining questions to the model fail at once and the skill
+# answers with its fallbacks. 0 = no budget: each call to the model waits at most llm_timeout
+float64 budget_s
+---
+bool success
+# Why the skill failed
+string message
+string state
+# What the robot must say, if anything
+string reply
+# What the skill found, for the tree to decide (e.g. "complete", "confirms", "unclear")
+string label
+# The phase of the dialogue and its data (the result so far), as JSON
+string phase
+string data

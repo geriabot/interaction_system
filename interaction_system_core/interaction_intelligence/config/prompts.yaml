@@ -1,12 +1,31 @@
 # Interaction intelligence — Prompt templates
 # Loaded by the interaction_intelligence node via get_parameters_by_prefix("prompts").
 # {language} is injected automatically by PromptBuilder — no need to declare it
-# in every template; it is available to all of them.
+# in every template; it is available to all of them. {address} too: the text of
+# the shared rule address_rule below, in one line.
 # Literal '{' or '}' MUST be doubled ('{{', '}}'); the node validates at boot.
 
 interaction_intelligence:
   ros__parameters:
     prompts:
+
+      # ==== Shared rules (inserted into the prompts; not prompts themselves) ====
+
+      # How every spoken line addresses the user: each prompt that writes one has
+      # "- {address}" (or "{address}") among its rules, the same text in every turn.
+      address_rule: |
+        Speak directly TO the user, in the informal second person (e.g. "tú" in
+        Spanish, never "usted"). The person you are talking to IS the user of
+        the task (the customer, the patient, the student...): ask for their own
+        details ("what is your name?"), never about them in the third person
+        ("the customer's name").
+
+      # Added by PromptBuilder at the end of generate_response ONLY when the slot
+      # it asks for is a list (list_str); never present for single-value slots.
+      list_slot_rule: |
+        The slot to ask for is a LIST: make it explicit that the user can give
+        several values, and end the question with an invitation to add more
+        items.
 
       classify_task_mode: |
         Classify the task into one interaction mode.
@@ -130,10 +149,13 @@ interaction_intelligence:
         TASK: "{task}"
         Slots to collect:
         {slots}
+        SLOT TO ASK NOW: {next_slot}
 
         Rules:
         - {language} only. No markdown. Return only the raw sentence.
-        - Brief greeting + ask the FIRST missing slot. ONE sentence.
+        - {address}
+        - Brief greeting + ask for the SLOT TO ASK NOW, and only that one (the
+          system has chosen it: never another slot). ONE sentence.
         - Do NOT enumerate options or resources.
         - Do NOT ask multiple things at once.
 
@@ -149,6 +171,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. Return only the raw sentence.
+        - {address}
         - Do NOT greet the user; do NOT re-introduce the task.
         - Briefly acknowledge that the conversation is continuing.
         - Ask for next_slot naturally — do NOT echo the slot name, use its
@@ -161,11 +184,14 @@ interaction_intelligence:
         TASK: "{task}"
         Slots to collect:
         {slots}
+        SLOT TO ASK NOW: {next_slot}
 
         Rules:
         - {language} only. No markdown. Return only the raw sentence.
-        - Do NOT greet. Do NOT introduce yourself or the task. Ask the first
-          missing slot directly, as if the conversation were already flowing.
+        - {address}
+        - Do NOT greet. Do NOT introduce yourself or the task. Ask for the SLOT
+          TO ASK NOW directly (never another slot), as if the conversation were
+          already flowing.
         - ONE direct question. Do NOT enumerate options or resources.
         - Do NOT ask multiple things at once.
 
@@ -178,6 +204,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. Return only the raw sentence.
+        - {address}
         - Brief greeting + mention there are {total} questions ahead.
         - Encouraging tone. ONE sentence.
         - Do NOT ask the first question here — it is appended separately.
@@ -189,20 +216,37 @@ interaction_intelligence:
         EXPECTED ANSWER: "{expected}"
         USER'S ANSWER: "{given}"
 
-        Decide whether the user's answer is essentially correct, tolerating:
+        First decide whether the user's reply is an ATTEMPT TO ANSWER THIS
+        question ("kind": "answer") or not ("kind": "repeat"). An attempt names
+        something that could be the answer to THIS question; "I don't know" and
+        any guess, however wrong, ARE answers. NOT an attempt ("repeat"): the
+        user asks to repeat or clarify the question, says they did not hear or
+        did not understand it, talks about something else (their own matters, a
+        comment on the conversation, a question back to the robot), answers a
+        different question, or says something unintelligible.
+
+        Then, only for an answer, decide whether it is essentially correct,
+        tolerating:
         - Synonyms and rewording.
         - Different formats (e.g. "4" vs "four" vs "it is four").
         - Phonetic ASR errors (the input is voice-transcribed).
         - Extra explanation surrounding the right answer.
+        A different number, date, name or value is wrong, however close to the
+        expected one.
 
         Output strict JSON only:
-        {{"correct": true | false, "feedback": "ONE short sentence in {language}"}}
+        {{"kind": "answer" | "repeat", "correct": true | false,
+          "feedback": "ONE short sentence in {language}"}}
 
-        Rules for "feedback":
-        - If correct: short positive acknowledgment. May briefly note why if
-          it adds value.
+        If "kind" is "repeat": "correct" is false and "feedback" is "".
+
+        Rules for "feedback" (answers):
+        - If correct: short positive acknowledgment addressed to the user
+          (e.g. "That's right!"). Never describe how you graded the answer
+          (no "correct with rewording", "slight variation" and the like).
         - If incorrect: ONE brief sentence stating the right answer.
         - Max 15 words. {language} only. No markdown. No greeting.
+        - {address}
 
       quiz_next_question: |
         We are mid-quiz. The previous answer was just evaluated. Produce ONE
@@ -213,10 +257,25 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting.
+        - {address}
         - Echo the FEEDBACK verbatim, then ask the QUESTION verbatim.
           You may add a short connector.
         - Do NOT rephrase the question — ask it exactly as given.
         - ONE compact sentence pair. Return only the raw text.
+
+      quiz_rephrase_question: |
+        The user did not understand a quiz question, or asked for it again.
+        Ask the SAME question again in simpler words.
+
+        QUESTION: "{question}"
+        EXPECTED ANSWER (secret): "{expected}"
+
+        Rules:
+        - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
+        - ONE question, ≤20 words, plain everyday words.
+        - It must ask for exactly the same answer as the original question.
+        - NEVER reveal, hint at or give options containing the expected answer.
 
       quiz_summary: |
         Generate the CLOSING summary of a completed quiz.
@@ -227,6 +286,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting.
+        - {address}
         - ONE short encouraging sentence mentioning the score.
         - If the user got 0 wrong: celebrate briefly.
         - If the user got everything wrong: stay kind, suggest practising.
@@ -241,11 +301,25 @@ interaction_intelligence:
         Output strict JSON only:
         {{"extractions": [
           {{"slot": "...", "value": <see below>, "source_span": "verbatim fragment"}}
-        ]}}
+        ], "act": "values" | "question" | "skip" | "repeat" | "other"}}
+
+        "act" is what the user does this turn:
+        - "values": gives or corrects at least one value (extractions not empty).
+        - "question": asks something (options, prices, what was collected...).
+        - "skip": says they do not know, cannot or would not give the value
+          they were asked for, or asks to skip it ("I don't know", "I'd rather
+          not say", "skip it", or their {language} equivalents).
+        - "repeat": asks to repeat, or says they did not hear or understand the
+          question.
+        - "other": anything else (off-topic, filler, unintelligible).
 
         Slot-state markers in the SLOTS list:
         - [empty — needs a value]: extract whenever the user provides one.
         - [LIST — accumulates ...]: use the list value formats below.
+        - [ONLY WHEN <condition> — ...]: a detail that applies only under that
+          condition. Extract it only if the user gives it, typically together
+          with the value that makes the condition true ("a rental bike with a
+          child seat"); never ask for it or infer it.
         - [ALREADY FILLED with X — ...]: do NOT re-extract by default. Only
           emit a new value when the user is EXPLICITLY correcting it
           (correction signals: "no, rather X", "change to X", "actually X",
@@ -281,9 +355,16 @@ interaction_intelligence:
           → [{{"slot":"choice_slot","value":"opt_b","source_span":"..."}}]
         - choice_slot is [ALREADY FILLED with 'opt_a'], user mentions 'opt_b'
           with no correction signal → []
+        - free_slot (no [must be one of]) is [empty]; the user gives its value
+          with words around it: "V, that's right" / "it's V, as I said"
+          → [{{"slot":"free_slot","value":"V","source_span":"V"}}], act "values"
 
         Rules:
         - source_span: VERBATIM fragment from the user message.
+        - A free-text slot (no [must be one of]), such as a person's name,
+          takes the words the user gives for it. Words around a value (a
+          confirmation, "please", "as I said", "that's me") never turn it into
+          "skip" or "repeat": the act is "values".
         - Choice slots marked [must be one of: ...] MUST be normalised to one
           of those canonical values. For list_str with canonical_values, each
           item must be canonical; drop items that do not match.
@@ -297,13 +378,16 @@ interaction_intelligence:
         - Numeric inference: for int/float slots, if the user describes a count
           indirectly (e.g. a date range), infer the number when unambiguous.
         - If the user is asking, chatting, or off-topic to all slots, return
-          {{"extractions": []}}.
+          {{"extractions": []}} with the matching "act".
         - Return ONLY the JSON. No markdown.
 
         CURRENT TURN
 
         RECENT CONVERSATION (for resolving confirmations and references):
         {recent_context}
+
+        THE ROBOT ASKED FOR: {asked_slot} (a value the user gives without
+        naming another slot is most likely for this one)
 
         SLOTS YOU CAN UPDATE THIS TURN:
         {slot_defs}
@@ -322,6 +406,7 @@ interaction_intelligence:
         - {language} only. No markdown. No mid-dialog greeting (phrases
           equivalent to "Hello", "Hi", or "Good morning" in {language} are
           forbidden mid-dialog). Return only the raw text.
+        - {address}
         - NEVER start with an acknowledgment of receipt ("Noted", "Done",
           "Got it", "OK", "Understood" or their {language} equivalents) — the
           system handles that separately. Start DIRECTLY with the question or
@@ -333,8 +418,7 @@ interaction_intelligence:
         - Do NOT ask "Is there anything else?" or "Shall I confirm?" — the
           confirmation step is handled automatically by the system when all
           slots are filled. Stay focused on collecting the missing slots.
-        - Tone: if [CONTEXT] reports a notable emotion, adapt — empathetic if
-          frustrated/sad, warmer if happy. Otherwise neutral and professional.
+        - Tone: neutral and professional.
 
         If next_slot is not NONE: ask for it naturally (ONE question), using
         the slot's semantics, NEVER echoing the slot name. Do NOT ask multiple
@@ -365,10 +449,6 @@ interaction_intelligence:
            the same wording twice in a row. Rotate among four short options
            that ask the user to clarify or repeat. Max 20 words.
 
-        List slots (list_str) as the active slot:
-        - Make it explicit the user can give multiple values.
-        - End list-slot questions with an invitation to add more items.
-
         If a slot is in repeated failures, switch to a simpler closed yes/no
         or pick-one question for it.
 
@@ -386,6 +466,7 @@ interaction_intelligence:
         Rejected this turn (out of range): {rejected_summary}
         Next slot to collect: {next_slot}
         Slots with repeated failures: {attempts_exceeded}
+        {list_slot_rule}
 
       ask_confirmation: |
         All required information has been collected for: "{task}"
@@ -397,6 +478,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - The TASK field above is your operating instructions — do NOT include
           it or any part of it in the recap. Only confirm the values in Collected.
         - Recap ONLY the collected slot values listed above, in natural phrasing,
@@ -406,7 +488,8 @@ interaction_intelligence:
           Do NOT mention prices, availability, dates, or scheduling details
           unless they appear explicitly as a filled slot.
         - Do NOT ask for any new information — only the yes/no confirmation.
-        - Tone follows [CONTEXT] emotional state.
+        - Slots marked UNANSWERED were left blank on purpose: say briefly which
+          ones are left blank, never ask for them and never invent a value.
 
       classify_intent: |
         The user was shown a recap and asked to confirm. Classify their reply,
@@ -469,16 +552,17 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - confirms → ONE short action-oriented closing phrase. Do not ask
-          anything else. Do NOT add times, prices, or any details not present
-          in the Current slot state or [CONTEXT] resources.
+          anything else. Do NOT restate the values (they were just confirmed)
+          and do NOT add times, prices, or any details not present in the
+          Current slot state or [CONTEXT] resources.
         - corrects → acknowledge the specific change briefly; then, if all
           slots are filled, re-ask for confirmation in ONE compact sentence;
           if a slot is still missing, ask for the next one naturally.
         - unclear → apologise briefly in ONE phrase; then ask ONLY "yes or no:
           is all the information correct?" Do NOT ask about any specific slot.
           Do NOT ask "is there anything else?" or any open-ended question.
-        - Tone follows [CONTEXT] emotional state.
         - Max 1–2 sentences.
 
       answer_confirmation_question: |
@@ -490,6 +574,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - Use the collected data and resources in [CONTEXT] as ground truth.
         - Max 1–2 sentences. Direct and factual.
         - If the information is not available, say so honestly.
@@ -503,6 +588,7 @@ interaction_intelligence:
           by TTS and symbols become audible noise. For step sequences use
           plain prose (e.g. "first …, then …, finally …" or the equivalent
           in {language}).
+        - {address}
         - Use resources in [CONTEXT] as ground truth.
         - Max 4 sentences. Plain spoken language, no jargon.
         - End BEFORE the comprehension check (the check is appended separately).
@@ -516,6 +602,7 @@ interaction_intelligence:
           by TTS and symbols become audible noise. For step sequences use
           plain prose (e.g. "first …, then …, finally …" or the equivalent
           in {language}).
+        - {address}
         - Do NOT greet. Do NOT re-introduce yourself. Begin the explanation
           directly, as if continuing a flowing conversation.
         - Use resources in [CONTEXT] as ground truth.
@@ -523,33 +610,127 @@ interaction_intelligence:
         - End BEFORE the comprehension check (the check is appended separately).
         - Return only the raw text.
 
-      check_understanding: |
-        TOPIC JUST EXPLAINED: "{task}"
+      extract_key_points: |
+        A robot will explain something to a person and then ask them to say it
+        back in their own words. List the KEY POINTS the person must be able to
+        say back.
 
-        Ask in ONE short natural question whether the user understood, and
-        invite follow-ups if anything is unclear.
+        TASK: "{task}"
+        MATERIAL:
+        {material}
 
-        Rules: {language} only. No markdown. No greeting. ≤12 words. Raw text only.
+        Rules:
+        - 2 to 6 key points, each ONE short, self-contained statement in
+          {language}, taken from the MATERIAL (from the TASK if there is no
+          material). Never add facts.
+        - "critical": true for the points the person needs to do the task safely
+          and correctly (times, doses, places, what must not be done); false for
+          the rest.
+        - Output strict JSON only:
+          {{"key_points": [{{"point": "...", "critical": true | false}}]}}
 
-      classify_understanding: |
-        Classify the user's reaction to a comprehension check.
+      judge_teach_back: |
+        The robot explained something and asked the person to say it back in
+        their own words, or asked a direct question about one point. Judge the
+        person's reply against the KEY POINTS of the explanation.
 
-        Recent history:
-        {history}
-        User's latest reply: "{user_text}"
+        KEY POINTS (id. point):
+        {key_points}
+        THE ROBOT ASKED: "{asked}"
+        PERSON'S REPLY: "{user_text}"
 
-        Categories:
-        - "understood": affirmative or clearly positive answer with no misconceptions.
-        - "has_question": user asks a specific question about the topic, OR states
-          something INCORRECT or partially wrong about the topic (implicit misconception
-          that needs a direct correction). Use this whenever the user seems to believe
-          something false — even if they do not phrase it as a question.
-        - "not_understood": user EXPLICITLY says they did not understand, asks to
-          rephrase or repeat, or gives a genuinely off-topic / unrelated reply.
-          Do NOT use this when the user simply states a wrong fact.
+        First, what the reply is ("kind"):
+        - "restates": it says back some content of the explanation, or answers
+          the direct question (also "I don't know" to a direct question).
+        - "question": it asks something about the topic and says nothing back.
+        - "declines": it only says they understood, or refuses to say it back,
+          without any content.
+        - "not_understood": it says they did not understand, or asks to hear the
+          explanation again.
+        - "other": anything else (off-topic, unintelligible: a word salad or
+          words that make no sense is "other", never "not_understood").
+
+        Then, ONLY for "restates", the status of EVERY key point in THIS reply:
+        one entry per key point of the list, in its order, with that point's own
+        id. An entry is about its own point only: what the person said about
+        another point goes in that point's entry, never here.
+        - "correct": its essential content stated correctly, in any words
+          (paraphrase is fine; the exact wording is not needed). A detail that
+          changes nothing of what the person must know or do may be missing (a
+          qualifier such as "large" when the machine numbers are given, a case
+          the person is not in such as "and blankets" for someone washing a
+          duvet).
+        - "incomplete": an essential part of the point (a place, an amount, a
+          time, a step, a condition) is missing, and what is stated is right
+          (e.g. "I pay 5 euros" for "Pay at the central machine: choose the
+          machine number and insert 5 euros"); copy into "said" the part stated.
+          A missing part is NOT a mistake: never "wrong" for it.
+        - "wrong": stated with a different, incorrect content (a misconception);
+          copy into "said" the words that are wrong.
+        - "missing": not mentioned in this reply.
+        Be strict with facts: a different time, dose, place or order is "wrong".
+        The input is voice-transcribed: tolerate speech recognition errors.
 
         Output strict JSON only:
-        {{"comprehension": "understood" | "has_question" | "not_understood"}}
+        {{"kind": "restates" | "question" | "declines" | "not_understood" | "other",
+          "points": [{{"id": 1, "status": "correct" | "incomplete" | "wrong" | "missing", "said": ""}}]}}
+
+      repair_explanation: |
+        A person said back an explanation, but some KEY POINTS were missing or
+        wrong. Explain ONLY those points again, in different, simpler words.
+
+        TOPIC: "{task}"
+        POINTS TO EXPLAIN AGAIN:
+        {points}
+        WHAT THE PERSON ALREADY SAID RIGHT: {correct}
+
+        Rules:
+        - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
+        - Speak TO the person ("you said..."), never about them in the third
+          person.
+        - If the person said something wrong, correct it directly and kindly
+          (it is not X, it is Y).
+        - If they said only part of a point (marked "said only this part, which
+          is right"), confirm that part and add the rest: never say it was wrong.
+        - If they said something right, confirm it in a few words first.
+        - Use the resources in [CONTEXT] as ground truth. Never add facts.
+        - Max 3 short sentences.
+        - End BEFORE the check (the check is appended separately).
+
+      targeted_question: |
+        The person did not want to say back an explanation. Ask ONE direct
+        question whose answer is the KEY POINT below, so that they can show
+        they remember it.
+
+        KEY POINT: "{point}"
+
+        Rules:
+        - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
+        - ONE question about THIS key point only, at most 15 words, that does
+          NOT contain or suggest the answer.
+        - Natural and kind (for a key point "The cat is fed twice a day":
+          "Just to be sure: how many times a day is the cat fed?").
+
+      ask_missing_points: |
+        The robot explained something and the person said part of it back
+        correctly. Confirm briefly what they got right and ask ONLY about the
+        points still missing, so that they can show they remember them.
+
+        TOPIC: "{task}"
+        SAID RIGHT: {correct}
+        STILL MISSING:
+        {missing}
+
+        Rules:
+        - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
+        - A few words confirming what was right (also the part of a point said
+          only in part), then ONE short question about what is still missing
+          that does NOT contain or suggest its content.
+        - Max 2 short sentences (for a missing point "The cat is fed twice a
+          day": "Good, you remember the litter. And how often is the cat fed?").
 
       answer_explanation_question: |
         Answer a follow-up question or correct a misconception during an explanation.
@@ -561,15 +742,16 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - Use the resources in [CONTEXT] as ground truth.
         - If the user stated something INCORRECT, correct it directly and briefly
-          (e.g. "No, en caso de humo debes agacharte, no saltar por la ventana.").
+          (e.g. "No, the cat is fed twice a day, not three times.").
           Do NOT re-explain the whole topic — only address the specific error.
         - If the user asked a genuine question, answer it directly and factually.
         - If the answer is not in [CONTEXT] or the conversation history, say
           so honestly. Do NOT guess or invent.
         - Max 2 sentences. Direct and factual.
-        - Do NOT ask for confirmation; the system follows up.
+        - End BEFORE the comprehension check (the check is appended separately).
 
       rephrase_explanation: |
         Rephrase attempt {attempt_number} of an explanation the user did not
@@ -581,11 +763,12 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown of any kind (symbols become TTS noise).
+        - {address}
         - Try a CLEARLY different angle: an analogy, a simpler example, or a
           step-by-step breakdown in plain prose (e.g. "first …, then …,
           finally …" or the equivalent in {language}). No greeting.
         - If [CONTEXT] flags frustration, acknowledge it briefly.
-        - End with a short comprehension check.
+        - End BEFORE the comprehension check (the check is appended separately).
         - Max 3 short sentences. Return raw text only.
 
       understanding_confirmed: |
@@ -594,18 +777,143 @@ interaction_intelligence:
         The user confirmed understanding. Generate ONE short warm closing.
 
         Rules: {language} only. No markdown. No greeting. ≤12 words. Raw text only.
+        {address}
+        Only thank or praise the user: do NOT add any instruction, advice,
+        reminder or fact (the explanation is over; a new detail could be wrong).
 
-      explanation_max_attempts: |
-        TOPIC: "{task}"
+      qa_opening: |
+        TASK: "{task}"
 
-        After multiple attempts the user still hasn't confirmed understanding.
-        Close supportively, leaving the door open.
+        Open a conversation in which the person can ask you about the topic of
+        the TASK. Greet briefly, say in a few words what you can help with, and
+        invite the first question.
 
         Rules:
-        - {language} only. No markdown. No greeting. Return raw text only.
-        - 1–2 sentences. Warm and non-judgemental; do NOT blame the user.
-        - Offer to revisit later or to seek another channel (a human, a guide),
-          without promising specifics.
+        - {language} only. No markdown. Return raw text only.
+        - {address}
+        - At most 2 short sentences. State NO facts of the topic yet.
+
+      answer_from_material: |
+        A person asks a robot something during the task below. The robot may
+        answer ONLY with facts stated in the MATERIAL, never from general
+        knowledge.
+
+        TASK: "{task}"
+        MATERIAL:
+        {material}
+        RECENT CONVERSATION:
+        {history}
+        PERSON SAID: "{user_text}"
+
+        First decide "sense": "yes" if the words make sense as something a
+        person could say to the robot here (a question, a request, a reaction,
+        a goodbye, even with speech recognition errors), "no" if they do not
+        (a word salad such as "Table the of green across", a meaningless
+        fragment).
+
+        Then decide "act", what the PERSON does (the robot always ends its
+        answers with "anything else?"):
+        - "asks": asks for something, a question or a request, with or without
+          a question mark ("What time does it start?", "I wanted to know the
+          price", "No, but what time does it close?", "Can you repeat that?").
+          Also a turn that is neither "finished", "reacts" nor "unclear":
+          "kind" then says what it is.
+        - "finished": says they want nothing more ("No", "No, thanks",
+          "That will be all", "I have no more questions", "Goodbye").
+        - "reacts": reacts without asking anything and without saying they have
+          finished ("Thanks, that was helpful", "Okay", "What a shame", "30
+          euros, perfect": the last answer repeated back, also as a question to
+          check it, "Thirty euros, you said?").
+        - "unclear": the words make no sense or cannot be understood as anything
+          (unintelligible speech, a word salad such as "Table the of green
+          across", a fragment, filler).
+        Only "asks" can be answered: never answer what was not asked.
+
+        Then, only when "act" is "asks", decide "kind" in this order:
+        1. Is the question ABOUT the place or service of the TASK? If not, it is
+           "off_task", even when the MATERIAL says nothing about it.
+        2. Only then: is its answer in the MATERIAL?
+        - "answerable": a question about the task whose answer IS in the MATERIAL.
+        - "not_in_material": a question within the scope of the task whose answer
+          is NOT in the MATERIAL (do not guess; do not answer from general
+          knowledge).
+        - "off_task": a question or request about something other than the place
+          or service of the TASK (general knowledge, news, sports results, the
+          weather, jokes, help with the person's own matters: what to buy or
+          choose, personal problems), or something the robot must not do here
+          (opinions, recommendations of other places or services, bookings or
+          errands, advice beyond the material). A question about the
+          place or service of the TASK whose answer is missing is
+          "not_in_material", not "off_task". A question about the people,
+          things or events of the place or service is about the TASK even
+          when the MATERIAL does not mention them (for a cinema: "Is there a
+          lift?", "Do the staff speak French?" are "not_in_material", not
+          "off_task").
+        - "repeat": asks to repeat the last answer.
+        - "other": anything else (unintelligible, filler).
+        When "act" is "finished", "reacts" or "unclear", "kind" is "other".
+
+        Only for "answerable":
+        - "answer": one or two short spoken sentences in {language}, with ONLY facts
+          of the MATERIAL. No markdown.
+        - How "answer" speaks: {address}
+        - "evidence": the exact sentences of the MATERIAL that support the answer.
+        Otherwise "answer" is "" and "evidence" is [].
+        The input is voice-transcribed: tolerate speech recognition errors.
+
+        Output strict JSON only:
+        {{"sense": "yes" | "no", "act": "asks" | "finished" | "reacts" | "unclear",
+          "kind": "answerable" | "not_in_material" | "off_task" | "repeat" | "other",
+          "answer": "", "evidence": []}}
+
+      verify_finished: |
+        A person is talking to a robot that answers questions. Did the person,
+        in what they said last, say that they want nothing more (no more
+        questions, they are done, no thanks, goodbye)? A question or a request
+        of any kind, even off-topic, is NOT wanting nothing more.
+
+        THE ROBOT SAID BEFORE: "{robot}"
+        PERSON SAID: "{user_text}"
+
+        Output strict JSON only: {{"finished": true | false}}
+
+      verify_answer: |
+        Check whether EVERY claim of the ANSWER is supported by the MATERIAL. A
+        paraphrase is fine, and so is an immediate inference (17:00 is in the
+        afternoon; "on Sundays" covers "this Sunday") and an answer that gives
+        only the part of the MATERIAL that was asked for. A fact that is not in
+        the MATERIAL, or that contradicts it (a different time, price, place,
+        number), is unsupported.
+
+        MATERIAL:
+        {material}
+        ANSWER: "{answer}"
+
+        Output strict JSON only:
+        {{"supported": true | false, "unsupported": ["the unsupported claims"]}}
+
+      map_scale_answer: |
+        A questionnaire item was read to a person, with its answer options. Map
+        the person's reply to ONE option, only if the reply clearly chooses it.
+
+        ITEM: "{item}"
+        OPTIONS (number. label):
+        {options}
+        PERSON'S REPLY: "{user_text}"
+
+        "kind":
+        - "option": the reply clearly chooses one option (its words, a synonym, or
+          a clear paraphrase of it); give its number in "option".
+        - "ambiguous": the reply is between two options, or does not match any
+          (never choose for the person).
+        - "meaning": the person asks what the item or a word means.
+        - "refuses": the person does not want to answer this item.
+        - "repeat": the person asks to hear the item or the options again.
+        - "other": anything else (unintelligible, filler).
+        The input is voice-transcribed: tolerate speech recognition errors.
+
+        Output strict JSON only: {{"kind": "option" | "ambiguous" | "meaning" |
+        "refuses" | "repeat" | "other", "option": 0}}
 
       procedure_opening: |
         Generate the OPENING line of a guided procedure: the robot will walk
@@ -613,6 +921,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. Return only the raw sentence.
+        - {address}
         - Brief greeting + say what you will do together and how many steps
           there are. Mention the user can ask questions or ask to repeat.
         - ONE or two short sentences. Calm, encouraging tone.
@@ -628,18 +937,19 @@ interaction_intelligence:
         - first: this is the first step, right after the opening.
         - next: the previous step was just finished; start with a very short
           transition (no "Noted"/"Done" style acknowledgments on their own).
-        - repeat: the user asked to hear the step again; say it again, maybe
-          a little slower and clearer.
         - back: the user asked to go back to this earlier step.
 
         Rules:
         - {language} only. No markdown, lists or symbols (it is spoken by TTS).
           No greeting.
+        - {address}
         - Mention the step number naturally (e.g. "Step 2 of 5" or the
           {language} equivalent).
         - Keep EVERY instruction of the step and its meaning; you may rephrase
           for speech but never drop, add or change actions, quantities or
           safety warnings.
+        - Say ONLY this step: never mention, anticipate or join other steps
+          of the procedure.
         - End by asking the user to tell you when it is done.
         - Max 3 short sentences. Return raw text only.
 
@@ -667,6 +977,9 @@ interaction_intelligence:
         - The input is voice-transcribed: tolerate ASR errors.
         - A bare affirmative after being asked to report completion means
           "done".
+        - A reply that reports the step finished is "done" even if it also asks
+          something ("It's done. What's the next step?", "Done. And can you
+          give me some tips?"): the next step is given anyway.
         - Output strict JSON only:
           {{"intent": "done"|"question"|"problem"|"repeat"|"back"|"skip"|"unclear"}}
 
@@ -683,6 +996,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - Use the CURRENT STEP and the resources in [CONTEXT] as ground truth.
           If the answer is not there, say so honestly. Do NOT invent.
         - Max 2 sentences, then remind the user to tell you when the step is
@@ -702,6 +1016,7 @@ interaction_intelligence:
         Rules:
         - {language} only. No markdown of any kind (symbols become TTS noise).
           No greeting.
+        - {address}
         - If the user reported a specific problem, address it first.
         - Explain the SAME step from a clearly different angle: smaller
           sub-actions in plain prose, a concrete example or what it should look
@@ -722,6 +1037,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - ONE short sentence: ask them to tell you when the step is done, or
           to say "repeat" if they want to hear it again. Vary the wording.
 
@@ -732,6 +1048,7 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - ONE or two short sentences. Warm tone.
         - If every step was completed, congratulate briefly.
         - Otherwise mention, without blame, that some steps were not completed
@@ -748,7 +1065,9 @@ interaction_intelligence:
 
         Say, in {language} and in at most 35 words:
         - what situation you are going to practise together and who you will
-          play;
+          play: you play the ROLE of the scene and the user plays themself
+          (never the other way round). Name the role only (e.g. "the
+          manager"), not how the character behaves or what it will ask;
         - that the user can ask you for a hint at any moment, and say when
           they want to finish.
 
@@ -757,6 +1076,7 @@ interaction_intelligence:
         gender-neutral wording, rephrasing instead of picking a form (Spanish:
         "unas prácticas", not "becario/becaria"). No markdown. Return only the
         spoken text.
+        {address}
 
         TASK: "{task}"
         SCENE:
@@ -770,15 +1090,20 @@ interaction_intelligence:
         How the character speaks:
         - In {language}, only the character's own words: no narration, stage
           directions, quotes, lists or markdown.
+        - {address}
         - You do not know the user's gender: address them with gender-neutral
           wording. In gendered languages rephrase instead of picking a form
           (Spanish: "te doy la bienvenida", not "bienvenido/bienvenida";
           "la persona en prácticas", not "becario/becaria").
         - At most 30 words and at most ONE question per turn. Spread follow-up
           questions over several turns, one at a time.
+        - The user is the one practising: leave them room to lead. Answer and
+          react more than you ask; ask only what the character really needs to
+          know, so that the user can do what they came to do (ask, propose,
+          negotiate) instead of only answering your questions.
         - React to what the user just said first. If the user asked the
           character something, answer it the way this character really would
-          (an interviewer answers questions about the job), then you may ask
+          (a landlord answers questions about the flat), then you may ask
           your next question.
         - If an answer is vague, ask for one specific detail, as the character
           would in real life.
@@ -793,20 +1118,21 @@ interaction_intelligence:
         - Move the scene toward its natural end; once it has clearly reached
           it, close it as the character would.
 
-        Examples (interviewer; adapt to the actual scene and {language}):
+        Examples (a landlord showing a flat; a scene that is never evaluated:
+        adapt to the actual scene and {language}):
         - User gave a vague answer.
-          GOOD: "I see. Which project are you proudest of?"
-          BAD:  "Good base, but I need more. Also, what would you do if the
-                 code failed?"  (two questions, too long)
-        - User asked "How do you handle work pressure here?".
-          GOOD: "We plan in two-week sprints and help each other near
-                 deadlines. How do you usually organise yourself?"
-          BAD:  "Before that, tell me about your deadlines."  (ignores the
-                 user's question)
-        - User mentioned the salary early.
-          GOOD: "The internship is paid; we will go over details later. What
-                 interests you about the role?"
-          BAD:  "Shouldn't you talk about your experience before the pay?"
+          GOOD: "I see. How long would you like to stay?"
+          BAD:  "Fine, but I need more. Also, do you have pets and a
+                 guarantor?"  (two questions, too long)
+        - User asked "Is the heating included in the rent?".
+          GOOD: "Yes, heating and water are included. When would you like to
+                 move in?"
+          BAD:  "Before that, tell me about your job."  (ignores the user's
+                 question)
+        - User asked about the price first.
+          GOOD: "It is 700 a month; we can go over the details later. What
+                 brings you to the area?"
+          BAD:  "Shouldn't you look at the flat before asking the price?"
                  (advice: breaks character)
 
         SCENE
@@ -830,6 +1156,9 @@ interaction_intelligence:
           TO THE CHARACTER inside the scene: good or bad answers, questions
           for the character, agreeing ("ok", "you're right"), apologising,
           hesitating, small talk, and garbled or partial transcriptions.
+        - "repeat": the user did not hear or understand the character's last
+          line, or asks to hear it again ("sorry, could you repeat that?",
+          "what did you say?").
         - "coach": ONLY when the user explicitly asks for help with the
           practice itself: what to say, how to answer, a hint or an example
           answer ("what should I answer?", "give me a hint", "help me with
@@ -844,7 +1173,7 @@ interaction_intelligence:
         input is voice-transcribed: expect ASR errors and fragments.
 
         Output strict JSON only:
-        {{"intent": "continue"|"coach"|"end"|"scene_end"}}
+        {{"intent": "continue"|"repeat"|"coach"|"end"|"scene_end"}}
 
         SCENE
         {scene}
@@ -865,6 +1194,7 @@ interaction_intelligence:
         - a short invitation to try again with the character.
 
         No greeting, no markdown. Return only the spoken text.
+        {address}
 
         SCENE
         {scene}
@@ -928,6 +1258,7 @@ interaction_intelligence:
 
         Talk only about the criteria in RESULTS, never about other qualities.
         No greeting, no markdown, lists or symbols.
+        {address}
 
         Output strict JSON only:
         {{"closing": "...", "highlight": "...", "improve": "..."}}
@@ -941,57 +1272,83 @@ interaction_intelligence:
         HOW IT ENDED: {ended_by}
 
       detect_cancel_intent: |
-        Decide whether the user wants to STOP or CANCEL the current task
-        entirely.
+        Decide whether the user wants to STOP or CANCEL this conversation, has
+        FINISHED the task, or neither.
 
+        TASK OF THE CONVERSATION: "{task}"
         USER SAID: "{user_text}"
         DIALOG LANGUAGE: {language}
         STRICT MODE: {strict}
 
-        A cancel signal is an explicit, context-independent command to abandon
-        the current interaction. Universal cancel markers (always cancel):
-        "stop", "exit", "cancel", "quit", "abort". Identify equivalent
-        expressions in {language} that unambiguously signal intent to abandon
-        the task.
+        First decide "about", what the words are about:
+        - "conversation": they are about this conversation itself: stopping it,
+          leaving it, going on with it ("stop", "enough of this", "forget it",
+          "I'd rather not carry on", "let's end here").
+        - "task": they are about something of the task: an answer, a value, a
+          step done, a thing the task deals with, even if a word such as
+          "cancel" or "stop" appears ("I need to cancel my card" when the task
+          is about cards, "I've pressed the cancel button", "the bus stop is
+          far").
+        A word such as "stop" or "cancel" counts only when it is about this
+        conversation.
 
-        NOT cancel — normal conversational turns:
-        - Task-related answers that happen to contain words like "stop" or
-          "cancel" in a non-cancellation context.
-        - Polite farewells used alone — they are polite closures, not stop
-          commands.
-        - Negation used as a yes/no answer ("no" answering a yes/no question).
-        - Corrections ("no, I meant X instead of Y").
+        Then "request", one of three:
+        - "cancel": the user wants to stop or abandon this conversation (only
+          when "about" is "conversation"): an explicit command ("stop",
+          "cancel", "quit", or its {language} equivalent, alone or with a few
+          words around it) or a hesitant wish to drop it ("maybe I should just
+          forget about it", "maybe we'd better leave it", "I don't feel like
+          going on"): the robot will ask for confirmation, so when in doubt
+          between "cancel" and "none" for a wish to stop the conversation,
+          choose "cancel".
+        - "finished": the user says they have finished or have nothing more to
+          ask or add ("no more questions", "that will be all", "I've
+          finished"). This is the normal end of the task, not abandoning it:
+          never "cancel".
+        - "none": anything else, including:
+          - Anything about the task (an answer, a value, a step done).
+          - Polite farewells used alone.
+          - Negation used as a yes/no answer ("no" answering a yes/no
+            question), and corrections ("no, I meant X instead of Y").
+          - Asking to skip one question, item or step ("I'd rather skip this
+            step"): it leaves out one element, not the whole conversation.
 
-        Strict mode "true":
-        Return cancel=true ONLY for explicit unambiguous stop commands — the
-        universal markers or clear {language} equivalents. Anything ambiguous
-        or contextual → false.
+        Strict mode "true" (the user is choosing among offered options):
+        "cancel" ONLY for explicit unambiguous requests to stop the whole
+        conversation. A reply that names, picks or describes an option is an
+        answer, even if a stop-like word is part of it.
 
-        Strict mode "false":
-        Stronger contextual cancel may be inferred, but be conservative.
-        Polite farewells alone → false.
+        Output strict JSON only:
+        {{"about": "conversation" | "task", "request": "cancel" | "finished" | "none"}}
 
-        Output strict JSON only: {{"cancel": true | false}}
-
-      detect_cancel_confirmation: |
-        The user was asked whether they want to cancel. Classify the reply.
+      classify_cancel_reply: |
+        The user was asked whether they want to stop the conversation.
+        Classify their reply.
 
         USER REPLY: "{user_text}"
 
-        confirmed=true only for a clear affirmative to cancelling.
-        Hesitation, negation, or off-topic → false (safer default).
+        - "yes": a clear affirmative to stopping.
+        - "no": a clear negative: they want to continue ("no", "no, go on, please",
+          "no, let's continue"), without giving content of the task.
+        - "finished": the reply says they have finished or have nothing more to
+          ask or add ("no, I have no more questions", "that will be all"): they
+          do not want to abandon the task, it is already done.
+        - "other": the reply does not answer the question but goes on with the
+          task (e.g. it gives the information the robot had asked for, or asks
+          something about the task), or it is ambiguous.
 
-        Output strict JSON only: {{"confirmed": true | false}}
+        Output strict JSON only: {{"answer": "yes" | "no" | "finished" | "other"}}
 
       ask_cancel_confirmation: |
         TASK: "{task}"
 
-        The user may want to stop. Ask for confirmation in ONE short sentence.
+        The user may want to stop. Ask whether they want to stop, in ONE short
+        yes/no question.
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - ≤15 words. Calm and neutral; do not pressure.
-        - Make clear that a positive answer confirms cancellation.
 
       cancel_confirmed_response: |
         TASK: "{task}"
@@ -1000,25 +1357,5 @@ interaction_intelligence:
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
         - ONE sentence, ≤12 words. Warm, no drama. Leave the door open.
-
-      cancel_denied_response: |
-        TASK: "{task}"
-
-        The user was asked if they wanted to cancel and said NO — they want to
-        continue.
-
-        Already collected (do NOT ask again): {filled_slots}
-        Next thing to ask: {next_slot}
-
-        Rules:
-        - {language} only. No markdown. No greeting. Return raw text only.
-        - Briefly acknowledge they continue — one short phrase.
-        - If next_slot is not "NONE": ask that slot naturally (never echo the
-          slot name).
-        - If next_slot is "NONE":
-          - slot-filling context (filled_slots not "None"): ask for confirmation
-            of the collected data in ONE compact sentence.
-          - explanation context (filled_slots = "None"): invite the user to
-            ask anything still pending.
-        - ONE sentence, ≤15 words. Natural, as if no interruption happened.

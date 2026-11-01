@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>interaction_system</name>
+  <version>0.1.0</version>
+  <description>The interaction system: the orchestrator that handles each dialogue request (a behavior_architecture plugin), the catalog of dialogue behaviors, the configuration and the launch files.</description>
+  <maintainer email="rodrigo.perez@urjc.es">Rodrigo Pérez-Rodríguez</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>rclcpp_action</depend>
+  <depend>lifecycle_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>behaviortree_cpp</depend>
+  <depend>behavior_architecture</depend>
+  <depend>nlohmann-json-dev</depend>
+  <depend>ros2_dialog_interfaces</depend>
+  <depend>interaction_system_interfaces</depend>
+
+  <exec_depend>interaction_system_behaviors</exec_depend>
+  <exec_depend>interaction_intelligence</exec_depend>
+  <exec_depend>ros2_llm_manager</exec_depend>
+  <exec_depend>simple_hri</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

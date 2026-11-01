@@ -1,0 +1,43 @@
+# The behavior_architecture runtime of the interaction system (positional argument of
+# mission_executor): the orchestrator, and one runner per dialogue behavior with its tree.
+node_name: "interaction_system_bt_node"
+
+orchestrator_type: "interaction_orchestrator"
+
+package_name: "interaction_system"
+
+orchestrator_libraries:
+  - "libinteraction_system.so"
+
+plugin_libraries:
+  - "libinteraction_system_behaviors_bt_plugins.so"
+
+behaviors:
+  - name: "interaction_slot_filling"
+    behavior_file: "behavior_tree_xml/slot_filling.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"
+  - name: "interaction_explanation"
+    behavior_file: "behavior_tree_xml/explanation.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"
+  - name: "interaction_quiz"
+    behavior_file: "behavior_tree_xml/quiz.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"
+  - name: "interaction_procedure"
+    behavior_file: "behavior_tree_xml/procedure.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"
+  - name: "interaction_roleplay"
+    behavior_file: "behavior_tree_xml/roleplay.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"
+  - name: "interaction_grounded_qa"
+    behavior_file: "behavior_tree_xml/grounded_qa.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"
+  - name: "interaction_questionnaire"
+    behavior_file: "behavior_tree_xml/questionnaire.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"

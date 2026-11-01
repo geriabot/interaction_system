@@ -1,0 +1,84 @@
+/interaction_orchestrator:
+  ros__parameters:
+    control_cycle_rate_ms: 50
+
+    # Limits of every dialogue, written to the blackboard of the behavior
+    # (max_turns, max_silence, max_stalled, max_attempts and max_off_task are the defaults of the
+    # requests that leave them unset; 0 = unlimited, except max_attempts)
+    wait_timeout: 15.0          # silence of the user before each prompt that the robot is waiting (s)
+    max_silence: 90.0           # continuous silence of the user that ends the dialogue (s)
+    max_stalled: 4              # user turns in a row without progress that end the dialogue
+    max_turns: 0                # user turns of a dialogue
+    max_attempts: 3             # per element: explanations, helps with a step, askings of a slot,
+                                # repetitions of a quiz question
+    max_off_task: 6             # requests in a row outside the task (grounded QA) that end the
+                                # dialogue (outcome breakdown, reason "Off-task: ...")
+    tts_timeout: 60.0           # longest utterance (s)
+    intelligence_timeout: 30.0  # longest wait for a skill of the intelligence (s): the hard
+                                # limit; past it, the error closing (outcome error)
+    reply_budget: 20.0          # time the intelligence may spend asking the model for the reply
+                                # to a user turn, from the end of the turn (s); once spent, the
+                                # pending questions fall back, so that the robot answers within
+                                # it when the model hangs; 0 = no budget
+    opening_budget: 30.0        # the same for the opening (it may design the frame or list the
+                                # key points, and generate the longest text: an explanation)
+    user_speaking_topic: "/user_speaking"  # barge-in (Bool); "" disables it
+    filler_after_s: 2.0         # a reply not ready after this many seconds: the robot says a
+                                # fixed filler ("Hmm..."); the default of the requests that leave
+                                # it unset; 0 = no fillers
+    filler_repeat_s: 4.0        # still not ready this many seconds later: one more filler (the
+                                # last); 0 = only one
+
+    # The catalog of dialogue behaviors. A request names one with dialog_mode, or the
+    # intelligence chooses among those whose needs the request provides
+    dialogue_behaviors:
+      behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire"]
+
+      SlotFilling:
+        behavior_id: 0
+        mode: "slot_filling"
+        needs: [""]
+        explanation: "The robot COLLECTS specific structured data from the user (form filling, order taking, registration, booking, reservation, preference selection), then reads it back for confirmation. Also when the task combines informing the user with collecting a preference or decision: the collection is primary."
+        node_name: "interaction_slot_filling"  # As in interaction_behaviors_config.yaml
+
+      Explanation:
+        behavior_id: 1
+        mode: "explanation"
+        needs: [""]
+        explanation: "The robot EXPLAINS something to the user and checks that they understood it, answering their questions and explaining again if needed. Only when there is nothing to collect from the user."
+        node_name: "interaction_explanation"
+
+      Quiz:
+        behavior_id: 2
+        mode: "quiz"
+        needs: ["question_bank"]
+        explanation: "The robot ASKS the questions of a question bank, grades each answer of the user and gives the score: tests, quizzes, cognitive exercises, trivia."
+        node_name: "interaction_quiz"
+
+      Procedure:
+        behavior_id: 3
+        mode: "procedure"
+        needs: ["steps"]
+        explanation: "The robot GUIDES the user step by step through a procedure while the user does it, helping when the user is stuck and repeating, going back or skipping steps on request: exercises, assembly, recipes, checklists."
+        node_name: "interaction_procedure"
+
+      Roleplay:
+        behavior_id: 4
+        mode: "roleplay"
+        needs: ["scene"]
+        explanation: "The robot PLAYS a character in a scene so that the user can practise a situation (a job interview, a conversation in another language, a difficult talk), and then scores the user against a rubric."
+        node_name: "interaction_roleplay"
+
+      GroundedQA:
+        behavior_id: 5
+        mode: "grounded_qa"
+        needs: ["material"]
+        explanation: "The robot ANSWERS the user's questions about a topic, only from the information it is given (a reception desk, a museum, a station, opening hours, prices): the user asks, the robot answers, says when it does not have the information, and declines what is outside the task. Only when the user is the one who asks; nothing to collect, explain or test."
+        node_name: "interaction_grounded_qa"
+
+      Questionnaire:
+        behavior_id: 6
+        mode: "questionnaire"
+        needs: ["instrument"]
+        explanation: "The robot ADMINISTERS a standardized questionnaire or survey (a satisfaction survey, a rating scale, a validated instrument): it reads each item and its answer options as written, records the option the user chooses and computes the score."
+        node_name: "interaction_questionnaire"

@@ -1,3 +1,8 @@
+# Copyright 2026 Álvaro Quintana Camacho
+# Copyright 2026 Rodrigo Pérez-Rodríguez
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 DialogFrame — mutable, thread-safe schema for slot-filling dialogs.
 
@@ -76,6 +81,11 @@ def _fmt_bounds(bounds: dict[str, float]) -> str:
 _MAX_HISTORY = 200
 
 
+# What a gathering turn does (extract_slots): gives values, asks something, says it cannot or
+# will not give the value asked (skip), asks to repeat, or none of these (other)
+TURN_ACTS = ("values", "question", "skip", "repeat", "other")
+
+
 class DialogFrame:
 
     def __init__(
@@ -96,6 +106,8 @@ class DialogFrame:
         self._bounds = bounds or {}
         self._rejected: dict[str, Any] = {}
         self._attempts: dict[str, int] = {k: 0 for k in schema}
+        # Slots the user could not or would not give: left empty, not asked again
+        self._unanswered: set[str] = set()
         self._history: list[dict] = []
         self._max_history = history_max_turns
 
@@ -440,14 +452,24 @@ class DialogFrame:
                     new = [i for i in normalized if self._key(i) not in seen]
                     if new:
                         self._data[k] = existing + new
+                        self._unanswered.discard(k)
                         updated.append(k)
                     continue
 
                 if self._data[k] != normalized:
                     old = self._data[k]
                     self._data[k] = normalized
+                    self._unanswered.discard(k)
                     updated.append(k)
                     self._reset_conditional_children(k, old, normalized)
+
+            # A conditional slot given in the same batch as its parent ("a latte with oat milk")
+            # is kept only if its condition holds once the whole batch is applied ("an espresso
+            # with oat milk" does not keep the milk)
+            for k in list(updated):
+                if not self._in_scope(k):
+                    self._data[k] = [] if self._types[k] == "list_str" else None
+                    updated.remove(k)
 
         return updated
 
@@ -462,6 +484,7 @@ class DialogFrame:
                 if old_matched and not new_matches:
                     self._data[child] = None
                     self._attempts[child] = 0
+                    self._unanswered.discard(child)
 
     # ==== ATTEMPT TRACKING ====
 
@@ -478,6 +501,25 @@ class DialogFrame:
         with self._lock:
             self._attempts[slot] = 0
 
+    # ==== UNANSWERED SLOTS ====
+
+    def mark_unanswered(self, slot: str) -> None:
+        """The user could not or would not give this slot (or it could not be obtained after
+        the attempts allowed): it stays empty and is not asked again. Slots conditioned on it
+        are out of scope, since their condition cannot hold. A value given later clears it."""
+        with self._lock:
+            if slot in self._data and self._is_empty(slot):
+                self._unanswered.add(slot)
+
+    def is_unanswered(self, slot: str) -> bool:
+        with self._lock:
+            return slot in self._unanswered
+
+    def unanswered_slots(self) -> list[str]:
+        """The in-scope slots left unanswered, in schema order."""
+        with self._lock:
+            return [k for k in self._keys if k in self._unanswered and self._in_scope(k)]
+
     # ==== QUERIES ====
 
     def _is_empty(self, slot: str) -> bool:
@@ -487,8 +529,12 @@ class DialogFrame:
         return v in _EMPTY_VALUES
 
     def missing_slots(self) -> list[str]:
+        """The in-scope slots still to ask: empty and not left unanswered."""
         with self._lock:
-            return [k for k in self._keys if self._in_scope(k) and self._is_empty(k)]
+            return [
+                k for k in self._keys
+                if self._in_scope(k) and self._is_empty(k) and k not in self._unanswered
+            ]
 
     def filled_slots(self) -> dict:
         with self._lock:
@@ -507,7 +553,9 @@ class DialogFrame:
             return [
                 k
                 for k in self._keys
-                if self._in_scope(k) and (self._is_empty(k) or self._types[k] == "list_str")
+                if self._in_scope(k)
+                and k not in self._unanswered
+                and (self._is_empty(k) or self._types[k] == "list_str")
             ]
 
     def modifiable_slots(self) -> list[str]:
@@ -519,6 +567,14 @@ class DialogFrame:
     def current_value(self, slot: str):
         with self._lock:
             return self._data.get(slot)
+
+    def describe_condition(self, slot: str) -> str:
+        """The condition of a conditional slot, e.g. "drink is 'latte'" or "age >= 65". Empty if
+        the slot has none."""
+        with self._lock:
+            return " and ".join(
+                f"{parent} {_fmt_bounds(cond)}" if isinstance(cond, dict) else f"{parent} is {cond!r}"
+                for parent, cond in self._conditions.get(slot, []))
 
     def conditions_for(self, slot: str) -> list[tuple[str, str | dict[str, float]]]:
         with self._lock:
@@ -560,6 +616,10 @@ class DialogFrame:
         """Bounds as a compact expression, e.g. '>= 18 and < 120'. Empty if none."""
         return _fmt_bounds(self._bounds.get(slot, {}))
 
+    def has_rejected(self) -> bool:
+        """Whether values were rejected (out of range) since the last pop_rejected."""
+        return bool(self._rejected)
+
     def pop_rejected(self) -> dict[str, Any]:
         """Values refused by try_update since the last call (out of bounds)."""
         with self._lock:
@@ -572,6 +632,7 @@ class DialogFrame:
             if slot in self._data:
                 self._data[slot] = None
                 self._attempts[slot] = 0
+                self._unanswered.discard(slot)
 
     def amend_canonical_values(
         self,
@@ -617,7 +678,12 @@ class DialogFrame:
                 t = self._types[k]
                 conds = self._conditions.get(k, [])
                 cond_str = f" [active when {self._describe_condition(conds[0])}]" if conds else ""
-                val_str = f"= {v!r}" if not self._is_empty(k) else "MISSING"
+                if not self._is_empty(k):
+                    val_str = f"= {v!r}"
+                elif k in self._unanswered:
+                    val_str = "UNANSWERED (the user could not or would not give it)"
+                else:
+                    val_str = "MISSING"
                 canon = self._canonical_values.get(k, [])
                 canon_str = f" [one of: {' | '.join(repr(c) for c in canon)}]" if canon else ""
                 rng = self.describe_bounds(k)
@@ -690,6 +756,7 @@ class DialogFrame:
                 "canonical_values": {k: list(v) for k, v in self._canonical_values.items()},
                 "bounds": {k: dict(v) for k, v in self._bounds.items()},
                 "attempts": dict(self._attempts),
+                "unanswered": [k for k in self._keys if k in self._unanswered],
                 "history": list(self._history),
                 "max_history": self._max_history,
             }
@@ -713,6 +780,7 @@ class DialogFrame:
         data = state.get("data", {})
         frame._data = {k: data.get(k) for k in keys}
         frame._attempts = {k: (state.get("attempts") or {}).get(k, 0) for k in keys}
+        frame._unanswered = {k for k in state.get("unanswered", []) if k in frame._data}
         frame._history = list(state.get("history", []))
         return frame
 
@@ -750,27 +818,35 @@ class DialogFrame:
                         },
                         "required": ["slot", "value", "source_span"],
                     },
-                }
+                },
+                "act": {"type": "string", "enum": list(TURN_ACTS)},
             },
-            "required": ["extractions"],
+            "required": ["extractions", "act"],
         }
 
     def schema_for_intent(self) -> dict:
-        """Schema for the confirming-phase intent classifier."""
-        operation = {
-            "anyOf": [
-                {"type": "string"},
-                {
-                    "type": "object",
-                    "properties": {
-                        "_add": {"type": "boolean"},
-                        "_remove": {"type": "boolean"},
-                        "_replace": {"type": "boolean"},
-                        "items": {"type": "array", "items": {"type": "string"}},
-                    },
-                },
-            ]
+        """Schema for the confirming-phase intent classifier. Each correction is typed by its
+        slot (a number for an int or float slot, true/false for a bool one, a string or a list
+        operation for the others), so that a correction cannot hold text that is not a value
+        (decided by the author, 2026-11-01: Qwen wrote its reasoning, "}}</think>", as the
+        number of tickets)."""
+        list_operation = {
+            "type": "object",
+            "properties": {
+                "_add": {"type": "boolean"},
+                "_remove": {"type": "boolean"},
+                "_replace": {"type": "boolean"},
+                "items": {"type": "array", "items": {"type": "string"}},
+            },
         }
+        by_type = {
+            "int": {"type": "integer"},
+            "float": {"type": "number"},
+            "bool": {"type": "boolean"},
+            "str": {"type": "string"},
+            "list_str": {"anyOf": [{"type": "string"}, list_operation]},
+        }
+        operation = {k: by_type.get(self.slot_type(k), {"type": "string"}) for k in self._keys}
         return {
             "type": "object",
             "properties": {
@@ -780,7 +856,7 @@ class DialogFrame:
                 },
                 "corrections": {
                     "type": "object",
-                    "properties": {k: operation for k in self._keys},
+                    "properties": operation,
                 },
             },
             "required": ["intent", "corrections"],
@@ -796,10 +872,11 @@ class DialogFrame:
     def _clean_items(items: list) -> list[str]:
         return [str(i).strip() for i in items if i is not None and str(i).strip()]
 
-    # Language-independent bool synonyms. Language-specific variants are handled
-    # by the LLM during extraction; these are only a last-resort parsing fallback.
-    _BOOL_TRUE = frozenset({"true", "yes", "1", "ok", "okay", "correct"})
-    _BOOL_FALSE = frozenset({"false", "no", "0", "nope"})
+    # A bool value given as text: these language-independent forms, and the yes/no words of
+    # every language file (config/languages/*.yaml, yes_words/no_words; languages.bool_words).
+    # The LLM normally returns a JSON bool; this is only a last-resort parsing fallback.
+    _BOOL_TRUE = frozenset({"true", "1"})
+    _BOOL_FALSE = frozenset({"false", "0"})
 
     @staticmethod
     def _normalize(v: Any, slot_type: str) -> Any | None:
@@ -821,10 +898,13 @@ class DialogFrame:
             if isinstance(v, (int, float)):
                 return bool(v)
             if isinstance(v, str):
+                from .languages import bool_words
+
                 low = v.lower().strip()
-                if low in DialogFrame._BOOL_TRUE:
+                yes, no = bool_words()
+                if low in DialogFrame._BOOL_TRUE or low in yes:
                     return True
-                if low in DialogFrame._BOOL_FALSE:
+                if low in DialogFrame._BOOL_FALSE or low in no:
                     return False
             return None
         if slot_type in ("int", "float"):

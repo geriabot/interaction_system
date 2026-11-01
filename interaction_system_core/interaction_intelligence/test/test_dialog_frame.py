@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Unit tests for DialogFrame: schema, type normalisation, conditional slots,
 list operations, history, and JSON construction from slot definitions."""
 
@@ -352,6 +356,10 @@ def test_schema_for_intent_structure():
     intent_enum = schema["properties"]["intent"]["enum"]
     assert "confirms" in intent_enum
     assert "corrects" in intent_enum
+    # Each correction typed by its slot: an int slot only admits a number (2026-11-01)
+    corrections = schema["properties"]["corrections"]["properties"]
+    assert corrections["edad"] == {"type": "integer"}
+    assert corrections["nombre"] == {"type": "string"}
 
 
 # ==== THREAD SAFETY ====
@@ -873,3 +881,70 @@ def test_equality_condition_outside_parent_bounds_raises():
 def test_equality_condition_not_numeric_on_numeric_parent_raises():
     with pytest.raises(ValueError, match="is not a number"):
         numeric_condition_frame(condition_value="mayor")
+
+
+# ==== UNANSWERED SLOTS ====
+
+
+def test_unanswered_slot_is_not_asked_and_completes_the_frame():
+    f = simple_frame()
+    f.try_update({"nombre": "Ana"})
+    assert f.next_slot() == "edad"
+    f.mark_unanswered("edad")
+    assert f.is_unanswered("edad")
+    assert f.next_slot() is None
+    assert f.is_complete()
+    assert f.unanswered_slots() == ["edad"]
+    assert f.to_dict() == {"nombre": "Ana"}
+    assert "UNANSWERED" in f.describe_slots()
+
+
+def test_unanswered_slot_cleared_by_a_value_given_later():
+    f = simple_frame()
+    f.mark_unanswered("edad")
+    f.try_update({"edad": "40"})
+    assert not f.is_unanswered("edad")
+    assert f.unanswered_slots() == []
+
+
+def test_children_of_an_unanswered_slot_are_out_of_scope():
+    f = conditional_frame()
+    f.mark_unanswered("tipo")
+    assert f.is_complete()
+    assert f.missing_slots() == []
+
+
+def test_a_filled_slot_cannot_be_marked_unanswered():
+    f = simple_frame()
+    f.try_update({"nombre": "Ana"})
+    f.mark_unanswered("nombre")
+    assert not f.is_unanswered("nombre")
+
+
+def test_unanswered_slots_survive_the_state_round_trip():
+    f = simple_frame()
+    f.mark_unanswered("edad")
+    g = DialogFrame.from_state(f.to_state())
+    assert g.unanswered_slots() == ["edad"]
+    assert g.next_slot() == "nombre"
+
+
+def test_a_conditional_slot_given_with_its_parent_is_kept():
+    # "a latte with oat milk": the child's condition holds once the whole turn is applied
+    f = conditional_frame()
+    assert sorted(f.try_update({"detalle_a": "x", "tipo": "A"})) == ["detalle_a", "tipo"]
+    assert f.filled_slots() == {"tipo": "A", "detalle_a": "x"}
+
+
+def test_a_conditional_slot_whose_condition_fails_is_not_kept():
+    # "an espresso with oat milk": the milk does not apply to an espresso
+    f = conditional_frame()
+    assert f.try_update({"tipo": "B", "detalle_a": "x"}) == ["tipo"]
+    assert f.filled_slots() == {"tipo": "B"}
+    assert f.missing_slots() == ["detalle_b"]
+
+
+def test_describe_condition():
+    f = conditional_frame()
+    assert f.describe_condition("detalle_a") == "tipo is 'A'"
+    assert f.describe_condition("tipo") == ""

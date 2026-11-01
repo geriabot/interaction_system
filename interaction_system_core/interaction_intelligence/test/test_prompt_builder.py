@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """PromptBuilder cache prefix: stable instructions first, per-turn data last."""
 
 import os
@@ -56,3 +60,24 @@ def test_context_still_leads_templates_without_prefix():
     pb = PromptBuilder({"t": 'Task: "{task}"'})
     p = pb._inject(pb._t("t", task="x"), DialogContext(domain="clinic"))
     assert p.startswith("[CONTEXT]") and p.cache_prefix_len == 0
+
+
+def test_extraction_lists_the_conditional_slots_that_do_not_apply_yet():
+    # The user may give a conditional slot with its parent in one turn ("a latte with oat milk")
+    f = DialogFrame.from_slots_json(
+        '{"slots": [{"name": "drink", "type": "str", "canonical_values": ["latte", "tea"]},'
+        ' {"name": "milk", "type": "str", "canonical_values": ["oat", "soy"],'
+        '  "condition_slot": "drink", "condition_value": "latte"}]}')
+    prompt, _ = production_builder().extract_slots("A latte with oat milk", f)
+    line = next(ln for ln in prompt.splitlines() if ln.strip().startswith("- milk"))
+    assert "ONLY WHEN drink is 'latte'" in line and "'oat'" in line
+
+
+def test_the_opening_asks_the_slot_the_frame_asks_next():
+    # The code chooses the slot of the first question, as in every later turn: the reply is
+    # read against that slot (a skip leaves it, not another one, unanswered)
+    f = DialogFrame.from_slots_json(
+        '{"slots": [{"name": "problem", "type": "str"}, {"name": "contact_name", "type": "str"}]}')
+    pb = production_builder()
+    for prompt in (pb.opening("Book a plumber", f), pb.opening_direct("Book a plumber", f)):
+        assert "SLOT TO ASK NOW: problem" in prompt
