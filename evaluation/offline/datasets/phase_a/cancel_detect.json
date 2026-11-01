@@ -1,0 +1,788 @@
+{
+  "_instructions": [
+    "Phase A benchmark: the spoken cancellation (detect_cancel_intent, as cancel_check asks it on every user turn; strict mode while slot filling asks a closed-choice slot).",
+    "The benchmark asks the LLM for every case (the local check of the text is reported apart as the production decision).",
+    "Fields:",
+    "  id, language (en | es), description (English), category (kind of case), trap (built to provoke the critical error)",
+    "  situation          : the task and what the robot had just asked (English, for the annotator; not sent to the LLM)",
+    "  strict             : optional, true when the robot had asked a closed-choice question (the LLM is asked in strict mode); default false",
+    "  user_text          : what the user says",
+    "  expected_cancel    : true only if the user asks to abandon the current interaction entirely",
+    "Critical error (gate): a turn that is not a request to stop taken as one.",
+    "Traps: stop / cancel / quit / exit (parar, parada, cancelar, anular, dejar, salida, terminar) inside answers that go on with the task,",
+    "cancelling something that is the content of the task, farewells alone, corrections, negative answers and complaints that go on.",
+    "The labels are decided by a person; drop any case a careful annotator could label otherwise.",
+    "No case may reuse content of an evaluation scenario or of the examples of config/prompts.yaml (core/dataset_check.py checks it)."
+  ],
+  "question": "detect_cancel_intent",
+  "cases": [
+    {
+      "id": "cd_en_001",
+      "language": "en",
+      "description": "Explicit request to abandon the task",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a bicycle service; the robot asked which day suits the user.",
+      "user_text": "Let's drop this, I don't want to continue.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_002",
+      "language": "en",
+      "description": "Colloquial request to abandon",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Registering for a pottery course; the robot asked for the user's surname.",
+      "user_text": "Forget it, I'm out.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_003",
+      "language": "en",
+      "description": "Request to cancel the whole interaction",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Ordering a bouquet from a florist; the robot asked about the colour of the flowers.",
+      "user_text": "Cancel the whole thing, please.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_004",
+      "language": "en",
+      "description": "Change of mind, abandons the task",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a car wash; the robot asked for the car's registration.",
+      "user_text": "I've changed my mind, I don't want to do this anymore.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_005",
+      "language": "en",
+      "description": "Asks to stop the whole conversation",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "A quiz about the solar system; the robot asked the second question.",
+      "user_text": "Can we just stop this conversation?",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_006",
+      "language": "en",
+      "description": "Abort the whole process",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a kayak rental; the robot asked how many people are going.",
+      "user_text": "Please abort the booking process altogether.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_007",
+      "language": "en",
+      "description": "Gives up the task",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Setting up a printer step by step; the robot presented the third step.",
+      "user_text": "I give up, let's not do this at all.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_008",
+      "language": "en",
+      "description": "Stop followed by refusal to go on",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Ordering photo prints; the robot asked for the size of the prints.",
+      "user_text": "Stop, I don't want to go on with this.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_009",
+      "language": "en",
+      "description": "Postpones and leaves the task",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a locksmith visit; the robot asked for the address.",
+      "user_text": "Never mind, I'll sort it out another day. Let's leave it.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_010",
+      "language": "en",
+      "description": "Quits the activity",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "A roleplay of opening a bank account; the robot spoke as the clerk.",
+      "user_text": "I want to quit this, it's not for me.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_011",
+      "language": "en",
+      "description": "Asks to end, no longer interested",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "A questionnaire about a cooking class; the robot read the third item.",
+      "user_text": "End this please, I'm not interested anymore.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_012",
+      "language": "en",
+      "description": "Calls the whole thing off",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Enrolling a child in swimming lessons; the robot asked for the child's age.",
+      "user_text": "Let's call the whole thing off.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_013",
+      "language": "en",
+      "description": "Asks to exit and not continue",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a dog grooming appointment; the robot asked for the dog's breed.",
+      "user_text": "I'd like to exit now and not continue.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_014",
+      "language": "en",
+      "description": "'Stop' is part of the answer (a bus stop)",
+      "category": "stop_word_in_answer",
+      "trap": true,
+      "situation": "Arranging a parcel delivery; the robot asked for a landmark near the address.",
+      "user_text": "The nearest stop is Elm Street, right by the bakery.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_015",
+      "language": "en",
+      "description": "Cancelling an appointment is the task itself",
+      "category": "cancel_word_as_task_value",
+      "trap": true,
+      "situation": "Managing the user's appointments; the robot asked what change they need.",
+      "user_text": "I need to cancel my dentist appointment on Tuesday.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_016",
+      "language": "en",
+      "description": "'Quit' is part of the answer",
+      "category": "quit_word_in_answer",
+      "trap": true,
+      "situation": "Filling in a life insurance form; the robot asked whether the user smokes.",
+      "user_text": "I quit smoking last year.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_017",
+      "language": "en",
+      "description": "'Exit' is part of the answer",
+      "category": "exit_word_in_answer",
+      "trap": true,
+      "situation": "Giving directions for a furniture delivery; the robot asked how to reach the house.",
+      "user_text": "Take the exit after the bridge and it's the second house.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_018",
+      "language": "en",
+      "description": "A farewell alone is not a cancel request",
+      "category": "farewell_alone",
+      "trap": true,
+      "situation": "A grounded questions session at a garden centre; the robot asked if there is anything else.",
+      "user_text": "Bye for now, see you next week!",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_019",
+      "language": "en",
+      "description": "A negative answer with a correction",
+      "category": "negative_answer",
+      "trap": true,
+      "situation": "Ordering a jacket online; the robot asked whether the black one is right.",
+      "user_text": "Nope, not that one, the blue one.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_020",
+      "language": "en",
+      "description": "A correction of a value",
+      "category": "correction",
+      "trap": true,
+      "situation": "Booking a guitar lesson; the robot read back Monday at five.",
+      "user_text": "No, Tuesday, not Monday.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_021",
+      "language": "en",
+      "description": "Complains but asks to go on",
+      "category": "complaint_without_abandon",
+      "trap": true,
+      "situation": "Booking a boiler service; the robot asked a long list of questions.",
+      "user_text": "This is taking ages, but go on.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_022",
+      "language": "en",
+      "description": "Stopping a delivery is the content of the task",
+      "category": "stop_word_as_task_value",
+      "trap": true,
+      "situation": "Arranging services for the user's holiday; the robot asked what should be suspended.",
+      "user_text": "Please stop the newspaper delivery while I'm away.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_023",
+      "language": "en",
+      "description": "Cancelling one ticket is a change in the task",
+      "category": "cancel_word_as_task_value",
+      "trap": true,
+      "situation": "Buying concert tickets; the robot asked how many tickets.",
+      "user_text": "Cancel the second ticket, I'm going alone.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_024",
+      "language": "en",
+      "description": "'Stops' inside a question about the task",
+      "category": "stop_word_in_question",
+      "trap": true,
+      "situation": "Booking a party room; the robot asked about the end time.",
+      "user_text": "The music stops at midnight, right?",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_025",
+      "language": "en",
+      "description": "Plain answer",
+      "category": "plain_answer",
+      "trap": false,
+      "situation": "Booking a dog grooming appointment; the robot asked which day suits.",
+      "user_text": "Saturday morning works best for me.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_026",
+      "language": "en",
+      "description": "Plain answer",
+      "category": "plain_answer",
+      "trap": false,
+      "situation": "Registering for a pottery course; the robot asked for the user's surname.",
+      "user_text": "My surname is Whitfield, with a W.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_027",
+      "language": "en",
+      "description": "Plain answer",
+      "category": "plain_answer",
+      "trap": false,
+      "situation": "Ordering a jacket online; the robot asked which size.",
+      "user_text": "I'd like the larger size.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_028",
+      "language": "en",
+      "description": "A question about the task",
+      "category": "question",
+      "trap": false,
+      "situation": "Booking a kayak rental; the robot asked how long they want it.",
+      "user_text": "Could you tell me the price first?",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_029",
+      "language": "en",
+      "description": "Hesitation, not abandonment",
+      "category": "hesitation",
+      "trap": false,
+      "situation": "Ordering a bouquet; the robot asked whether to add a card.",
+      "user_text": "Hmm, let me think about it for a second.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_030",
+      "language": "en",
+      "description": "'Exit' is part of the answer",
+      "category": "exit_word_in_answer",
+      "trap": true,
+      "situation": "Arranging to be picked up by a friend's car service; the robot asked where to meet.",
+      "user_text": "I'll exit the motorway at junction four, so meet me there.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_031",
+      "language": "en",
+      "description": "'Stop by' is an errand",
+      "category": "stop_word_as_task_value",
+      "trap": true,
+      "situation": "Planning a list of errands; the robot asked what else to add.",
+      "user_text": "Stop by the garden centre on the way, if you can.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_032",
+      "language": "en",
+      "description": "Finds it hard but wants to keep going",
+      "category": "complaint_without_abandon",
+      "trap": true,
+      "situation": "Setting up a TV step by step; the robot asked whether to continue to the next step.",
+      "user_text": "It's a bit complicated, but I'd like to keep going.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_033",
+      "language": "en",
+      "description": "Explicit request to stop while choosing an option",
+      "category": "strict_explicit_stop",
+      "trap": false,
+      "situation": "Ordering a taxi; the robot asked whether the user wants a standard car or a van.",
+      "strict": true,
+      "user_text": "Hold on, stop, I don't want any of this.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_034",
+      "language": "en",
+      "description": "Explicit request to stop while choosing an option",
+      "category": "strict_explicit_stop",
+      "trap": false,
+      "situation": "Booking a gym class; the robot asked: yoga, spinning or pilates?",
+      "strict": true,
+      "user_text": "Forget it, I'm done with this.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_en_035",
+      "language": "en",
+      "description": "Option whose name contains a stop word",
+      "category": "strict_choice_answer",
+      "trap": true,
+      "situation": "Planning a bus trip; the robot asked whether the user gets off at the market stop or at the hospital stop.",
+      "strict": true,
+      "user_text": "The hospital stop.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_036",
+      "language": "en",
+      "description": "Option that is itself a cancellation of something",
+      "category": "strict_choice_answer",
+      "trap": true,
+      "situation": "Managing reminders; the robot asked whether to keep, move or cancel the Monday reminder.",
+      "strict": true,
+      "user_text": "Cancel the Monday one, please.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_001",
+      "language": "es",
+      "description": "Explicit request to abandon the task",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a bicycle service; the robot asked which day suits the user.",
+      "user_text": "Déjalo, no quiero seguir con esto.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_002",
+      "language": "es",
+      "description": "Asks to stop and not continue",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "A quiz about the solar system; the robot asked the first question.",
+      "user_text": "Para ya, no quiero continuar.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_003",
+      "language": "es",
+      "description": "Prefers to leave it",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Registering for a pottery course; the robot asked for the date of birth.",
+      "user_text": "Mejor lo dejamos, no me apetece seguir.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_004",
+      "language": "es",
+      "description": "Forget it, does not want to do it",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Ordering a bouquet; the robot asked about the colour of the flowers.",
+      "user_text": "Olvídalo, ya no quiero hacer nada de esto.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_005",
+      "language": "es",
+      "description": "Cancel the whole interaction",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a car wash; the robot asked for the registration.",
+      "user_text": "Quiero cancelar todo esto, por favor.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_006",
+      "language": "es",
+      "description": "Enough, will not go on",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Setting up a printer step by step; the robot presented the second step.",
+      "user_text": "Basta, no sigo.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_007",
+      "language": "es",
+      "description": "Gives up the task",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "A questionnaire about a cooking class; the robot read the second item.",
+      "user_text": "Me rindo, vamos a dejarlo del todo.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_008",
+      "language": "es",
+      "description": "Prefers not to continue",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a locksmith visit; the robot asked for the address.",
+      "user_text": "Prefiero no continuar, terminamos aquí.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_009",
+      "language": "es",
+      "description": "Does not want to go on",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "A roleplay of buying at a market stall; the robot spoke as the stallholder.",
+      "user_text": "No quiero seguir hablando de esto, déjalo estar.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_010",
+      "language": "es",
+      "description": "Cut it, abandons the errand",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Renewing a parking permit; the robot asked for the car's registration.",
+      "user_text": "Corta, que no quiero continuar con el trámite.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_011",
+      "language": "es",
+      "description": "Cancels everything, changed mind",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Booking a kayak rental; the robot asked how many people.",
+      "user_text": "Anula todo, he cambiado de idea.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_012",
+      "language": "es",
+      "description": "Wants to get out of the interaction",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Enrolling in swimming lessons; the robot asked for the preferred time.",
+      "user_text": "Ya está bien, quiero salir de esto.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_013",
+      "language": "es",
+      "description": "Leaves it, not interested",
+      "category": "explicit_abandon",
+      "trap": false,
+      "situation": "Ordering photo prints; the robot asked for the size.",
+      "user_text": "Vamos a dejarlo aquí, no me interesa.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_014",
+      "language": "es",
+      "description": "'Parada' is part of the answer",
+      "category": "stop_word_in_answer",
+      "trap": true,
+      "situation": "Arranging a parcel delivery; the robot asked for a landmark near the address.",
+      "user_text": "La parada de metro más cercana es Ópera.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_015",
+      "language": "es",
+      "description": "Cancelling a booking is the task itself",
+      "category": "cancel_word_as_task_value",
+      "trap": true,
+      "situation": "Changing bookings at a rural guesthouse; the robot asked which booking to change.",
+      "user_text": "Quiero cancelar la reserva del jueves, no la del viernes.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_016",
+      "language": "es",
+      "description": "'Deja' is part of the answer",
+      "category": "leave_word_in_answer",
+      "trap": true,
+      "situation": "Arranging a furniture delivery; the robot asked for instructions for the courier.",
+      "user_text": "Deja la caja en la entrada, por favor.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_017",
+      "language": "es",
+      "description": "'Dejé de' is part of the answer",
+      "category": "quit_word_in_answer",
+      "trap": true,
+      "situation": "Filling in a life insurance form; the robot asked whether the user smokes.",
+      "user_text": "Dejé de fumar hace dos años.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_018",
+      "language": "es",
+      "description": "'Para' as a preposition",
+      "category": "para_preposition",
+      "trap": true,
+      "situation": "Booking a guitar lesson; the robot asked which day.",
+      "user_text": "Para el sábado, si puede ser.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_019",
+      "language": "es",
+      "description": "A farewell alone is not a cancel request",
+      "category": "farewell_alone",
+      "trap": true,
+      "situation": "A grounded questions session at a garden centre; the robot asked if there is anything else.",
+      "user_text": "Hasta luego, nos vemos el lunes.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_020",
+      "language": "es",
+      "description": "A correction of a value",
+      "category": "correction",
+      "trap": true,
+      "situation": "Booking a guitar lesson; the robot read back Monday at five.",
+      "user_text": "No, el martes, no el lunes.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_021",
+      "language": "es",
+      "description": "A negative answer with a correction",
+      "category": "negative_answer",
+      "trap": true,
+      "situation": "Ordering a jacket online; the robot asked whether the black one is right.",
+      "user_text": "Qué va, ese no, el gris.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_022",
+      "language": "es",
+      "description": "Complains but asks to go on",
+      "category": "complaint_without_abandon",
+      "trap": true,
+      "situation": "Booking a boiler service; the robot asked many questions.",
+      "user_text": "Esto va lento, pero sigue.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_023",
+      "language": "es",
+      "description": "'Parar' is part of the answer",
+      "category": "stop_word_in_answer",
+      "trap": true,
+      "situation": "Fixing a leaking pipe at home; the robot asked what has to be done first.",
+      "user_text": "Hay que parar el agua antes de tocar la tubería.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_024",
+      "language": "es",
+      "description": "'Salida' is part of the answer",
+      "category": "exit_word_in_answer",
+      "trap": true,
+      "situation": "Giving directions for a delivery van; the robot asked how to arrive.",
+      "user_text": "Salgo por la salida tres de la autovía y te espero allí.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_025",
+      "language": "es",
+      "description": "'Termino' is part of the answer",
+      "category": "finish_word_in_answer",
+      "trap": true,
+      "situation": "Booking a dog grooming appointment; the robot asked the preferred time.",
+      "user_text": "Termino de trabajar a las seis, así que mejor por la tarde.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_026",
+      "language": "es",
+      "description": "Plain answer",
+      "category": "plain_answer",
+      "trap": false,
+      "situation": "Registering for a pottery course; the robot asked for the surname.",
+      "user_text": "Me apellido Gutiérrez Ballesteros.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_027",
+      "language": "es",
+      "description": "Plain answer",
+      "category": "plain_answer",
+      "trap": false,
+      "situation": "Ordering a jacket online; the robot asked which size.",
+      "user_text": "La talla mediana, por favor.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_028",
+      "language": "es",
+      "description": "A question about the task",
+      "category": "question",
+      "trap": false,
+      "situation": "Ordering a bouquet; the robot asked for the delivery address.",
+      "user_text": "¿Cuánto cuesta el envío?",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_029",
+      "language": "es",
+      "description": "'Déjame' pensarlo is a pause, not abandonment",
+      "category": "leave_word_hesitation",
+      "trap": true,
+      "situation": "Ordering a bouquet; the robot asked whether to add a card.",
+      "user_text": "Déjame pensarlo un momento.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_030",
+      "language": "es",
+      "description": "Cancelling one ticket is a change in the task",
+      "category": "cancel_word_as_task_value",
+      "trap": true,
+      "situation": "Buying concert tickets; the robot asked how many tickets.",
+      "user_text": "Anula el segundo billete, voy yo solo.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_031",
+      "language": "es",
+      "description": "Plain answer",
+      "category": "plain_answer",
+      "trap": false,
+      "situation": "Ordering a fridge; the robot asked which colour.",
+      "user_text": "Prefiero el modelo blanco.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_032",
+      "language": "es",
+      "description": "Finds it tedious but wants to finish it",
+      "category": "complaint_without_abandon",
+      "trap": true,
+      "situation": "Setting up a TV step by step; the robot asked whether to go on.",
+      "user_text": "Es un rollo, pero vamos a terminarlo.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_033",
+      "language": "es",
+      "description": "Explicit request to stop while choosing an option",
+      "category": "strict_explicit_stop",
+      "trap": false,
+      "situation": "Ordering at a bakery; the robot asked whether the user wants a small, medium or large loaf.",
+      "strict": true,
+      "user_text": "Mira, para, que lo dejo.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_034",
+      "language": "es",
+      "description": "Explicit request to stop while choosing an option",
+      "category": "strict_explicit_stop",
+      "trap": false,
+      "situation": "Choosing a delivery slot; the robot asked: morning or afternoon?",
+      "strict": true,
+      "user_text": "Oye, prefiero dejarlo aquí, se acabó.",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_035",
+      "language": "es",
+      "description": "Option introduced by the preposition 'para'",
+      "category": "strict_choice_answer",
+      "trap": true,
+      "situation": "Ordering food; the robot asked whether it is to eat in or to take away.",
+      "strict": true,
+      "user_text": "Para llevar.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_036",
+      "language": "es",
+      "description": "Option whose name contains a cancel word",
+      "category": "strict_choice_answer",
+      "trap": true,
+      "situation": "Buying a train ticket; the robot asked: single, return, or the fare with free cancellation?",
+      "strict": true,
+      "user_text": "La de cancelación gratuita.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_037",
+      "language": "en",
+      "description": "Finished, not abandoning: no more questions",
+      "category": "finished",
+      "trap": true,
+      "situation": "Answering visitors' questions at a museum desk; the robot asked whether there is anything else.",
+      "user_text": "Nothing else, I've found out what I needed, thanks.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_en_038",
+      "language": "en",
+      "description": "A hesitant wish to drop the conversation is a cancel request",
+      "category": "hesitant",
+      "trap": true,
+      "situation": "Taking an order at the florist; the robot asked for the name on the card.",
+      "user_text": "Oh, I think I would rather drop the whole thing...",
+      "expected_cancel": true
+    },
+    {
+      "id": "cd_es_037",
+      "language": "es",
+      "description": "Finished, not abandoning: no more questions",
+      "category": "finished",
+      "trap": true,
+      "situation": "Answering visitors' questions at a museum desk; the robot asked whether there is anything else.",
+      "user_text": "Nada más, ya sé todo lo que necesitaba, gracias.",
+      "expected_cancel": false
+    },
+    {
+      "id": "cd_es_038",
+      "language": "es",
+      "description": "A hesitant wish to drop the conversation is a cancel request",
+      "category": "hesitant",
+      "trap": true,
+      "situation": "Taking an order at the florist; the robot asked for the name on the card.",
+      "user_text": "Uf, mira, creo que lo voy a dejar estar...",
+      "expected_cancel": true
+    }
+  ]
+}

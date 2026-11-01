@@ -1,0 +1,1957 @@
+{
+  "_instructions": [
+    "Phase A of E0a: judging a teach-back reply (judge_teach_back), as explanation.check asks it.",
+    "Fields:",
+    "  id, language (en | es), description, category, trap: common to every phase A dataset",
+    "  task            : the topic explained (context for the annotator; not sent to the question)",
+    "  key_points      : [{point, critical}] the key points of the explanation, in order (the prompt numbers",
+    "                    them from 1)",
+    "  asked           : the check the robot asked; '' is the fixed teach-back request of the language (the",
+    "                    first check), otherwise a direct question about one point (the fallback)",
+    "  user_text       : the person's reply (voice-transcribed)",
+    "  expected_kind   : restates (says content back, or answers the direct question, also without knowing),",
+    "                    question, declines (only says they understood, or refuses, without content),",
+    "                    not_understood (did not understand, or asks to hear it again) or other",
+    "  expected_points : only for restates: {'<id>': correct | wrong | missing} for EVERY key point.",
+    "                    correct: said in any words; wrong: said with a different content (a different time,",
+    "                    dose, place, number or order is wrong); missing: not said in this reply",
+    "trap: built to provoke the critical error, a key point said wrongly or not said judged correct: a",
+    "subtle wrong time, dose, quantity, place or order inside a fluent paraphrase, a confident restatement",
+    "missing a critical point, a self-report naming the topic without content, a direct question answered",
+    "wrongly or without knowing. Correct paraphrases in very different words are included too (not traps).",
+    "The labels are decided by a person. No case may come from an evaluation scenario or from an example",
+    "of the prompts (core/dataset_check.py checks it)."
+  ],
+  "question": "judge_teach_back",
+  "cases": [
+    {
+      "id": "tb_en_001",
+      "language": "en",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to thaw frozen food safely",
+      "key_points": [
+        {
+          "point": "Thaw it in the fridge, not on the kitchen counter",
+          "critical": true
+        },
+        {
+          "point": "Allow about 24 hours for every kilo",
+          "critical": true
+        },
+        {
+          "point": "Cook it within 24 hours of thawing",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "So I leave it in the fridge, not out on the worktop, roughly a day for each kilo, and once it has thawed I cook it within a day.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_002",
+      "language": "en",
+      "description": "Fluent reply with the wrong place to thaw",
+      "category": "subtle_wrong_place",
+      "trap": true,
+      "task": "How to thaw frozen food safely",
+      "key_points": [
+        {
+          "point": "Thaw it in the fridge, not on the kitchen counter",
+          "critical": true
+        },
+        {
+          "point": "Allow about 24 hours for every kilo",
+          "critical": true
+        },
+        {
+          "point": "Cook it within 24 hours of thawing",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "I let it defrost on the counter overnight, about a day per kilo, and cook it within the next 24 hours.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_003",
+      "language": "en",
+      "description": "Confident reply that leaves out the time per kilo",
+      "category": "missing_critical",
+      "trap": true,
+      "task": "How to thaw frozen food safely",
+      "key_points": [
+        {
+          "point": "Thaw it in the fridge, not on the kitchen counter",
+          "critical": true
+        },
+        {
+          "point": "Allow about 24 hours for every kilo",
+          "critical": true
+        },
+        {
+          "point": "Cook it within 24 hours of thawing",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "In the fridge, and then I cook it within a day.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "missing",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_004",
+      "language": "en",
+      "description": "Dose per litre instead of per five litres",
+      "category": "subtle_wrong_dose",
+      "trap": true,
+      "task": "How to dilute the floor cleaner",
+      "key_points": [
+        {
+          "point": "Use 40 ml of product for every 5 litres of water",
+          "critical": true
+        },
+        {
+          "point": "Wear gloves",
+          "critical": true
+        },
+        {
+          "point": "Never mix it with bleach",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Forty millilitres for every litre of water, gloves on, and never mix it with bleach.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_005",
+      "language": "en",
+      "description": "Every point in very different words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to dilute the floor cleaner",
+      "key_points": [
+        {
+          "point": "Use 40 ml of product for every 5 litres of water",
+          "critical": true
+        },
+        {
+          "point": "Wear gloves",
+          "critical": true
+        },
+        {
+          "point": "Never mix it with bleach",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "A small capful, about forty mil, into a five-litre bucket, rubber gloves on, and nothing with bleach in it.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_006",
+      "language": "en",
+      "description": "Right content in the wrong order: the call comes first",
+      "category": "subtle_wrong_order",
+      "trap": true,
+      "task": "How to use the defibrillator (AED)",
+      "key_points": [
+        {
+          "point": "Call the emergency number first",
+          "critical": true
+        },
+        {
+          "point": "Stick one pad below the right collarbone and the other on the left side, below the armpit",
+          "critical": true
+        },
+        {
+          "point": "Nobody touches the person while the shock is given",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "First I put the pads on, one under the right collarbone and one on the left side under the armpit, then I call the emergency number, and nobody touches the person during the shock.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_007",
+      "language": "en",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to use the defibrillator (AED)",
+      "key_points": [
+        {
+          "point": "Call the emergency number first",
+          "critical": true
+        },
+        {
+          "point": "Stick one pad below the right collarbone and the other on the left side, below the armpit",
+          "critical": true
+        },
+        {
+          "point": "Nobody touches the person while the shock is given",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Ring emergencies before anything else, then stick the pads on, right below the collarbone and left side under the arm, and when it shocks everyone keeps their hands off.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_008",
+      "language": "en",
+      "description": "Direct question answered with the wrong pad positions",
+      "category": "targeted_wrong",
+      "trap": true,
+      "task": "How to use the defibrillator (AED)",
+      "key_points": [
+        {
+          "point": "Call the emergency number first",
+          "critical": true
+        },
+        {
+          "point": "Stick one pad below the right collarbone and the other on the left side, below the armpit",
+          "critical": true
+        },
+        {
+          "point": "Nobody touches the person while the shock is given",
+          "critical": true
+        }
+      ],
+      "asked": "Where do the two pads go?",
+      "user_text": "One on the left side of the chest, near the heart, and the other one in the middle.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "missing",
+        "2": "wrong",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_en_009",
+      "language": "en",
+      "description": "Damp cloth instead of a dry one",
+      "category": "subtle_wrong_method",
+      "trap": true,
+      "task": "How to look after the hearing aids",
+      "key_points": [
+        {
+          "point": "Charge them every night in their case",
+          "critical": true
+        },
+        {
+          "point": "Clean them with a dry cloth, never with water",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "I charge them every night in their case and give them a wipe with a damp cloth.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "wrong"
+      }
+    },
+    {
+      "id": "tb_en_010",
+      "language": "en",
+      "description": "Says they understood without saying anything back",
+      "category": "self_report",
+      "trap": false,
+      "task": "How to look after the hearing aids",
+      "key_points": [
+        {
+          "point": "Charge them every night in their case",
+          "critical": true
+        },
+        {
+          "point": "Clean them with a dry cloth, never with water",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Yes, yes, I got all of it, no problem.",
+      "expected_kind": "declines"
+    },
+    {
+      "id": "tb_en_011",
+      "language": "en",
+      "description": "Every two days instead of once a day",
+      "category": "subtle_wrong_frequency",
+      "trap": true,
+      "task": "How to look after a sourdough starter",
+      "key_points": [
+        {
+          "point": "Feed it once a day with equal weights of flour and water",
+          "critical": true
+        },
+        {
+          "point": "If it is kept in the fridge, feed it once a week",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "I feed it every two days with the same weight of flour and water, and if it lives in the fridge, once a week.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct"
+      }
+    },
+    {
+      "id": "tb_en_012",
+      "language": "en",
+      "description": "Names the topic but says no key point",
+      "category": "self_report_topic_words",
+      "trap": true,
+      "task": "How to look after a sourdough starter",
+      "key_points": [
+        {
+          "point": "Feed it once a day with equal weights of flour and water",
+          "critical": true
+        },
+        {
+          "point": "If it is kept in the fridge, feed it once a week",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "I understood, it's about the sourdough starter.",
+      "expected_kind": "declines"
+    },
+    {
+      "id": "tb_en_013",
+      "language": "en",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to apply sunscreen",
+      "key_points": [
+        {
+          "point": "Apply it 20 minutes before going out",
+          "critical": true
+        },
+        {
+          "point": "Reapply it every two hours and after swimming",
+          "critical": true
+        },
+        {
+          "point": "Use factor 30 or higher",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "I put it on twenty minutes before I go out, again every couple of hours and whenever I've been swimming, factor thirty or more.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_014",
+      "language": "en",
+      "description": "Every three hours instead of every two, and the swim left out",
+      "category": "subtle_wrong_time",
+      "trap": true,
+      "task": "How to apply sunscreen",
+      "key_points": [
+        {
+          "point": "Apply it 20 minutes before going out",
+          "critical": true
+        },
+        {
+          "point": "Reapply it every two hours and after swimming",
+          "critical": true
+        },
+        {
+          "point": "Use factor 30 or higher",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Twenty minutes before going out, then again every three hours, and factor thirty.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "wrong",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_015",
+      "language": "en",
+      "description": "Asks about the topic and says nothing back",
+      "category": "question",
+      "trap": false,
+      "task": "How to apply sunscreen",
+      "key_points": [
+        {
+          "point": "Apply it 20 minutes before going out",
+          "critical": true
+        },
+        {
+          "point": "Reapply it every two hours and after swimming",
+          "critical": true
+        },
+        {
+          "point": "Use factor 30 or higher",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Does it matter if the cream is waterproof?",
+      "expected_kind": "question"
+    },
+    {
+      "id": "tb_en_016",
+      "language": "en",
+      "description": "Every point said briefly",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to feed the puppy",
+      "key_points": [
+        {
+          "point": "Three meals a day",
+          "critical": true
+        },
+        {
+          "point": "80 grams of food at each meal",
+          "critical": true
+        },
+        {
+          "point": "Fresh water always available",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Three meals, eighty grams each time, and always fresh water.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_017",
+      "language": "en",
+      "description": "Eighty grams a day instead of per meal",
+      "category": "subtle_wrong_dose",
+      "trap": true,
+      "task": "How to feed the puppy",
+      "key_points": [
+        {
+          "point": "Three meals a day",
+          "critical": true
+        },
+        {
+          "point": "80 grams of food at each meal",
+          "critical": true
+        },
+        {
+          "point": "Fresh water always available",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Eighty grams a day split into three meals, and fresh water.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "wrong",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_018",
+      "language": "en",
+      "description": "Direct question answered without knowing: the point is missing",
+      "category": "targeted_no_answer",
+      "trap": true,
+      "task": "How to feed the puppy",
+      "key_points": [
+        {
+          "point": "Three meals a day",
+          "critical": true
+        },
+        {
+          "point": "80 grams of food at each meal",
+          "critical": true
+        },
+        {
+          "point": "Fresh water always available",
+          "critical": false
+        }
+      ],
+      "asked": "How many grams does the puppy get at each meal?",
+      "user_text": "Uh, no idea, honestly.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "missing",
+        "2": "missing",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_en_019",
+      "language": "en",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "What to do in a thunderstorm when you are outdoors",
+      "key_points": [
+        {
+          "point": "Get inside a building or a car",
+          "critical": true
+        },
+        {
+          "point": "Stay away from isolated trees",
+          "critical": true
+        },
+        {
+          "point": "Wait 30 minutes after the last thunder before going out",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Get into a building or the car, keep away from trees standing on their own, and wait half an hour after the last thunder.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_020",
+      "language": "en",
+      "description": "Sheltering under a tree contradicts a key point",
+      "category": "subtle_wrong_place",
+      "trap": true,
+      "task": "What to do in a thunderstorm when you are outdoors",
+      "key_points": [
+        {
+          "point": "Get inside a building or a car",
+          "critical": true
+        },
+        {
+          "point": "Stay away from isolated trees",
+          "critical": true
+        },
+        {
+          "point": "Wait 30 minutes after the last thunder before going out",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Shelter under a big tree or go inside, and wait half an hour after the last thunder.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "wrong",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_021",
+      "language": "en",
+      "description": "Leaves out the wait after the last thunder",
+      "category": "missing_critical",
+      "trap": true,
+      "task": "What to do in a thunderstorm when you are outdoors",
+      "key_points": [
+        {
+          "point": "Get inside a building or a car",
+          "critical": true
+        },
+        {
+          "point": "Stay away from isolated trees",
+          "critical": true
+        },
+        {
+          "point": "Wait 30 minutes after the last thunder before going out",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Go inside somewhere and stay well away from trees.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_en_022",
+      "language": "en",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to use the parking meter",
+      "key_points": [
+        {
+          "point": "Type in the car's number plate",
+          "critical": true
+        },
+        {
+          "point": "The maximum stay is two hours",
+          "critical": true
+        },
+        {
+          "point": "The ticket does not need to be left on the dashboard",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "You type in your number plate, you can stay two hours, and you don't need to leave the ticket in the car.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_023",
+      "language": "en",
+      "description": "Three hours instead of two",
+      "category": "subtle_wrong_number",
+      "trap": true,
+      "task": "How to use the parking meter",
+      "key_points": [
+        {
+          "point": "Type in the car's number plate",
+          "critical": true
+        },
+        {
+          "point": "The maximum stay is two hours",
+          "critical": true
+        },
+        {
+          "point": "The ticket does not need to be left on the dashboard",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "You type in the plate number and you can stay up to three hours.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "wrong",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_en_024",
+      "language": "en",
+      "description": "Did not follow and asks to hear it again",
+      "category": "not_understood",
+      "trap": false,
+      "task": "How to care for a new tattoo",
+      "key_points": [
+        {
+          "point": "Wash it twice a day with mild soap",
+          "critical": true
+        },
+        {
+          "point": "No swimming for two weeks",
+          "critical": true
+        },
+        {
+          "point": "Do not pick the scabs",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Sorry, I lost you halfway, can you explain it again?",
+      "expected_kind": "not_understood"
+    },
+    {
+      "id": "tb_en_025",
+      "language": "en",
+      "description": "Good restatement that leaves out the two weeks without swimming",
+      "category": "missing_critical",
+      "trap": true,
+      "task": "How to care for a new tattoo",
+      "key_points": [
+        {
+          "point": "Wash it twice a day with mild soap",
+          "critical": true
+        },
+        {
+          "point": "No swimming for two weeks",
+          "critical": true
+        },
+        {
+          "point": "Do not pick the scabs",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Wash it twice a day with gentle soap and leave the scabs alone.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "missing",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_026",
+      "language": "en",
+      "description": "Half instead of two thirds",
+      "category": "subtle_wrong_quantity",
+      "trap": true,
+      "task": "How to use the pressure cooker safely",
+      "key_points": [
+        {
+          "point": "Never fill it more than two thirds full",
+          "critical": true
+        },
+        {
+          "point": "Release the steam before opening the lid",
+          "critical": true
+        },
+        {
+          "point": "Check that the valve is clean before using it",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Never more than half full, and let the steam out before you open it.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_en_027",
+      "language": "en",
+      "description": "Asks about the topic and says nothing back",
+      "category": "question",
+      "trap": false,
+      "task": "How to use the pressure cooker safely",
+      "key_points": [
+        {
+          "point": "Never fill it more than two thirds full",
+          "critical": true
+        },
+        {
+          "point": "Release the steam before opening the lid",
+          "critical": true
+        },
+        {
+          "point": "Check that the valve is clean before using it",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "What happens if the valve is blocked?",
+      "expected_kind": "question"
+    },
+    {
+      "id": "tb_en_028",
+      "language": "en",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to use a ladder safely",
+      "key_points": [
+        {
+          "point": "Place the base one metre out for every four metres of height",
+          "critical": true
+        },
+        {
+          "point": "Keep three points of contact at all times",
+          "critical": true
+        },
+        {
+          "point": "Never stand on the top two rungs",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "One metre out for every four up, three points of contact all the time, and I keep off the top two rungs.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_029",
+      "language": "en",
+      "description": "Wrong ratio for the base",
+      "category": "subtle_wrong_ratio",
+      "trap": true,
+      "task": "How to use a ladder safely",
+      "key_points": [
+        {
+          "point": "Place the base one metre out for every four metres of height",
+          "critical": true
+        },
+        {
+          "point": "Keep three points of contact at all times",
+          "critical": true
+        },
+        {
+          "point": "Never stand on the top two rungs",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "The base one metre out for every two metres up, always three points of contact, and never on the top two rungs.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_030",
+      "language": "en",
+      "description": "Off-topic question",
+      "category": "off_topic",
+      "trap": false,
+      "task": "How to check the tyre pressure",
+      "key_points": [
+        {
+          "point": "Check it when the tyres are cold",
+          "critical": true
+        },
+        {
+          "point": "Front tyres 2.3 bar, rear tyres 2.1 bar",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "By the way, is the shop on the corner open on Sundays?",
+      "expected_kind": "other"
+    },
+    {
+      "id": "tb_en_031",
+      "language": "en",
+      "description": "Says it is clear without saying anything back",
+      "category": "self_report",
+      "trap": false,
+      "task": "How to prepare for a power cut",
+      "key_points": [
+        {
+          "point": "Keep the fridge and freezer closed",
+          "critical": true
+        },
+        {
+          "point": "Unplug the appliances",
+          "critical": false
+        },
+        {
+          "point": "Use torches, not candles",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Right, all clear, thank you.",
+      "expected_kind": "declines"
+    },
+    {
+      "id": "tb_en_032",
+      "language": "en",
+      "description": "Every point said back",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "How to prepare for a power cut",
+      "key_points": [
+        {
+          "point": "Keep the fridge and freezer closed",
+          "critical": true
+        },
+        {
+          "point": "Unplug the appliances",
+          "critical": false
+        },
+        {
+          "point": "Use torches, not candles",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Keep the fridge and freezer shut, unplug things, and use torches rather than candles.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_en_033",
+      "language": "en",
+      "description": "Did not understand and asks again",
+      "category": "not_understood",
+      "trap": false,
+      "task": "How to check the tyre pressure",
+      "key_points": [
+        {
+          "point": "Check it when the tyres are cold",
+          "critical": true
+        },
+        {
+          "point": "Front tyres 2.3 bar, rear tyres 2.1 bar",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "I didn't follow any of that, can you go over it again?",
+      "expected_kind": "not_understood"
+    },
+    {
+      "id": "tb_es_001",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Cómo descongelar alimentos con seguridad",
+      "key_points": [
+        {
+          "point": "Descongelarlo en la nevera, no en la encimera",
+          "critical": true
+        },
+        {
+          "point": "Contar un día por cada kilo",
+          "critical": true
+        },
+        {
+          "point": "Cocinarlo en las 24 horas siguientes",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Lo paso a la nevera, nunca a la encimera, cuento un día por cada kilo y luego lo cocino en menos de un día.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_002",
+      "language": "es",
+      "description": "Wrong place to thaw",
+      "category": "subtle_wrong_place",
+      "trap": true,
+      "task": "Cómo descongelar alimentos con seguridad",
+      "key_points": [
+        {
+          "point": "Descongelarlo en la nevera, no en la encimera",
+          "critical": true
+        },
+        {
+          "point": "Contar un día por cada kilo",
+          "critical": true
+        },
+        {
+          "point": "Cocinarlo en las 24 horas siguientes",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Lo dejo en la encimera toda la noche y cuento un día por kilo.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_003",
+      "language": "es",
+      "description": "Half a day per kilo instead of a day",
+      "category": "subtle_wrong_time",
+      "trap": true,
+      "task": "Cómo descongelar alimentos con seguridad",
+      "key_points": [
+        {
+          "point": "Descongelarlo en la nevera, no en la encimera",
+          "critical": true
+        },
+        {
+          "point": "Contar un día por cada kilo",
+          "critical": true
+        },
+        {
+          "point": "Cocinarlo en las 24 horas siguientes",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "En la nevera, medio día por cada kilo, y lo cocino enseguida.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "wrong",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_004",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Cómo cuidar la masa madre",
+      "key_points": [
+        {
+          "point": "Alimentarla una vez al día con el mismo peso de harina que de agua",
+          "critical": true
+        },
+        {
+          "point": "Si se guarda en la nevera, alimentarla una vez por semana",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Le doy de comer cada día, el mismo peso de harina que de agua, y si la meto en la nevera, una vez a la semana.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct"
+      }
+    },
+    {
+      "id": "tb_es_005",
+      "language": "es",
+      "description": "Twice the flour instead of equal weights",
+      "category": "subtle_wrong_quantity",
+      "trap": true,
+      "task": "Cómo cuidar la masa madre",
+      "key_points": [
+        {
+          "point": "Alimentarla una vez al día con el mismo peso de harina que de agua",
+          "critical": true
+        },
+        {
+          "point": "Si se guarda en la nevera, alimentarla una vez por semana",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Una vez al día, con el doble de harina que de agua.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "missing"
+      }
+    },
+    {
+      "id": "tb_es_006",
+      "language": "es",
+      "description": "Direct question answered with the wrong place",
+      "category": "targeted_wrong",
+      "trap": true,
+      "task": "Cómo guardar los huevos",
+      "key_points": [
+        {
+          "point": "Guardarlos en la nevera dentro de su caja",
+          "critical": true
+        },
+        {
+          "point": "Consumirlos en tres semanas",
+          "critical": true
+        },
+        {
+          "point": "No lavarlos antes de guardarlos",
+          "critical": true
+        }
+      ],
+      "asked": "¿Dónde hay que guardar los huevos?",
+      "user_text": "En la puerta de la nevera, fuera de la caja.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "missing",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_007",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Cómo guardar los huevos",
+      "key_points": [
+        {
+          "point": "Guardarlos en la nevera dentro de su caja",
+          "critical": true
+        },
+        {
+          "point": "Consumirlos en tres semanas",
+          "critical": true
+        },
+        {
+          "point": "No lavarlos antes de guardarlos",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "En la nevera y en su cartón, se gastan en tres semanas y no se lavan antes de guardarlos.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_008",
+      "language": "es",
+      "description": "Leaves out not washing them",
+      "category": "missing_critical",
+      "trap": true,
+      "task": "Cómo guardar los huevos",
+      "key_points": [
+        {
+          "point": "Guardarlos en la nevera dentro de su caja",
+          "critical": true
+        },
+        {
+          "point": "Consumirlos en tres semanas",
+          "critical": true
+        },
+        {
+          "point": "No lavarlos antes de guardarlos",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "En la nevera en su caja, y como mucho tres semanas.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_009",
+      "language": "es",
+      "description": "Lukewarm water instead of cold",
+      "category": "subtle_wrong_temperature",
+      "trap": true,
+      "task": "Cómo lavar las prendas de lana",
+      "key_points": [
+        {
+          "point": "Lavarlas a mano con agua fría",
+          "critical": true
+        },
+        {
+          "point": "No retorcerlas",
+          "critical": true
+        },
+        {
+          "point": "Secarlas en horizontal, no colgadas",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Las lavo a mano con agua templada, sin retorcerlas, y las seco tendidas en horizontal.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_010",
+      "language": "es",
+      "description": "Says they understood without saying anything back",
+      "category": "self_report",
+      "trap": false,
+      "task": "Cómo lavar las prendas de lana",
+      "key_points": [
+        {
+          "point": "Lavarlas a mano con agua fría",
+          "critical": true
+        },
+        {
+          "point": "No retorcerlas",
+          "critical": true
+        },
+        {
+          "point": "Secarlas en horizontal, no colgadas",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Vale, vale, me ha quedado todo clarísimo.",
+      "expected_kind": "declines"
+    },
+    {
+      "id": "tb_es_011",
+      "language": "es",
+      "description": "Asks about the topic and says nothing back",
+      "category": "question",
+      "trap": false,
+      "task": "Cómo lavar las prendas de lana",
+      "key_points": [
+        {
+          "point": "Lavarlas a mano con agua fría",
+          "critical": true
+        },
+        {
+          "point": "No retorcerlas",
+          "critical": true
+        },
+        {
+          "point": "Secarlas en horizontal, no colgadas",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "¿Y se puede usar suavizante con la lana?",
+      "expected_kind": "question"
+    },
+    {
+      "id": "tb_es_012",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Cómo programar el termostato",
+      "key_points": [
+        {
+          "point": "20 grados durante el día",
+          "critical": true
+        },
+        {
+          "point": "17 grados por la noche",
+          "critical": true
+        },
+        {
+          "point": "El programa de noche empieza a las 23:00",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Veinte grados de día, diecisiete por la noche, y lo de la noche arranca a las once.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_013",
+      "language": "es",
+      "description": "Temperatures swapped",
+      "category": "subtle_wrong_swap",
+      "trap": true,
+      "task": "Cómo programar el termostato",
+      "key_points": [
+        {
+          "point": "20 grados durante el día",
+          "critical": true
+        },
+        {
+          "point": "17 grados por la noche",
+          "critical": true
+        },
+        {
+          "point": "El programa de noche empieza a las 23:00",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "De día diecisiete y de noche veinte.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "wrong",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_014",
+      "language": "es",
+      "description": "Leaves out the non-critical start time",
+      "category": "missing_non_critical",
+      "trap": false,
+      "task": "Cómo programar el termostato",
+      "key_points": [
+        {
+          "point": "20 grados durante el día",
+          "critical": true
+        },
+        {
+          "point": "17 grados por la noche",
+          "critical": true
+        },
+        {
+          "point": "El programa de noche empieza a las 23:00",
+          "critical": false
+        }
+      ],
+      "asked": "",
+      "user_text": "Veinte de día y diecisiete de noche.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_015",
+      "language": "es",
+      "description": "Hot tyres instead of cold",
+      "category": "subtle_wrong_condition",
+      "trap": true,
+      "task": "Cómo comprobar la presión de los neumáticos",
+      "key_points": [
+        {
+          "point": "Medirla con las ruedas en frío",
+          "critical": true
+        },
+        {
+          "point": "Delanteras a 2,3 bar y traseras a 2,1 bar",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Con las ruedas calientes, después de conducir un rato, y dos coma tres delante y dos coma uno detrás.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct"
+      }
+    },
+    {
+      "id": "tb_es_016",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Cómo comprobar la presión de los neumáticos",
+      "key_points": [
+        {
+          "point": "Medirla con las ruedas en frío",
+          "critical": true
+        },
+        {
+          "point": "Delanteras a 2,3 bar y traseras a 2,1 bar",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Siempre en frío, y dos coma tres las de delante, dos coma uno las de atrás.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct"
+      }
+    },
+    {
+      "id": "tb_es_017",
+      "language": "es",
+      "description": "Front and rear pressures swapped",
+      "category": "subtle_wrong_swap",
+      "trap": true,
+      "task": "Cómo comprobar la presión de los neumáticos",
+      "key_points": [
+        {
+          "point": "Medirla con las ruedas en frío",
+          "critical": true
+        },
+        {
+          "point": "Delanteras a 2,3 bar y traseras a 2,1 bar",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "En frío; delante dos coma uno y detrás dos coma tres.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "wrong"
+      }
+    },
+    {
+      "id": "tb_es_018",
+      "language": "es",
+      "description": "The call to 112 comes first",
+      "category": "subtle_wrong_order",
+      "trap": true,
+      "task": "Cómo usar el desfibrilador",
+      "key_points": [
+        {
+          "point": "Llamar primero al 112",
+          "critical": true
+        },
+        {
+          "point": "Un parche debajo de la clavícula derecha y el otro en el costado izquierdo, bajo la axila",
+          "critical": true
+        },
+        {
+          "point": "Nadie toca a la persona durante la descarga",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Primero pongo los parches, uno debajo de la clavícula derecha y otro en el costado izquierdo, luego llamo al 112, y durante la descarga nadie la toca.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_019",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Cómo usar el desfibrilador",
+      "key_points": [
+        {
+          "point": "Llamar primero al 112",
+          "critical": true
+        },
+        {
+          "point": "Un parche debajo de la clavícula derecha y el otro en el costado izquierdo, bajo la axila",
+          "critical": true
+        },
+        {
+          "point": "Nadie toca a la persona durante la descarga",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Llamar primero al 112, los parches debajo de la clavícula derecha y en el lado izquierdo bajo el sobaco, y que nadie la toque cuando da la descarga.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_020",
+      "language": "es",
+      "description": "Did not understand and asks to hear it again",
+      "category": "not_understood",
+      "trap": false,
+      "task": "Cómo usar el desfibrilador",
+      "key_points": [
+        {
+          "point": "Llamar primero al 112",
+          "critical": true
+        },
+        {
+          "point": "Un parche debajo de la clavícula derecha y el otro en el costado izquierdo, bajo la axila",
+          "critical": true
+        },
+        {
+          "point": "Nadie toca a la persona durante la descarga",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "No me he enterado de nada, ¿me lo vuelves a explicar?",
+      "expected_kind": "not_understood"
+    },
+    {
+      "id": "tb_es_021",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Cómo cuidar los audífonos",
+      "key_points": [
+        {
+          "point": "Cargarlos cada noche en su estuche",
+          "critical": true
+        },
+        {
+          "point": "Limpiarlos con un paño seco, nunca con agua",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Se cargan todas las noches en el estuche y se limpian con un trapo seco, sin agua.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct"
+      }
+    },
+    {
+      "id": "tb_es_022",
+      "language": "es",
+      "description": "Direct question answered wrongly",
+      "category": "targeted_wrong",
+      "trap": true,
+      "task": "Cómo cuidar los audífonos",
+      "key_points": [
+        {
+          "point": "Cargarlos cada noche en su estuche",
+          "critical": true
+        },
+        {
+          "point": "Limpiarlos con un paño seco, nunca con agua",
+          "critical": true
+        }
+      ],
+      "asked": "¿Con qué hay que limpiar los audífonos?",
+      "user_text": "Con un poco de agua y jabón.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "missing",
+        "2": "wrong"
+      }
+    },
+    {
+      "id": "tb_es_023",
+      "language": "es",
+      "description": "Dose per litre instead of per five litres",
+      "category": "subtle_wrong_dose",
+      "trap": true,
+      "task": "Cómo diluir el limpiador de suelos",
+      "key_points": [
+        {
+          "point": "40 ml de producto por cada 5 litros de agua",
+          "critical": true
+        },
+        {
+          "point": "Usar guantes",
+          "critical": true
+        },
+        {
+          "point": "No mezclarlo nunca con lejía",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Cuarenta mililitros por cada litro, con guantes y sin mezclar con lejía.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "wrong",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_024",
+      "language": "es",
+      "description": "Leaves out never mixing it with bleach",
+      "category": "missing_critical",
+      "trap": true,
+      "task": "Cómo diluir el limpiador de suelos",
+      "key_points": [
+        {
+          "point": "40 ml de producto por cada 5 litros de agua",
+          "critical": true
+        },
+        {
+          "point": "Usar guantes",
+          "critical": true
+        },
+        {
+          "point": "No mezclarlo nunca con lejía",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Cuarenta mililitros en cinco litros de agua y con guantes puestos.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_025",
+      "language": "es",
+      "description": "Names the topic but says no key point",
+      "category": "self_report_topic_words",
+      "trap": true,
+      "task": "Qué hacer si te pilla una tormenta al aire libre",
+      "key_points": [
+        {
+          "point": "Entrar en un edificio o en un coche",
+          "critical": true
+        },
+        {
+          "point": "Alejarse de los árboles aislados",
+          "critical": true
+        },
+        {
+          "point": "Esperar 30 minutos después del último trueno antes de salir",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Sí, entendido, lo de la tormenta.",
+      "expected_kind": "declines"
+    },
+    {
+      "id": "tb_es_026",
+      "language": "es",
+      "description": "Every point in other words",
+      "category": "all_correct_paraphrase",
+      "trap": false,
+      "task": "Qué hacer si te pilla una tormenta al aire libre",
+      "key_points": [
+        {
+          "point": "Entrar en un edificio o en un coche",
+          "critical": true
+        },
+        {
+          "point": "Alejarse de los árboles aislados",
+          "critical": true
+        },
+        {
+          "point": "Esperar 30 minutos después del último trueno antes de salir",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Meterme en un edificio o en el coche, lejos de los árboles que estén solos, y esperar media hora desde el último trueno.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_027",
+      "language": "es",
+      "description": "Ten minutes instead of thirty",
+      "category": "subtle_wrong_time",
+      "trap": true,
+      "task": "Qué hacer si te pilla una tormenta al aire libre",
+      "key_points": [
+        {
+          "point": "Entrar en un edificio o en un coche",
+          "critical": true
+        },
+        {
+          "point": "Alejarse de los árboles aislados",
+          "critical": true
+        },
+        {
+          "point": "Esperar 30 minutos después del último trueno antes de salir",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Meterme dentro, lejos de los árboles, y esperar diez minutos después del último trueno.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "wrong"
+      }
+    },
+    {
+      "id": "tb_es_028",
+      "language": "es",
+      "description": "Off-topic question",
+      "category": "off_topic",
+      "trap": false,
+      "task": "Cómo prepararse para un corte de luz",
+      "key_points": [
+        {
+          "point": "Mantener cerradas la nevera y el congelador",
+          "critical": true
+        },
+        {
+          "point": "Desenchufar los electrodomésticos",
+          "critical": false
+        },
+        {
+          "point": "Usar linternas, no velas",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Oye, ¿sabes qué tiempo va a hacer mañana?",
+      "expected_kind": "other"
+    },
+    {
+      "id": "tb_es_029",
+      "language": "es",
+      "description": "Direct question answered without knowing: the point is missing",
+      "category": "targeted_no_answer",
+      "trap": true,
+      "task": "Cómo prepararse para un corte de luz",
+      "key_points": [
+        {
+          "point": "Mantener cerradas la nevera y el congelador",
+          "critical": true
+        },
+        {
+          "point": "Desenchufar los electrodomésticos",
+          "critical": false
+        },
+        {
+          "point": "Usar linternas, no velas",
+          "critical": true
+        }
+      ],
+      "asked": "¿Qué hay que usar para alumbrarse?",
+      "user_text": "Ni idea.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "missing",
+        "2": "missing",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_030",
+      "language": "es",
+      "description": "Contradicts the rule about the top rungs",
+      "category": "subtle_wrong_rule",
+      "trap": true,
+      "task": "Cómo usar una escalera con seguridad",
+      "key_points": [
+        {
+          "point": "Separar la base un metro por cada cuatro metros de altura",
+          "critical": true
+        },
+        {
+          "point": "Mantener siempre tres puntos de apoyo",
+          "critical": true
+        },
+        {
+          "point": "No subirse nunca a los dos últimos peldaños",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Un metro de separación por cada cuatro de altura, tres apoyos siempre, y puedo subirme hasta el último peldaño.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "wrong"
+      }
+    },
+    {
+      "id": "tb_es_031",
+      "language": "es",
+      "description": "Asks about the topic and says nothing back",
+      "category": "question",
+      "trap": false,
+      "task": "Cómo usar una escalera con seguridad",
+      "key_points": [
+        {
+          "point": "Separar la base un metro por cada cuatro metros de altura",
+          "critical": true
+        },
+        {
+          "point": "Mantener siempre tres puntos de apoyo",
+          "critical": true
+        },
+        {
+          "point": "No subirse nunca a los dos últimos peldaños",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "¿Y si el suelo está inclinado, qué hago?",
+      "expected_kind": "question"
+    },
+    {
+      "id": "tb_es_032",
+      "language": "es",
+      "description": "Asks to hear part of the explanation again",
+      "category": "not_understood",
+      "trap": false,
+      "task": "Cómo prepararse para un corte de luz",
+      "key_points": [
+        {
+          "point": "Mantener cerradas la nevera y el congelador",
+          "critical": true
+        },
+        {
+          "point": "Desenchufar los electrodomésticos",
+          "critical": false
+        },
+        {
+          "point": "Usar linternas, no velas",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Perdona, ¿puedes repetir lo de la nevera? No lo he pillado.",
+      "expected_kind": "not_understood"
+    },
+    {
+      "id": "tb_en_034",
+      "language": "en",
+      "description": "Part of a point, nothing false: incomplete, never wrong",
+      "category": "incomplete",
+      "trap": true,
+      "task": "How to use the recycling centre",
+      "key_points": [
+        {
+          "point": "Batteries go in the red container",
+          "critical": true
+        },
+        {
+          "point": "Show your ID card at the gate before unloading",
+          "critical": true
+        },
+        {
+          "point": "Large furniture such as sofas and wardrobes goes to bay 3, at the back",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Batteries go in the red container, and I show my ID card.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "incomplete",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_en_035",
+      "language": "en",
+      "description": "A missing irrelevant detail does not make a point incomplete",
+      "category": "irrelevant_detail",
+      "trap": true,
+      "task": "How to use the recycling centre",
+      "key_points": [
+        {
+          "point": "Batteries go in the red container",
+          "critical": true
+        },
+        {
+          "point": "Show your ID card at the gate before unloading",
+          "critical": true
+        },
+        {
+          "point": "Large furniture such as sofas and wardrobes goes to bay 3, at the back",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Batteries in the red container, I show my ID at the gate before I unload, and my old sofa goes to bay three.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "correct",
+        "3": "correct"
+      }
+    },
+    {
+      "id": "tb_es_033",
+      "language": "es",
+      "description": "Part of a point, nothing false: incomplete, never wrong",
+      "category": "incomplete",
+      "trap": true,
+      "task": "Cómo usar el punto limpio",
+      "key_points": [
+        {
+          "point": "Las pilas van en el contenedor rojo",
+          "critical": true
+        },
+        {
+          "point": "Hay que enseñar el DNI en la puerta antes de descargar",
+          "critical": true
+        },
+        {
+          "point": "Los muebles grandes, como sofás y armarios, van a la nave 3, al fondo",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Las pilas al contenedor rojo y enseño el DNI.",
+      "expected_kind": "restates",
+      "expected_points": {
+        "1": "correct",
+        "2": "incomplete",
+        "3": "missing"
+      }
+    },
+    {
+      "id": "tb_es_034",
+      "language": "es",
+      "description": "Word salad says nothing of the explanation",
+      "category": "unintelligible",
+      "trap": true,
+      "task": "Cómo usar el punto limpio",
+      "key_points": [
+        {
+          "point": "Las pilas van en el contenedor rojo",
+          "critical": true
+        },
+        {
+          "point": "Hay que enseñar el DNI en la puerta antes de descargar",
+          "critical": true
+        },
+        {
+          "point": "Los muebles grandes, como sofás y armarios, van a la nave 3, al fondo",
+          "critical": true
+        }
+      ],
+      "asked": "",
+      "user_text": "Ventana amarilla siete el río.",
+      "expected_kind": "other"
+    }
+  ]
+}

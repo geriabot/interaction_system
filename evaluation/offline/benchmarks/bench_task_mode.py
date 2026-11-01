@@ -1,8 +1,20 @@
+# Copyright 2026 Álvaro Quintana Camacho
+# Copyright 2026 Rodrigo Pérez-Rodríguez
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 Benchmark: dialog mode classification (task_mode).
 
 Measures whether the system correctly assigns slot_filling vs explanation
 from the textual task description.
+
+Two methods:
+  - behavior (default): the interaction system's choice of the dialogue behavior
+    (interaction_intelligence.selection) from the catalog of the orchestrator
+    (interaction_orchestrator_params.yaml). Without resources, the behaviors offered are those
+    that need nothing: slot filling and explanation.
+  - task_mode: the original classifier of DialoStack (prompt classify_task_mode).
 
 Metrics:
   - Global accuracy
@@ -24,13 +36,37 @@ from core.llm_adapter import make_infer_fn
 from core.metrics import MultiMetrics, print_confusion
 from core.report import print_section, print_table, print_summary, save_json
 
-from ros2_dialog_manager.llm_client import LLMDialogClient
-from ros2_dialog_manager.prompt_builder import PromptBuilder
+from interaction_intelligence.llm_client import LLMDialogClient
+from interaction_intelligence.prompt_builder import PromptBuilder
+from interaction_intelligence.selection import choose_behavior
 
 _LABELS = ["slot_filling", "explanation"]
+_CATALOG = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "interaction_system_core", "interaction_system",
+    "config", "interaction_orchestrator_params.yaml",
+)
 
 
-def run(cfg: dict, dataset_path: str, verbose: bool = False) -> dict:
+def load_catalog() -> list[dict]:
+    """The dialogue behaviors of the orchestrator's catalog, as the intelligence receives them."""
+    import yaml
+
+    with open(_CATALOG, encoding="utf-8") as f:
+        params = yaml.safe_load(f)["/interaction_orchestrator"]["ros__parameters"]
+    catalog = params["dialogue_behaviors"]
+    return [
+        {
+            "behavior_id": catalog[name]["behavior_id"],
+            "name": name,
+            "mode": catalog[name]["mode"],
+            "explanation": catalog[name]["explanation"],
+            "needs": [n for n in catalog[name]["needs"] if n],
+        }
+        for name in catalog["behaviors"]
+    ]
+
+
+def run(cfg: dict, dataset_path: str, verbose: bool = False, method: str = "behavior") -> dict:
     prompts_path = resolve_path(cfg["prompts_yaml"])
     templates = load_prompts(prompts_path)
     language = cfg.get("dialog", {}).get("language", "Spanish")
@@ -47,6 +83,9 @@ def run(cfg: dict, dataset_path: str, verbose: bool = False) -> dict:
         history_max_turns=history_max,
     )
 
+    catalog = load_catalog()
+    modes = {b["behavior_id"]: b["mode"] for b in catalog}
+
     with open(dataset_path, encoding="utf-8") as f:
         dataset = json.load(f)
     cases = dataset.get("cases", [])
@@ -57,6 +96,7 @@ def run(cfg: dict, dataset_path: str, verbose: bool = False) -> dict:
     print_section("BENCHMARK: Task mode classification")
     print(f"  Dataset : {os.path.basename(dataset_path)}")
     print(f"  Cases   : {len(cases)}")
+    print(f"  Method  : {method}")
     print(f"  Provider: {cfg['llm']['provider']} / {cfg['llm']['model']}\n")
 
     total = len(cases)
@@ -72,7 +112,11 @@ def run(cfg: dict, dataset_path: str, verbose: bool = False) -> dict:
 
         t0 = time.monotonic()
         try:
-            got = llm.classify_task_mode(task, ctx=None)
+            if method == "task_mode":
+                got = llm.classify_task_mode(task, ctx=None)
+            else:
+                chosen, _ = choose_behavior(llm, task, catalog, [], None)
+                got = modes.get(chosen, "none")
         except Exception as exc:
             metrics.errors += 1
             case_results.append({"id": cid, "status": "llm_error", "error": str(exc)})
@@ -134,6 +178,7 @@ def run(cfg: dict, dataset_path: str, verbose: bool = False) -> dict:
 
     results = {
         "benchmark": "task_mode",
+        "method": method,
         "provider": cfg["llm"]["provider"],
         "model": cfg["llm"]["model"],
         "total_cases": len(cases),
@@ -165,13 +210,14 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", default=None)
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--save", action="store_true")
+    parser.add_argument("--method", choices=["behavior", "task_mode"], default="behavior")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
     dataset = args.dataset or resolve_path("datasets/task_mode.json")
-    results = run(cfg, dataset, verbose=args.verbose)
+    results = run(cfg, dataset, verbose=args.verbose, method=args.method)
 
     if args.save:
         results_dir = resolve_path(cfg.get("results_dir", "results"))
-        path = save_json(results, "task_mode", results_dir)
+        path = save_json(results, f"task_mode_{args.method}", results_dir)
         print(f"\n  Saved to: {path}")

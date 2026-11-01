@@ -1,3 +1,8 @@
+# Copyright 2026 Álvaro Quintana Camacho
+# Copyright 2026 Rodrigo Pérez-Rodríguez
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 LLM adapter: factory functions that return an infer_fn compatible
 with LLMDialogClient's signature:
@@ -10,6 +15,33 @@ import os
 from typing import Callable, Optional
 
 InferFn = Callable[[str, str, Optional[int], Optional[dict]], Optional[str]]
+
+# The reasoning tokens of a model that thinks (think true or a level: gpt-oss cannot switch it
+# off) count toward num_predict: a cap of 30-80 tokens would be spent thinking and the answer
+# would come back empty. Such a model gets this many tokens more; the same allowance as the
+# production OllamaProvider, so that phase A, phase B and E1 ask alike.
+REASONING_ALLOWANCE = 1024
+
+
+def thinks(think) -> bool:
+    """Whether a `think` value lets the model reason (True or a level such as "low")."""
+    if isinstance(think, str):
+        return think.strip().lower() not in ("", "false", "0", "no", "off", "none")
+    return bool(think)
+
+
+def num_predict(max_tokens: Optional[int], think) -> Optional[int]:
+    """The num_predict of a request: the cap of the answer, plus the reasoning allowance for a
+    model that thinks. None: no cap."""
+    if not max_tokens or max_tokens <= 0:
+        return None
+    return max_tokens + (REASONING_ALLOWANCE if thinks(think) else 0)
+
+
+class TransportError(RuntimeError):
+    """The request did not reach the model or its answer did not come back (connection refused
+    or cut, a timeout, an HTTP 5xx): not an answer of the model. Phase A does not count it as a
+    call without an answer; the run that has one is not saved (run_models.py redoes it)."""
 
 
 def make_gemini_infer_fn(
@@ -59,8 +91,13 @@ def make_ollama_infer_fn(
     model: str = "qwen2.5",
     host: str = "127.0.0.1",
     port: int = 11434,
-    think: bool = False,
+    think: bool | str = False,
+    num_ctx: int | None = None,
 ) -> InferFn:
+    """think: False (no reasoning, as the system), or a level ("low") for the models that cannot
+    switch it off (they get REASONING_ALLOWANCE more tokens). num_ctx: the context window, when
+    the run fixes it. A transport failure raises TransportError; an empty answer of the model,
+    or an HTTP 4xx, returns None."""
     import json
     import requests
 
@@ -74,8 +111,11 @@ def make_ollama_infer_fn(
     ) -> Optional[str]:
         payload: dict = {"model": model, "prompt": prompt, "stream": False, "think": think}
         options: dict = {}
-        if max_tokens and max_tokens > 0:
-            options["num_predict"] = max_tokens
+        cap = num_predict(max_tokens, think)
+        if cap:
+            options["num_predict"] = cap
+        if num_ctx:
+            options["num_ctx"] = int(num_ctx)
         if schema:
             # Same rule as OllamaProvider: NLU calls run at temperature 0.
             payload["format"] = schema
@@ -84,11 +124,19 @@ def make_ollama_infer_fn(
             payload["options"] = options
         try:
             r = requests.post(url, json=payload, timeout=120)
-            r.raise_for_status()
-            return r.json().get("response", "").strip() or None
-        except Exception as exc:
-            print(f"  [Ollama error] {exc}")
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            print(f"  [Ollama transport error] {exc}")
+            raise TransportError(f"{type(exc).__name__}: {exc}") from exc
+        if r.status_code >= 500:
+            print(f"  [Ollama transport error] HTTP {r.status_code}")
+            raise TransportError(f"HTTP {r.status_code}: {r.text[:200]}")
+        if r.status_code >= 400:
+            print(f"  [Ollama error] HTTP {r.status_code}: {r.text[:200]}")
             return None
+        try:
+            return (r.json().get("response") or "").strip() or None
+        except ValueError as exc:  # the body was cut: it did not come back whole
+            raise TransportError(f"unreadable answer: {exc}") from exc
 
     return infer
 
@@ -198,7 +246,8 @@ def make_infer_fn(cfg: dict) -> InferFn:
             model=llm_cfg.get("model", "qwen2.5"),
             host=llm_cfg.get("ollama_host", "127.0.0.1"),
             port=int(llm_cfg.get("ollama_port", 11434)),
-            think=bool(llm_cfg.get("think", False)),
+            think=llm_cfg.get("think", False),
+            num_ctx=llm_cfg.get("num_ctx"),
         )
     if provider == "claude":
         return make_claude_infer_fn(

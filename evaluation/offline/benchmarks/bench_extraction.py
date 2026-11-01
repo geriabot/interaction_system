@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 Benchmark: slot extraction (NLU gathering phase).
 
@@ -25,10 +29,10 @@ from core.llm_adapter import make_infer_fn
 from core.metrics import BinaryMetrics, values_match, list_overlap
 from core.report import print_section, print_table, print_summary, save_json, save_csv
 
-from ros2_dialog_manager.llm_client import LLMDialogClient
-from ros2_dialog_manager.prompt_builder import PromptBuilder
-from ros2_dialog_manager.dialog_frame import DialogFrame
-from ros2_dialog_manager.dialog_context import DialogContext
+from interaction_intelligence.llm_client import LLMDialogClient
+from interaction_intelligence.prompt_builder import PromptBuilder
+from interaction_intelligence.dialog_frame import DialogFrame
+from interaction_intelligence.dialog_context import DialogContext
 
 
 def _build_frame(slot_schema: dict, frame_filled: dict) -> DialogFrame:

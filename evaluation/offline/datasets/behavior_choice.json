@@ -1,0 +1,475 @@
+{
+  "_instructions": [
+    "Benchmark: the choice of the dialogue behavior for a request that does not name one.",
+    "Each case: the task as a robot behavior would send it, the resources it attaches (none, a",
+    "question bank, the steps of a procedure, a roleplay scene, reference text, or a questionnaire",
+    "instrument), and the behavior a person would expect. 'expected' is the dialog mode: slot_filling,",
+    "explanation, quiz, procedure, roleplay, grounded_qa or questionnaire. A case whose task asks for a",
+    "behavior that needs a resource the request does not attach (e.g. 'run a quiz' without a question",
+    "bank) has expected null and 'infeasible_target' (the behavior asked for): it scores whether the",
+    "system avoids choosing a behavior that cannot run, not which one it chooses.",
+    "Resources are written in short form: {'bank': ...}, {'steps': ...}, {'scene': ...}, {'text': ...},",
+    "{'instrument': ...}. Reference text is also the material of grounded_qa, so a task with text is",
+    "offered both the explanation and grounded question answering: the task decides (the robot explains,",
+    "or the user asks)."
+  ],
+  "cases": [
+    {
+      "id": "bc_001",
+      "task": "Take the customer's order: drink, size and name",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_002",
+      "task": "Register the new resident: full name, date of birth and room number",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_003",
+      "task": "Book a table for tonight",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_004",
+      "task": "Find out which activity the visitor wants to sign up for and at what time",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_005",
+      "task": "Ask the patient how they slept and rate their pain from one to ten",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_006",
+      "task": "Tell the visitor about the menu options and note which dessert they want",
+      "resources": {
+        "text": "Desserts: fruit salad, yogurt, rice pudding."
+      },
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_007",
+      "task": "Toma el pedido del cliente: bebida, tamaño y nombre",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_008",
+      "task": "Pregunta al residente qué quiere cenar hoy",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_009",
+      "task": "Collect the details of the lost item: what it is, its colour and where it was lost",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_010",
+      "task": "Get the user's feedback on today's session: rating and whether they would come back",
+      "resources": {},
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_011",
+      "task": "Explain the fasting instructions before tomorrow's surgery",
+      "resources": {
+        "text": "No food from midnight. Water until 6 am."
+      },
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_012",
+      "task": "Explain how the new loyalty programme works",
+      "resources": {
+        "text": "One stamp per coffee; the tenth is free."
+      },
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_013",
+      "task": "Tell the resident what to do if the fire alarm goes off and make sure they understood",
+      "resources": {
+        "text": "Leave by the nearest exit, do not use the lift, meet in the garden."
+      },
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_014",
+      "task": "Explain why the visiting hours have changed",
+      "resources": {},
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_015",
+      "task": "Explícale al paciente cómo tomar la medicación nueva",
+      "resources": {
+        "text": "Una pastilla blanca por la mañana con el desayuno."
+      },
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_016",
+      "task": "Make sure the user understands the rules of the game before starting",
+      "resources": {
+        "text": "Each player rolls the die and moves; whoever arrives first wins."
+      },
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_017",
+      "task": "Describe the museum's opening hours and ticket prices to the visitor",
+      "resources": {
+        "text": "Open 10 to 18, closed Mondays. Tickets 8 euros, seniors 4."
+      },
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_018",
+      "task": "Inform the family how the new video call system works",
+      "resources": {},
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_019",
+      "task": "Run a short geography quiz",
+      "resources": {
+        "bank": true
+      },
+      "expected": "quiz"
+    },
+    {
+      "id": "bc_020",
+      "task": "Test what the user remembers from this morning's activity",
+      "resources": {
+        "bank": true
+      },
+      "expected": "quiz"
+    },
+    {
+      "id": "bc_021",
+      "task": "Ask these questions to check the training",
+      "resources": {
+        "bank": true
+      },
+      "expected": "quiz"
+    },
+    {
+      "id": "bc_022",
+      "task": "Do the memory exercise of today with the resident",
+      "resources": {
+        "bank": true
+      },
+      "expected": "quiz"
+    },
+    {
+      "id": "bc_023",
+      "task": "Hazle al usuario unas preguntas de cultura general",
+      "resources": {
+        "bank": true
+      },
+      "expected": "quiz"
+    },
+    {
+      "id": "bc_024",
+      "task": "Evaluate the user's knowledge of the safety rules",
+      "resources": {
+        "bank": true
+      },
+      "expected": "quiz"
+    },
+    {
+      "id": "bc_025",
+      "task": "Run a short geography quiz",
+      "resources": {},
+      "expected": null,
+      "infeasible_target": "quiz"
+    },
+    {
+      "id": "bc_026",
+      "task": "Test what the user remembers from this morning's activity",
+      "resources": {
+        "text": "We planted tomatoes in six pots."
+      },
+      "expected": null,
+      "infeasible_target": "quiz"
+    },
+    {
+      "id": "bc_027",
+      "task": "Guide the user through the shoulder warm-up",
+      "resources": {
+        "steps": true
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_028",
+      "task": "Help the resident prepare a cup of tea",
+      "resources": {
+        "steps": true
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_029",
+      "task": "Walk the user through setting an alarm on the phone",
+      "resources": {
+        "steps": true
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_030",
+      "task": "Acompaña al usuario en los ejercicios de respiración",
+      "resources": {
+        "steps": true
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_031",
+      "task": "Do the rehabilitation exercises of today with the patient",
+      "resources": {
+        "steps": true
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_032",
+      "task": "Help the user measure their blood pressure",
+      "resources": {
+        "steps": true
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_033",
+      "task": "Guide the user through the shoulder warm-up",
+      "resources": {},
+      "expected": null,
+      "infeasible_target": "procedure"
+    },
+    {
+      "id": "bc_034",
+      "task": "Help the resident prepare a cup of tea",
+      "resources": {
+        "text": "Boil water, put the bag in the cup, pour, wait three minutes."
+      },
+      "expected": null,
+      "infeasible_target": "procedure"
+    },
+    {
+      "id": "bc_035",
+      "task": "Practise a job interview with the user",
+      "resources": {
+        "scene": true
+      },
+      "expected": "roleplay"
+    },
+    {
+      "id": "bc_036",
+      "task": "Let the user rehearse ordering at a restaurant in English",
+      "resources": {
+        "scene": true
+      },
+      "expected": "roleplay"
+    },
+    {
+      "id": "bc_037",
+      "task": "Play the doctor so the user can practise explaining their symptoms",
+      "resources": {
+        "scene": true
+      },
+      "expected": "roleplay"
+    },
+    {
+      "id": "bc_038",
+      "task": "Ensaya con el usuario cómo pedir una cita por teléfono",
+      "resources": {
+        "scene": true
+      },
+      "expected": "roleplay"
+    },
+    {
+      "id": "bc_039",
+      "task": "Help the user prepare for a difficult conversation with their landlord",
+      "resources": {
+        "scene": true
+      },
+      "expected": "roleplay"
+    },
+    {
+      "id": "bc_040",
+      "task": "Practise a job interview with the user",
+      "resources": {},
+      "expected": null,
+      "infeasible_target": "roleplay"
+    },
+    {
+      "id": "bc_041",
+      "task": "The user wants to sign up for the trip; note their name and how many will go",
+      "resources": {
+        "bank": true
+      },
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_042",
+      "task": "Explain the exercise and then guide it step by step",
+      "resources": {
+        "steps": true
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_043",
+      "task": "Check whether the user remembers the steps of the recipe",
+      "resources": {
+        "bank": true,
+        "steps": true
+      },
+      "expected": "quiz"
+    },
+    {
+      "id": "bc_044",
+      "task": "Go through the steps of the evacuation drill with the resident",
+      "resources": {
+        "steps": true,
+        "text": "Evacuation protocol."
+      },
+      "expected": "procedure"
+    },
+    {
+      "id": "bc_045",
+      "task": "Introduce the activity and ask whether the user wants to join",
+      "resources": {
+        "text": "Music therapy on Tuesdays at 11."
+      },
+      "expected": "slot_filling"
+    },
+    {
+      "id": "bc_046",
+      "task": "Before the quiz, make sure the user understands how it works",
+      "resources": {
+        "text": "Three questions, answer aloud."
+      },
+      "expected": "explanation"
+    },
+    {
+      "id": "bc_047",
+      "task": "Answer the visitors' questions at the entrance of the museum",
+      "resources": {
+        "text": "The museum opens from Tuesday to Sunday, 10:00 to 19:00. Admission costs 8 euros."
+      },
+      "expected": "grounded_qa"
+    },
+    {
+      "id": "bc_048",
+      "task": "Be the information point of the train station and answer the travellers",
+      "resources": {
+        "text": "Trains to Toledo leave every hour from platform 3. A single ticket costs 13 euros."
+      },
+      "expected": "grounded_qa"
+    },
+    {
+      "id": "bc_049",
+      "task": "Help the hotel guests with their questions about the hotel services",
+      "resources": {
+        "text": "Breakfast is served from 7:00 to 10:30. Check-out is until 12:00."
+      },
+      "expected": "grounded_qa"
+    },
+    {
+      "id": "bc_050",
+      "task": "Attend the library users who want to know the opening hours and the loan rules",
+      "resources": {
+        "text": "The library opens from 9:00 to 21:00. Members can borrow up to 6 books."
+      },
+      "expected": "grounded_qa"
+    },
+    {
+      "id": "bc_051",
+      "task": "Resolve the doubts of the visitors at the hospital reception desk",
+      "resources": {
+        "text": "The cafeteria is on the ground floor. Visiting hours are from 16:00 to 20:00."
+      },
+      "expected": "grounded_qa"
+    },
+    {
+      "id": "bc_052",
+      "task": "Answer whatever the citizens ask about the certificate of registration",
+      "resources": {
+        "text": "An appointment is needed. The certificate is free."
+      },
+      "expected": "grounded_qa"
+    },
+    {
+      "id": "bc_053",
+      "task": "Answer the visitors' questions about the zoo",
+      "resources": {},
+      "expected": null,
+      "infeasible_target": "grounded_qa"
+    },
+    {
+      "id": "bc_054",
+      "task": "Ask the visitor the museum's satisfaction survey",
+      "resources": {
+        "instrument": true
+      },
+      "expected": "questionnaire"
+    },
+    {
+      "id": "bc_055",
+      "task": "Administer the three-item loneliness scale to the resident",
+      "resources": {
+        "instrument": true
+      },
+      "expected": "questionnaire"
+    },
+    {
+      "id": "bc_056",
+      "task": "Ask the patient to rate their pain from 0 to 10",
+      "resources": {
+        "instrument": true
+      },
+      "expected": "questionnaire"
+    },
+    {
+      "id": "bc_057",
+      "task": "Collect the participant's feedback on the workshop with the feedback form",
+      "resources": {
+        "instrument": true
+      },
+      "expected": "questionnaire"
+    },
+    {
+      "id": "bc_058",
+      "task": "Run the course evaluation questionnaire with the student",
+      "resources": {
+        "instrument": true
+      },
+      "expected": "questionnaire"
+    },
+    {
+      "id": "bc_059",
+      "task": "Ask the customer how satisfied they are with the robot's service",
+      "resources": {
+        "instrument": true
+      },
+      "expected": "questionnaire"
+    },
+    {
+      "id": "bc_060",
+      "task": "Ask the resident the sleep quality questionnaire",
+      "resources": {},
+      "expected": null,
+      "infeasible_target": "questionnaire"
+    }
+  ]
+}

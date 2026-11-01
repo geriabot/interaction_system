@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 Benchmark: quiz answer evaluation (evaluate_quiz_answer).
 
@@ -25,8 +29,8 @@ from core.llm_adapter import make_infer_fn
 from core.metrics import BinaryMetrics
 from core.report import print_section, print_table, print_summary, save_json
 
-from ros2_dialog_manager.llm_client import LLMDialogClient
-from ros2_dialog_manager.prompt_builder import PromptBuilder
+from interaction_intelligence.llm_client import LLMDialogClient
+from interaction_intelligence.prompt_builder import PromptBuilder
 
 
 def run(cfg: dict, dataset_path: str, verbose: bool = False) -> dict:

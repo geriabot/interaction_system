@@ -1,3 +1,8 @@
+# Copyright 2026 Álvaro Quintana Camacho
+# Copyright 2026 Rodrigo Pérez-Rodríguez
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 Main entry point for the evaluation suite.
 
@@ -7,7 +12,8 @@ Usage:
   python run_eval.py --benchmark intent        # intent classification only
   python run_eval.py --benchmark task_mode     # task mode only
   python run_eval.py --benchmark quiz          # quiz evaluation only
-  python run_eval.py --benchmark simulation    # end-to-end simulation only
+  python run_eval.py --benchmark confirmation  # a phase A benchmark (English and Spanish)
+  python run_eval.py --benchmark wording       # the form of the spoken lines (reported in E0a)
 
 Options:
   --config PATH    alternative path to config.yaml
@@ -30,7 +36,21 @@ BENCHMARKS = {
     "intent": ("benchmarks.bench_intent", "datasets/intent_classification.json"),
     "task_mode": ("benchmarks.bench_task_mode", "datasets/task_mode.json"),
     "quiz": ("benchmarks.bench_quiz", "datasets/quiz_evaluation.json"),
-    "simulation": ("benchmarks.bench_simulation", "datasets/dialog_scenarios.json"),
+    # Phase A of E0a: every critical narrow question, in English and Spanish
+    "confirmation": ("benchmarks.bench_confirmation", "datasets/phase_a/confirmation.json"),
+    "turn_act": ("benchmarks.bench_turn_act", "datasets/phase_a/turn_act.json"),
+    "quiz_grading": ("benchmarks.bench_quiz_grading", "datasets/phase_a/quiz_grading.json"),
+    "teach_back": ("benchmarks.bench_teach_back", "datasets/phase_a/teach_back.json"),
+    "qa_answer": ("benchmarks.bench_qa_answer", "datasets/phase_a/qa_answer.json"),
+    "qa_verify": ("benchmarks.bench_qa_verify", "datasets/phase_a/qa_verify.json"),
+    "scale_answer": ("benchmarks.bench_scale_answer", "datasets/phase_a/scale_answer.json"),
+    "step_turn": ("benchmarks.bench_step_turn", "datasets/phase_a/step_turn.json"),
+    "roleplay_turn": ("benchmarks.bench_roleplay_turn", "datasets/phase_a/roleplay_turn.json"),
+    "cancel_detect": ("benchmarks.bench_cancel_detect", "datasets/phase_a/cancel_detect.json"),
+    "cancel_reply": ("benchmarks.bench_cancel_reply", "datasets/phase_a/cancel_reply.json"),
+    # Reported in E0a, never a selection criterion (not in the safety gate): the form of the
+    # spoken lines, English and Spanish
+    "wording": ("benchmarks.bench_wording", "datasets/wording.json"),
 }
 
 
@@ -89,6 +109,9 @@ def main() -> None:
     parser.add_argument(
         "--model", default=None, help="Override LLM model (e.g. qwen2.5, gemini-2.5-flash)"
     )
+    parser.add_argument(
+        "--languages", default=None, help="Phase A benchmarks: comma-separated (default en,es)"
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -96,6 +119,8 @@ def main() -> None:
         cfg.setdefault("llm", {})["provider"] = args.provider
     if args.model:
         cfg.setdefault("llm", {})["model"] = args.model
+    if args.languages:
+        cfg["languages"] = args.languages
 
     provider = cfg.get("llm", {}).get("provider", "?")
     model = cfg.get("llm", {}).get("model", "?")

@@ -1,8 +1,13 @@
-"""
-Adds the production dialog manager package to sys.path so that evaluation
-scripts can import it without ROS being sourced.
+# Copyright 2026 Álvaro Quintana Camacho
+# Copyright 2026 Rodrigo Pérez-Rodríguez
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
 
-Call setup_path() before any import from ros2_dialog_manager.
+"""
+Adds the interaction intelligence package (the production language modules) to sys.path so
+that the evaluation scripts can import it without ROS being sourced.
+
+Call setup_path() before any import from interaction_intelligence.
 """
 
 import os
@@ -10,8 +15,10 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Path to the ROS package directory that contains ros2_dialog_manager/
-_DIALOG_MGR_PKG = os.path.normpath(os.path.join(_HERE, "..", "..", "ros2_dialog_manager"))
+# Path to the ROS package directory that contains interaction_intelligence/
+_DIALOG_MGR_PKG = os.path.normpath(
+    os.path.join(_HERE, "..", "..", "..", "interaction_system_core", "interaction_intelligence")
+)
 
 
 def setup_path() -> None:
@@ -32,7 +39,7 @@ def load_prompts(prompts_yaml_path: str) -> dict[str, str]:
 
     with open(os.path.abspath(prompts_yaml_path), encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    return data["dialog_manager_node"]["ros__parameters"]["prompts"]
+    return data["interaction_intelligence"]["ros__parameters"]["prompts"]
 
 
 def resolve_path(relative_to_eval: str) -> str:

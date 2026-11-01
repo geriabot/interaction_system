@@ -1,0 +1,3547 @@
+{
+  "_instructions": [
+    "Phase A of E0a: the understanding of a gathering turn of slot filling (LLMDialogClient.extract_turn), asked as slot_filling.update asks it.",
+    "Fields: task, domain (the context of the request), slot_schema (the frame_schema_json format), frame_filled (the values already in the frame), unanswered (optional: slots left blank), history (the conversation so far; it ends with the robot's question), user_text, expected_act (values | question | skip | repeat | other, as defined in the extract_slots prompt), expected_extractions ([{slot, value}], canonical values, ints as numbers, list operations as {\"_remove\"|\"_replace\": true, \"items\": [...]}; empty unless the act is values).",
+    "A value of a slot ALREADY FILLED mentioned without a correction signal is not extracted. A value outside the canonical values of its slot is dropped by the code: such cases are not used (their act would be ambiguous).",
+    "Traps: bare values that look like nothing (\"It's Laura\"), values given with hesitation, indirect skips, questions that name a valid value, oddly phrased requests to repeat, mentions of a filled value, numbers outside the slot's allowed range (extracted as said: the code rejects them and the reply says the range).",
+    "Each case: id, language (en | es), description (English), category (the kind of case), trap (a case built to provoke the error the question must not make), origin (optional: the case of the student's Spanish dataset it reuses or translates).",
+    "No case may reuse content of an evaluation scenario (evaluation/experiments/scenarios) nor of the examples of config/prompts.yaml; check with: python3 -m core.dataset_check.",
+    "The expected values are decided by a person; a case a careful annotator could label otherwise is dropped, not kept."
+  ],
+  "question": "extract_turn",
+  "cases": [
+    {
+      "id": "ta_en_001",
+      "language": "en",
+      "description": "A service named by its symptom",
+      "category": "plain_value",
+      "trap": false,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What do you need us to do with the bike?"
+        }
+      ],
+      "user_text": "The brakes keep squeaking, they need adjusting.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "service",
+          "value": "brake adjustment"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_002",
+      "language": "en",
+      "description": "A bare name that a small model may take as a skip",
+      "category": "bare_value",
+      "trap": true,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "brake adjustment",
+        "day": "thursday"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "And what name should I put the booking under?"
+        }
+      ],
+      "user_text": "It's Laura.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "customer_name",
+          "value": "Laura"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_003",
+      "language": "en",
+      "description": "A bare day with a filler word",
+      "category": "bare_value",
+      "trap": true,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "full service"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which day would suit you?"
+        }
+      ],
+      "user_text": "Thursday's fine.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "day",
+          "value": "thursday"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_004",
+      "language": "en",
+      "description": "A question that names a valid day: nothing to extract",
+      "category": "question_with_value",
+      "trap": true,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "full service"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which day would you like to bring it in?"
+        }
+      ],
+      "user_text": "Do you have anything on Saturday?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_005",
+      "language": "en",
+      "description": "A value given with hesitation is still a value",
+      "category": "uncertain_value",
+      "trap": true,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "gear tuning"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which day would you like to bring it in?"
+        }
+      ],
+      "user_text": "Not totally sure, but put me down for Wednesday.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "day",
+          "value": "wednesday"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_006",
+      "language": "en",
+      "description": "A short request to repeat",
+      "category": "odd_repeat",
+      "trap": true,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "puncture repair",
+        "day": "friday"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What name should I put the booking under?"
+        }
+      ],
+      "user_text": "Sorry, the what?",
+      "expected_act": "repeat",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_007",
+      "language": "en",
+      "description": "Mentions the value already filled, without a correction",
+      "category": "filled_no_correction",
+      "trap": true,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "gear tuning",
+        "day": "monday"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What name should I put the booking under?"
+        }
+      ],
+      "user_text": "Monday works great for me, by the way.",
+      "expected_act": "other",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_008",
+      "language": "en",
+      "description": "Corrects a filled slot and gives the asked one",
+      "category": "correction_plus_value",
+      "trap": false,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "brake adjustment",
+        "day": "tuesday"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What name should I put the booking under?"
+        }
+      ],
+      "user_text": "Oh wait, make it Friday instead of Tuesday. The name's Omar.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "day",
+          "value": "friday"
+        },
+        {
+          "slot": "customer_name",
+          "value": "Omar"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_009",
+      "language": "en",
+      "description": "Asks about the service",
+      "category": "plain_question",
+      "trap": false,
+      "task": "Book a repair at the bicycle workshop",
+      "domain": "bicycle workshop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "service",
+            "type": "str",
+            "canonical_values": [
+              "puncture repair",
+              "brake adjustment",
+              "full service",
+              "gear tuning"
+            ]
+          },
+          {
+            "name": "day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "service": "full service"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which day would you like to bring it in?"
+        }
+      ],
+      "user_text": "How long does a full service usually take?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_010",
+      "language": "en",
+      "description": "A one-word name",
+      "category": "bare_value",
+      "trap": true,
+      "task": "Book an appointment at the veterinary clinic",
+      "domain": "veterinary clinic",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pet_name",
+            "type": "str"
+          },
+          {
+            "name": "species",
+            "type": "str",
+            "canonical_values": [
+              "dog",
+              "rabbit",
+              "ferret",
+              "parrot"
+            ]
+          },
+          {
+            "name": "reason",
+            "type": "str",
+            "canonical_values": [
+              "vaccination",
+              "check-up",
+              "injury",
+              "dental"
+            ]
+          },
+          {
+            "name": "time_slot",
+            "type": "str",
+            "canonical_values": [
+              "morning",
+              "afternoon"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What's your pet's name?"
+        }
+      ],
+      "user_text": "Biscuit.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "pet_name",
+          "value": "Biscuit"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_011",
+      "language": "en",
+      "description": "Species with extra detail",
+      "category": "plain_value",
+      "trap": false,
+      "task": "Book an appointment at the veterinary clinic",
+      "domain": "veterinary clinic",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pet_name",
+            "type": "str"
+          },
+          {
+            "name": "species",
+            "type": "str",
+            "canonical_values": [
+              "dog",
+              "rabbit",
+              "ferret",
+              "parrot"
+            ]
+          },
+          {
+            "name": "reason",
+            "type": "str",
+            "canonical_values": [
+              "vaccination",
+              "check-up",
+              "injury",
+              "dental"
+            ]
+          },
+          {
+            "name": "time_slot",
+            "type": "str",
+            "canonical_values": [
+              "morning",
+              "afternoon"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "pet_name": "Biscuit"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "And what kind of animal is Biscuit?"
+        }
+      ],
+      "user_text": "He's a rabbit, a little lop-eared one.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "species",
+          "value": "rabbit"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_012",
+      "language": "en",
+      "description": "A canonical value given as a paraphrase",
+      "category": "paraphrased_value",
+      "trap": false,
+      "task": "Book an appointment at the veterinary clinic",
+      "domain": "veterinary clinic",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pet_name",
+            "type": "str"
+          },
+          {
+            "name": "species",
+            "type": "str",
+            "canonical_values": [
+              "dog",
+              "rabbit",
+              "ferret",
+              "parrot"
+            ]
+          },
+          {
+            "name": "reason",
+            "type": "str",
+            "canonical_values": [
+              "vaccination",
+              "check-up",
+              "injury",
+              "dental"
+            ]
+          },
+          {
+            "name": "time_slot",
+            "type": "str",
+            "canonical_values": [
+              "morning",
+              "afternoon"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "pet_name": "Biscuit",
+        "species": "rabbit",
+        "reason": "check-up"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Would you prefer the morning or the afternoon?"
+        }
+      ],
+      "user_text": "After lunch would be best.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "time_slot",
+          "value": "afternoon"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_013",
+      "language": "en",
+      "description": "A question that mentions a canonical reason",
+      "category": "question_with_value",
+      "trap": true,
+      "task": "Book an appointment at the veterinary clinic",
+      "domain": "veterinary clinic",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pet_name",
+            "type": "str"
+          },
+          {
+            "name": "species",
+            "type": "str",
+            "canonical_values": [
+              "dog",
+              "rabbit",
+              "ferret",
+              "parrot"
+            ]
+          },
+          {
+            "name": "reason",
+            "type": "str",
+            "canonical_values": [
+              "vaccination",
+              "check-up",
+              "injury",
+              "dental"
+            ]
+          },
+          {
+            "name": "time_slot",
+            "type": "str",
+            "canonical_values": [
+              "morning",
+              "afternoon"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "pet_name": "Biscuit",
+        "species": "rabbit"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What's the reason for the visit?"
+        }
+      ],
+      "user_text": "Is a dental check something you do here?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_014",
+      "language": "en",
+      "description": "Did not hear the options",
+      "category": "partial_repeat",
+      "trap": false,
+      "task": "Book an appointment at the veterinary clinic",
+      "domain": "veterinary clinic",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pet_name",
+            "type": "str"
+          },
+          {
+            "name": "species",
+            "type": "str",
+            "canonical_values": [
+              "dog",
+              "rabbit",
+              "ferret",
+              "parrot"
+            ]
+          },
+          {
+            "name": "reason",
+            "type": "str",
+            "canonical_values": [
+              "vaccination",
+              "check-up",
+              "injury",
+              "dental"
+            ]
+          },
+          {
+            "name": "time_slot",
+            "type": "str",
+            "canonical_values": [
+              "morning",
+              "afternoon"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "pet_name": "Biscuit",
+        "species": "rabbit",
+        "reason": "vaccination"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Would you prefer the morning or the afternoon?"
+        }
+      ],
+      "user_text": "Morning or what, sorry? I missed the second one.",
+      "expected_act": "repeat",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_015",
+      "language": "en",
+      "description": "An aside, nothing for the slots",
+      "category": "off_topic",
+      "trap": false,
+      "task": "Book an appointment at the veterinary clinic",
+      "domain": "veterinary clinic",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pet_name",
+            "type": "str"
+          },
+          {
+            "name": "species",
+            "type": "str",
+            "canonical_values": [
+              "dog",
+              "rabbit",
+              "ferret",
+              "parrot"
+            ]
+          },
+          {
+            "name": "reason",
+            "type": "str",
+            "canonical_values": [
+              "vaccination",
+              "check-up",
+              "injury",
+              "dental"
+            ]
+          },
+          {
+            "name": "time_slot",
+            "type": "str",
+            "canonical_values": [
+              "morning",
+              "afternoon"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What's your pet's name?"
+        }
+      ],
+      "user_text": "Hold on, the dog's barking at the postman again.",
+      "expected_act": "other",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_016",
+      "language": "en",
+      "description": "A bare number",
+      "category": "bare_value",
+      "trap": true,
+      "task": "Book a kayak rental at the lake",
+      "domain": "kayak rental",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "kayaks",
+            "type": "int"
+          },
+          {
+            "name": "hours",
+            "type": "int"
+          },
+          {
+            "name": "life_jackets",
+            "type": "bool"
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "kayaks": 3
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "For how many hours would you like them?"
+        }
+      ],
+      "user_text": "Just two.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "hours",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "ta_en_017",
+      "language": "en",
+      "description": "An affirmative without the word yes",
+      "category": "bool_affirm",
+      "trap": false,
+      "task": "Book a kayak rental at the lake",
+      "domain": "kayak rental",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "kayaks",
+            "type": "int"
+          },
+          {
+            "name": "hours",
+            "type": "int"
+          },
+          {
+            "name": "life_jackets",
+            "type": "bool"
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "kayaks": 3,
+        "hours": 2
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Do you need life jackets?"
+        }
+      ],
+      "user_text": "For the kids, definitely.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "life_jackets",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "ta_en_018",
+      "language": "en",
+      "description": "Cannot give the name and asks to leave it",
+      "category": "indirect_skip",
+      "trap": true,
+      "task": "Book a kayak rental at the lake",
+      "domain": "kayak rental",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "kayaks",
+            "type": "int"
+          },
+          {
+            "name": "hours",
+            "type": "int"
+          },
+          {
+            "name": "life_jackets",
+            "type": "bool"
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "kayaks": 3,
+        "hours": 2,
+        "life_jackets": true
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What name should the booking be under?"
+        }
+      ],
+      "user_text": "Can't remember if it's under my name or my partner's, let's leave it blank for now.",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_019",
+      "language": "en",
+      "description": "Asks the price",
+      "category": "plain_question",
+      "trap": false,
+      "task": "Book a kayak rental at the lake",
+      "domain": "kayak rental",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "kayaks",
+            "type": "int"
+          },
+          {
+            "name": "hours",
+            "type": "int"
+          },
+          {
+            "name": "life_jackets",
+            "type": "bool"
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "kayaks": 3
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "For how many hours would you like them?"
+        }
+      ],
+      "user_text": "How much is it per hour?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_020",
+      "language": "en",
+      "description": "A repeat request shaped as a question",
+      "category": "odd_repeat",
+      "trap": true,
+      "task": "Book a kayak rental at the lake",
+      "domain": "kayak rental",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "kayaks",
+            "type": "int"
+          },
+          {
+            "name": "hours",
+            "type": "int"
+          },
+          {
+            "name": "life_jackets",
+            "type": "bool"
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "kayaks": 2
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "For how many hours would you like them?"
+        }
+      ],
+      "user_text": "Sorry, I missed that, for how many what?",
+      "expected_act": "repeat",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_021",
+      "language": "en",
+      "description": "A comment on the weather",
+      "category": "off_topic",
+      "trap": false,
+      "task": "Book a kayak rental at the lake",
+      "domain": "kayak rental",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "kayaks",
+            "type": "int"
+          },
+          {
+            "name": "hours",
+            "type": "int"
+          },
+          {
+            "name": "life_jackets",
+            "type": "bool"
+          },
+          {
+            "name": "customer_name",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "How many kayaks would you like?"
+        }
+      ],
+      "user_text": "The water looks lovely today.",
+      "expected_act": "other",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_022",
+      "language": "en",
+      "description": "Two items of a list",
+      "category": "list_add",
+      "trap": false,
+      "task": "Take a bouquet order at the florist",
+      "domain": "florist",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flowers",
+            "type": "list_str",
+            "canonical_values": [
+              "roses",
+              "tulips",
+              "lilies",
+              "sunflowers",
+              "daisies"
+            ]
+          },
+          {
+            "name": "size",
+            "type": "str",
+            "canonical_values": [
+              "small",
+              "medium",
+              "large"
+            ]
+          },
+          {
+            "name": "delivery",
+            "type": "bool"
+          },
+          {
+            "name": "card_message",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which flowers would you like in the bouquet?"
+        }
+      ],
+      "user_text": "Tulips and a few daisies.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "flowers",
+          "value": [
+            "tulips",
+            "daisies"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ta_en_023",
+      "language": "en",
+      "description": "Removes an item of the list",
+      "category": "list_remove",
+      "trap": false,
+      "task": "Take a bouquet order at the florist",
+      "domain": "florist",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flowers",
+            "type": "list_str",
+            "canonical_values": [
+              "roses",
+              "tulips",
+              "lilies",
+              "sunflowers",
+              "daisies"
+            ]
+          },
+          {
+            "name": "size",
+            "type": "str",
+            "canonical_values": [
+              "small",
+              "medium",
+              "large"
+            ]
+          },
+          {
+            "name": "delivery",
+            "type": "bool"
+          },
+          {
+            "name": "card_message",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "flowers": [
+          "tulips",
+          "daisies"
+        ]
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What size would you like?"
+        }
+      ],
+      "user_text": "Hmm, leave out the daisies, please.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "flowers",
+          "value": {
+            "_remove": true,
+            "items": [
+              "daisies"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ta_en_024",
+      "language": "en",
+      "description": "Asks to skip the card message",
+      "category": "explicit_skip",
+      "trap": false,
+      "task": "Take a bouquet order at the florist",
+      "domain": "florist",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flowers",
+            "type": "list_str",
+            "canonical_values": [
+              "roses",
+              "tulips",
+              "lilies",
+              "sunflowers",
+              "daisies"
+            ]
+          },
+          {
+            "name": "size",
+            "type": "str",
+            "canonical_values": [
+              "small",
+              "medium",
+              "large"
+            ]
+          },
+          {
+            "name": "delivery",
+            "type": "bool"
+          },
+          {
+            "name": "card_message",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "flowers": [
+          "roses"
+        ],
+        "size": "medium",
+        "delivery": true
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "What should the card say?"
+        }
+      ],
+      "user_text": "Nothing comes to mind right now, can we skip the card?",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_025",
+      "language": "en",
+      "description": "Did not understand the question",
+      "category": "odd_repeat",
+      "trap": true,
+      "task": "Take a bouquet order at the florist",
+      "domain": "florist",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flowers",
+            "type": "list_str",
+            "canonical_values": [
+              "roses",
+              "tulips",
+              "lilies",
+              "sunflowers",
+              "daisies"
+            ]
+          },
+          {
+            "name": "size",
+            "type": "str",
+            "canonical_values": [
+              "small",
+              "medium",
+              "large"
+            ]
+          },
+          {
+            "name": "delivery",
+            "type": "bool"
+          },
+          {
+            "name": "card_message",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "flowers": [
+          "sunflowers"
+        ],
+        "size": "large"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Should we deliver it?"
+        }
+      ],
+      "user_text": "What did you ask, deliver what?",
+      "expected_act": "repeat",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_026",
+      "language": "en",
+      "description": "Hesitates, then gives the value",
+      "category": "uncertain_value",
+      "trap": true,
+      "task": "Take a birthday cake order at the bakery",
+      "domain": "bakery",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flavour",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vanilla",
+              "lemon",
+              "carrot"
+            ]
+          },
+          {
+            "name": "servings",
+            "type": "int"
+          },
+          {
+            "name": "pickup_day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which flavour would you like?"
+        }
+      ],
+      "user_text": "The lemon one, I think. Yes, lemon.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "flavour",
+          "value": "lemon"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_027",
+      "language": "en",
+      "description": "Mentions the filled flavour without a correction",
+      "category": "filled_no_correction",
+      "trap": true,
+      "task": "Take a birthday cake order at the bakery",
+      "domain": "bakery",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flavour",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vanilla",
+              "lemon",
+              "carrot"
+            ]
+          },
+          {
+            "name": "servings",
+            "type": "int"
+          },
+          {
+            "name": "pickup_day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "flavour": "carrot",
+        "servings": 12
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which day will you collect it?"
+        }
+      ],
+      "user_text": "My niece loves carrot cake, you know.",
+      "expected_act": "other",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_028",
+      "language": "en",
+      "description": "Gives the day and corrects the flavour",
+      "category": "correction_plus_value",
+      "trap": false,
+      "task": "Take a birthday cake order at the bakery",
+      "domain": "bakery",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flavour",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vanilla",
+              "lemon",
+              "carrot"
+            ]
+          },
+          {
+            "name": "servings",
+            "type": "int"
+          },
+          {
+            "name": "pickup_day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "flavour": "chocolate",
+        "servings": 12
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which day will you pick it up?"
+        }
+      ],
+      "user_text": "Friday, and switch the flavour to vanilla, please.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "pickup_day",
+          "value": "friday"
+        },
+        {
+          "slot": "flavour",
+          "value": "vanilla"
+        }
+      ]
+    },
+    {
+      "id": "ta_en_029",
+      "language": "en",
+      "description": "Cannot give the day yet",
+      "category": "indirect_skip",
+      "trap": true,
+      "task": "Take a birthday cake order at the bakery",
+      "domain": "bakery",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flavour",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vanilla",
+              "lemon",
+              "carrot"
+            ]
+          },
+          {
+            "name": "servings",
+            "type": "int"
+          },
+          {
+            "name": "pickup_day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "flavour": "vanilla",
+        "servings": 20
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "Which day will you pick it up?"
+        }
+      ],
+      "user_text": "Couldn't tell you yet, it depends on my shifts.",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_030",
+      "language": "en",
+      "description": "Asks about sizes",
+      "category": "plain_question",
+      "trap": false,
+      "task": "Take a birthday cake order at the bakery",
+      "domain": "bakery",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flavour",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vanilla",
+              "lemon",
+              "carrot"
+            ]
+          },
+          {
+            "name": "servings",
+            "type": "int"
+          },
+          {
+            "name": "pickup_day",
+            "type": "str",
+            "canonical_values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "flavour": "vanilla"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "How many people should it serve?"
+        }
+      ],
+      "user_text": "What's the biggest size you make?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_031",
+      "language": "en",
+      "description": "Cannot give the days and asks to move on",
+      "category": "explicit_skip",
+      "trap": false,
+      "task": "Handle a car rental",
+      "domain": "car rental",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "category",
+            "type": "str",
+            "canonical_values": [
+              "economy",
+              "family",
+              "suv",
+              "premium"
+            ]
+          },
+          {
+            "name": "days",
+            "type": "int"
+          },
+          {
+            "name": "insurance",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {
+        "category": "economy"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "For how many days do you need it?"
+        }
+      ],
+      "user_text": "I can't say yet, we haven't fixed the dates. Move on to the next thing.",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_001",
+      "language": "es",
+      "description": "Plain canonical value",
+      "category": "plain_value",
+      "trap": false,
+      "origin": "slot_extraction.json:sf_001",
+      "task": "Tomar el pedido de un helado de la heladería",
+      "domain": "heladería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "sabor",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vainilla",
+              "fresa",
+              "limón"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿De qué sabor lo quieres?"
+        }
+      ],
+      "user_text": "Quiero uno de chocolate",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "sabor",
+          "value": "chocolate"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_002",
+      "language": "es",
+      "description": "Corrects a filled slot",
+      "category": "correction",
+      "trap": false,
+      "origin": "slot_extraction.json:sf_003",
+      "task": "Tomar el pedido de un helado de la heladería",
+      "domain": "heladería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "sabor",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vainilla",
+              "fresa",
+              "limón"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "sabor": "chocolate"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Y de qué tamaño?"
+        }
+      ],
+      "user_text": "Espera, mejor de vainilla",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "sabor",
+          "value": "vainilla"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_003",
+      "language": "es",
+      "description": "A bare value",
+      "category": "bare_value",
+      "trap": true,
+      "task": "Tomar el pedido de un helado de la heladería",
+      "domain": "heladería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "sabor",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vainilla",
+              "fresa",
+              "limón"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "sabor": "fresa"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿De qué tamaño lo quieres?"
+        }
+      ],
+      "user_text": "El mediano.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "tamaño",
+          "value": "mediano"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_004",
+      "language": "es",
+      "description": "Asks for a recommendation; 'no sé' must not be read as a skip",
+      "category": "question_like_skip",
+      "trap": true,
+      "origin": "slot_extraction.json:sf_005",
+      "task": "Tomar el pedido de un helado de la heladería",
+      "domain": "heladería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "sabor",
+            "type": "str",
+            "canonical_values": [
+              "chocolate",
+              "vainilla",
+              "fresa",
+              "limón"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿De qué sabor lo quieres?"
+        }
+      ],
+      "user_text": "Mmm no sé, ¿qué recomiendas?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_005",
+      "language": "es",
+      "description": "Two slots, number in words",
+      "category": "multi_value",
+      "trap": false,
+      "origin": "slot_extraction.json:sf_017",
+      "task": "Gestionar el alquiler de un coche",
+      "domain": "alquiler de coches",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "categoria",
+            "type": "str",
+            "canonical_values": [
+              "económico",
+              "familiar",
+              "SUV",
+              "premium"
+            ]
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          },
+          {
+            "name": "seguro",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué tipo de coche necesitas y para cuántos días?"
+        }
+      ],
+      "user_text": "Un SUV por cinco días",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "categoria",
+          "value": "SUV"
+        },
+        {
+          "slot": "dias",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "id": "ta_es_006",
+      "language": "es",
+      "description": "Negative boolean without a verb",
+      "category": "bool_negative",
+      "trap": false,
+      "origin": "slot_extraction.json:sf_015",
+      "task": "Gestionar el alquiler de un coche",
+      "domain": "alquiler de coches",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "categoria",
+            "type": "str",
+            "canonical_values": [
+              "económico",
+              "familiar",
+              "SUV",
+              "premium"
+            ]
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          },
+          {
+            "name": "seguro",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {
+        "categoria": "SUV",
+        "dias": 5
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Quieres añadir el seguro adicional?"
+        }
+      ],
+      "user_text": "Sin seguro adicional",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "seguro",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "ta_es_007",
+      "language": "es",
+      "description": "A question with a number in it: nothing to extract",
+      "category": "question_with_value",
+      "trap": true,
+      "task": "Gestionar el alquiler de un coche",
+      "domain": "alquiler de coches",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "categoria",
+            "type": "str",
+            "canonical_values": [
+              "económico",
+              "familiar",
+              "SUV",
+              "premium"
+            ]
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          },
+          {
+            "name": "seguro",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {
+        "categoria": "familiar"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Para cuántos días lo necesitas?"
+        }
+      ],
+      "user_text": "¿Hay descuento si son más de siete?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_008",
+      "language": "es",
+      "description": "Will not give it yet",
+      "category": "explicit_skip",
+      "trap": false,
+      "task": "Gestionar el alquiler de un coche",
+      "domain": "alquiler de coches",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "categoria",
+            "type": "str",
+            "canonical_values": [
+              "económico",
+              "familiar",
+              "SUV",
+              "premium"
+            ]
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          },
+          {
+            "name": "seguro",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {
+        "categoria": "económico"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Para cuántos días lo necesitas?"
+        }
+      ],
+      "user_text": "Prefiero no decírtelo todavía, pasa a lo siguiente.",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_009",
+      "language": "es",
+      "description": "Two slots",
+      "category": "multi_value",
+      "trap": false,
+      "origin": "slot_extraction.json:sf_019",
+      "task": "Gestionar la reserva de una mesa en el restaurante",
+      "domain": "restaurante",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "num_personas",
+            "type": "int"
+          },
+          {
+            "name": "hora",
+            "type": "str",
+            "canonical_values": [
+              "13:00",
+              "14:00",
+              "20:00",
+              "21:00"
+            ]
+          },
+          {
+            "name": "zona",
+            "type": "str",
+            "canonical_values": [
+              "interior",
+              "terraza"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Para cuántas personas y dónde preferís sentaros?"
+        }
+      ],
+      "user_text": "Dos personas en la terraza",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "num_personas",
+          "value": 2
+        },
+        {
+          "slot": "zona",
+          "value": "terraza"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_010",
+      "language": "es",
+      "description": "Adds to a list",
+      "category": "list_add",
+      "trap": false,
+      "origin": "slot_extraction.json:sf_035",
+      "task": "Registrar el perfil nutricional del cliente",
+      "domain": "",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "alergias",
+            "type": "list_str"
+          },
+          {
+            "name": "tipo_dieta",
+            "type": "str",
+            "canonical_values": [
+              "omnívoro",
+              "vegetariano",
+              "vegano",
+              "sin gluten"
+            ]
+          }
+        ]
+      },
+      "frame_filled": {
+        "alergias": [
+          "frutos secos"
+        ]
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Alguna alergia más?"
+        }
+      ],
+      "user_text": "Y también al gluten",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "alergias",
+          "value": [
+            "gluten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ta_es_011",
+      "language": "es",
+      "description": "A bare name that may be taken as a skip",
+      "category": "bare_value",
+      "trap": true,
+      "task": "Dar cita en la peluquería",
+      "domain": "peluquería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "corte",
+              "tinte",
+              "peinado"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "hora",
+            "type": "str",
+            "canonical_values": [
+              "10:00",
+              "11:00",
+              "16:00",
+              "17:00"
+            ]
+          },
+          {
+            "name": "estilista",
+            "type": "str"
+          },
+          {
+            "name": "nombre_cliente",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "corte",
+        "dia": "jueves",
+        "hora": "10:00",
+        "estilista": "Carmen"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿A nombre de quién pongo la cita?"
+        }
+      ],
+      "user_text": "De Marisa.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "nombre_cliente",
+          "value": "Marisa"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_012",
+      "language": "es",
+      "description": "A value given with hesitation",
+      "category": "uncertain_value",
+      "trap": true,
+      "task": "Dar cita en la peluquería",
+      "domain": "peluquería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "corte",
+              "tinte",
+              "peinado"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "hora",
+            "type": "str",
+            "canonical_values": [
+              "10:00",
+              "11:00",
+              "16:00",
+              "17:00"
+            ]
+          },
+          {
+            "name": "estilista",
+            "type": "str"
+          },
+          {
+            "name": "nombre_cliente",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "tinte"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué día te viene bien?"
+        }
+      ],
+      "user_text": "No lo tengo claro, pero apúntame el miércoles.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "dia",
+          "value": "miércoles"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_013",
+      "language": "es",
+      "description": "A question that names a valid day",
+      "category": "question_with_value",
+      "trap": true,
+      "task": "Dar cita en la peluquería",
+      "domain": "peluquería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "corte",
+              "tinte",
+              "peinado"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "hora",
+            "type": "str",
+            "canonical_values": [
+              "10:00",
+              "11:00",
+              "16:00",
+              "17:00"
+            ]
+          },
+          {
+            "name": "estilista",
+            "type": "str"
+          },
+          {
+            "name": "nombre_cliente",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "corte"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué día te viene bien?"
+        }
+      ],
+      "user_text": "¿Tenéis hueco el sábado?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_014",
+      "language": "es",
+      "description": "Cannot give the name and asks to leave it",
+      "category": "indirect_skip",
+      "trap": true,
+      "task": "Dar cita en la peluquería",
+      "domain": "peluquería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "corte",
+              "tinte",
+              "peinado"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "hora",
+            "type": "str",
+            "canonical_values": [
+              "10:00",
+              "11:00",
+              "16:00",
+              "17:00"
+            ]
+          },
+          {
+            "name": "estilista",
+            "type": "str"
+          },
+          {
+            "name": "nombre_cliente",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "corte",
+        "dia": "viernes",
+        "hora": "16:00"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Con qué estilista quieres la cita?"
+        }
+      ],
+      "user_text": "Pues no me acuerdo de cómo se llamaba la chica, déjalo en blanco, ¿vale?",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_015",
+      "language": "es",
+      "description": "A short request to repeat",
+      "category": "odd_repeat",
+      "trap": true,
+      "task": "Dar cita en la peluquería",
+      "domain": "peluquería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "corte",
+              "tinte",
+              "peinado"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "hora",
+            "type": "str",
+            "canonical_values": [
+              "10:00",
+              "11:00",
+              "16:00",
+              "17:00"
+            ]
+          },
+          {
+            "name": "estilista",
+            "type": "str"
+          },
+          {
+            "name": "nombre_cliente",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "peinado",
+        "dia": "lunes",
+        "hora": "11:00",
+        "estilista": "Carmen"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿A nombre de quién pongo la cita?"
+        }
+      ],
+      "user_text": "Perdona, ¿el qué?",
+      "expected_act": "repeat",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_016",
+      "language": "es",
+      "description": "Mentions the filled day without a correction",
+      "category": "filled_no_correction",
+      "trap": true,
+      "task": "Dar cita en la peluquería",
+      "domain": "peluquería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "corte",
+              "tinte",
+              "peinado"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "hora",
+            "type": "str",
+            "canonical_values": [
+              "10:00",
+              "11:00",
+              "16:00",
+              "17:00"
+            ]
+          },
+          {
+            "name": "estilista",
+            "type": "str"
+          },
+          {
+            "name": "nombre_cliente",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "corte",
+        "dia": "martes",
+        "hora": "17:00",
+        "estilista": "Carmen"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿A nombre de quién pongo la cita?"
+        }
+      ],
+      "user_text": "El martes me va genial, por cierto.",
+      "expected_act": "other",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_017",
+      "language": "es",
+      "description": "A number in words",
+      "category": "plain_value",
+      "trap": false,
+      "task": "Alquilar el equipo de esquí",
+      "domain": "alquiler de esquís",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "num_equipos",
+            "type": "int"
+          },
+          {
+            "name": "talla_botas",
+            "type": "int"
+          },
+          {
+            "name": "casco",
+            "type": "bool"
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Cuántos equipos necesitáis?"
+        }
+      ],
+      "user_text": "Somos cuatro, así que cuatro equipos.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "num_equipos",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "id": "ta_es_018",
+      "language": "es",
+      "description": "A bare number in words",
+      "category": "bare_value",
+      "trap": true,
+      "task": "Alquilar el equipo de esquí",
+      "domain": "alquiler de esquís",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "num_equipos",
+            "type": "int"
+          },
+          {
+            "name": "talla_botas",
+            "type": "int"
+          },
+          {
+            "name": "casco",
+            "type": "bool"
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          }
+        ]
+      },
+      "frame_filled": {
+        "num_equipos": 4
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué número de bota usas?"
+        }
+      ],
+      "user_text": "Un cuarenta y dos.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "talla_botas",
+          "value": 42
+        }
+      ]
+    },
+    {
+      "id": "ta_es_019",
+      "language": "es",
+      "description": "Cannot give the days",
+      "category": "indirect_skip",
+      "trap": true,
+      "task": "Alquilar el equipo de esquí",
+      "domain": "alquiler de esquís",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "num_equipos",
+            "type": "int"
+          },
+          {
+            "name": "talla_botas",
+            "type": "int"
+          },
+          {
+            "name": "casco",
+            "type": "bool"
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          }
+        ]
+      },
+      "frame_filled": {
+        "num_equipos": 4,
+        "talla_botas": 42,
+        "casco": true
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Para cuántos días?"
+        }
+      ],
+      "user_text": "Depende del tiempo que haga, ahora mismo no te lo sé decir.",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_020",
+      "language": "es",
+      "description": "Did not hear the question",
+      "category": "plain_repeat",
+      "trap": false,
+      "task": "Alquilar el equipo de esquí",
+      "domain": "alquiler de esquís",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "num_equipos",
+            "type": "int"
+          },
+          {
+            "name": "talla_botas",
+            "type": "int"
+          },
+          {
+            "name": "casco",
+            "type": "bool"
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          }
+        ]
+      },
+      "frame_filled": {
+        "num_equipos": 2
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué número de bota usas?"
+        }
+      ],
+      "user_text": "¿Cómo dices? No te he oído bien.",
+      "expected_act": "repeat",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_021",
+      "language": "es",
+      "description": "A comment",
+      "category": "off_topic",
+      "trap": false,
+      "task": "Alquilar el equipo de esquí",
+      "domain": "alquiler de esquís",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "num_equipos",
+            "type": "int"
+          },
+          {
+            "name": "talla_botas",
+            "type": "int"
+          },
+          {
+            "name": "casco",
+            "type": "bool"
+          },
+          {
+            "name": "dias",
+            "type": "int"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Cuántos equipos necesitáis?"
+        }
+      ],
+      "user_text": "Qué bien se ve la pista desde aquí.",
+      "expected_act": "other",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_022",
+      "language": "es",
+      "description": "Two items of a list",
+      "category": "list_add",
+      "trap": false,
+      "task": "Tomar el pedido de un ramo en la floristería",
+      "domain": "floristería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flores",
+            "type": "list_str",
+            "canonical_values": [
+              "rosas",
+              "tulipanes",
+              "lirios",
+              "girasoles",
+              "margaritas"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          },
+          {
+            "name": "envio",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué flores quieres en el ramo?"
+        }
+      ],
+      "user_text": "Girasoles y unas cuantas margaritas.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "flores",
+          "value": [
+            "girasoles",
+            "margaritas"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ta_es_023",
+      "language": "es",
+      "description": "Removes an item",
+      "category": "list_remove",
+      "trap": false,
+      "task": "Tomar el pedido de un ramo en la floristería",
+      "domain": "floristería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flores",
+            "type": "list_str",
+            "canonical_values": [
+              "rosas",
+              "tulipanes",
+              "lirios",
+              "girasoles",
+              "margaritas"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          },
+          {
+            "name": "envio",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {
+        "flores": [
+          "girasoles",
+          "margaritas"
+        ]
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿De qué tamaño lo quieres?"
+        }
+      ],
+      "user_text": "Oye, quítale las margaritas.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "flores",
+          "value": {
+            "_remove": true,
+            "items": [
+              "margaritas"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ta_es_024",
+      "language": "es",
+      "description": "Asks the price of a size",
+      "category": "plain_question",
+      "trap": false,
+      "task": "Tomar el pedido de un ramo en la floristería",
+      "domain": "floristería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flores",
+            "type": "list_str",
+            "canonical_values": [
+              "rosas",
+              "tulipanes",
+              "lirios",
+              "girasoles",
+              "margaritas"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          },
+          {
+            "name": "envio",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {
+        "flores": [
+          "lirios"
+        ]
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿De qué tamaño lo quieres?"
+        }
+      ],
+      "user_text": "¿Cuánto cuesta el grande?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_025",
+      "language": "es",
+      "description": "Asks what was said",
+      "category": "odd_repeat",
+      "trap": true,
+      "task": "Tomar el pedido de un ramo en la floristería",
+      "domain": "floristería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "flores",
+            "type": "list_str",
+            "canonical_values": [
+              "rosas",
+              "tulipanes",
+              "lirios",
+              "girasoles",
+              "margaritas"
+            ]
+          },
+          {
+            "name": "tamaño",
+            "type": "str",
+            "canonical_values": [
+              "pequeño",
+              "mediano",
+              "grande"
+            ]
+          },
+          {
+            "name": "envio",
+            "type": "bool"
+          }
+        ]
+      },
+      "frame_filled": {
+        "flores": [
+          "tulipanes"
+        ],
+        "tamaño": "mediano"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Te lo enviamos a domicilio?"
+        }
+      ],
+      "user_text": "Uy, perdona, estaba despistado, ¿qué me decías?",
+      "expected_act": "repeat",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_026",
+      "language": "es",
+      "description": "A service named by its symptom",
+      "category": "paraphrased_value",
+      "trap": false,
+      "task": "Pedir cita en el taller de bicicletas",
+      "domain": "taller de bicicletas",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "reparar pinchazo",
+              "ajustar frenos",
+              "revisión completa",
+              "ajustar cambios"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "nombre",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué le pasa a la bici?"
+        }
+      ],
+      "user_text": "Se me ha pinchado la rueda de atrás.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "servicio",
+          "value": "reparar pinchazo"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_027",
+      "language": "es",
+      "description": "Two slots",
+      "category": "multi_value",
+      "trap": false,
+      "task": "Pedir cita en el taller de bicicletas",
+      "domain": "taller de bicicletas",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "reparar pinchazo",
+              "ajustar frenos",
+              "revisión completa",
+              "ajustar cambios"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "nombre",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "revisión completa"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué día la puedes traer?"
+        }
+      ],
+      "user_text": "El lunes, y ponlo a nombre de Iker.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "dia",
+          "value": "lunes"
+        },
+        {
+          "slot": "nombre",
+          "value": "Iker"
+        }
+      ]
+    },
+    {
+      "id": "ta_es_028",
+      "language": "es",
+      "description": "Cannot give the day yet",
+      "category": "explicit_skip",
+      "trap": false,
+      "task": "Pedir cita en el taller de bicicletas",
+      "domain": "taller de bicicletas",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "reparar pinchazo",
+              "ajustar frenos",
+              "revisión completa",
+              "ajustar cambios"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "nombre",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "ajustar frenos"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué día la puedes traer?"
+        }
+      ],
+      "user_text": "Ni idea todavía, tengo que mirar la agenda; sigue con lo demás.",
+      "expected_act": "skip",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_029",
+      "language": "es",
+      "description": "An aside",
+      "category": "off_topic",
+      "trap": false,
+      "task": "Pedir cita en el taller de bicicletas",
+      "domain": "taller de bicicletas",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "reparar pinchazo",
+              "ajustar frenos",
+              "revisión completa",
+              "ajustar cambios"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "nombre",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {
+        "servicio": "ajustar cambios",
+        "dia": "miércoles"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿A nombre de quién?"
+        }
+      ],
+      "user_text": "Mi perro se ha quedado atado fuera, voy un segundo.",
+      "expected_act": "other",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_es_030",
+      "language": "es",
+      "description": "A question that sounds like a service",
+      "category": "question_with_value",
+      "trap": true,
+      "task": "Pedir cita en el taller de bicicletas",
+      "domain": "taller de bicicletas",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "servicio",
+            "type": "str",
+            "canonical_values": [
+              "reparar pinchazo",
+              "ajustar frenos",
+              "revisión completa",
+              "ajustar cambios"
+            ]
+          },
+          {
+            "name": "dia",
+            "type": "str",
+            "canonical_values": [
+              "lunes",
+              "martes",
+              "miércoles",
+              "jueves",
+              "viernes",
+              "sábado"
+            ]
+          },
+          {
+            "name": "nombre",
+            "type": "str"
+          }
+        ]
+      },
+      "frame_filled": {},
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Qué le pasa a la bici?"
+        }
+      ],
+      "user_text": "¿Hacéis también revisiones de bicis eléctricas?",
+      "expected_act": "question",
+      "expected_extractions": []
+    },
+    {
+      "id": "ta_en_032",
+      "language": "en",
+      "description": "A number above the slot's maximum is extracted as said (the code rejects it)",
+      "category": "out_of_range_value",
+      "trap": true,
+      "task": "Book a padel court at the sports club",
+      "domain": "sports club",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "court",
+            "type": "str",
+            "canonical_values": [
+              "indoor",
+              "outdoor"
+            ]
+          },
+          {
+            "name": "players",
+            "type": "int",
+            "minimum": 2,
+            "maximum": 4
+          },
+          {
+            "name": "hours",
+            "type": "int",
+            "minimum": 1,
+            "maximum": 3
+          }
+        ]
+      },
+      "frame_filled": {
+        "court": "indoor"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "How many people are going to play?"
+        }
+      ],
+      "user_text": "We're a group of nine.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "players",
+          "value": 9
+        }
+      ]
+    },
+    {
+      "id": "ta_en_033",
+      "language": "en",
+      "description": "A number below the slot's minimum is extracted as said, not taken as nothing",
+      "category": "out_of_range_value",
+      "trap": true,
+      "task": "Book a padel court at the sports club",
+      "domain": "sports club",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "court",
+            "type": "str",
+            "canonical_values": [
+              "indoor",
+              "outdoor"
+            ]
+          },
+          {
+            "name": "players",
+            "type": "int",
+            "minimum": 2,
+            "maximum": 4
+          },
+          {
+            "name": "hours",
+            "type": "int",
+            "minimum": 1,
+            "maximum": 3
+          }
+        ]
+      },
+      "frame_filled": {
+        "court": "outdoor",
+        "players": 4
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "And for how long do you want the court?"
+        }
+      ],
+      "user_text": "Zero hours, just to try the court for a moment.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "hours",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "ta_en_034",
+      "language": "en",
+      "description": "A number at the slot's maximum, inside the range",
+      "category": "in_range_value",
+      "trap": false,
+      "task": "Sell packets of seeds at the garden shop",
+      "domain": "garden shop",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "variety",
+            "type": "str",
+            "canonical_values": [
+              "tomato",
+              "pepper",
+              "lettuce"
+            ]
+          },
+          {
+            "name": "packets",
+            "type": "int",
+            "minimum": 1,
+            "maximum": 10
+          }
+        ]
+      },
+      "frame_filled": {
+        "variety": "pepper"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "How many packets of pepper seeds?"
+        }
+      ],
+      "user_text": "Ten packets, the most you sell.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "packets",
+          "value": 10
+        }
+      ]
+    },
+    {
+      "id": "ta_es_031",
+      "language": "es",
+      "description": "A number above the slot's maximum is extracted as said (the code rejects it)",
+      "category": "out_of_range_value",
+      "trap": true,
+      "task": "Reservar una pista de pádel en el club deportivo",
+      "domain": "club deportivo",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pista",
+            "type": "str",
+            "canonical_values": [
+              "cubierta",
+              "descubierta"
+            ]
+          },
+          {
+            "name": "jugadores",
+            "type": "int",
+            "minimum": 2,
+            "maximum": 4
+          },
+          {
+            "name": "horas",
+            "type": "int",
+            "minimum": 1,
+            "maximum": 3
+          }
+        ]
+      },
+      "frame_filled": {
+        "pista": "cubierta"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Cuántas personas vais a jugar?"
+        }
+      ],
+      "user_text": "Somos un grupo de nueve.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "jugadores",
+          "value": 9
+        }
+      ]
+    },
+    {
+      "id": "ta_es_032",
+      "language": "es",
+      "description": "A number below the slot's minimum is extracted as said, not taken as nothing",
+      "category": "out_of_range_value",
+      "trap": true,
+      "task": "Reservar una pista de pádel en el club deportivo",
+      "domain": "club deportivo",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "pista",
+            "type": "str",
+            "canonical_values": [
+              "cubierta",
+              "descubierta"
+            ]
+          },
+          {
+            "name": "jugadores",
+            "type": "int",
+            "minimum": 2,
+            "maximum": 4
+          },
+          {
+            "name": "horas",
+            "type": "int",
+            "minimum": 1,
+            "maximum": 3
+          }
+        ]
+      },
+      "frame_filled": {
+        "pista": "descubierta",
+        "jugadores": 4
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Y para cuánto tiempo quieres la pista?"
+        }
+      ],
+      "user_text": "Cero horas, solo para probar la pista un momento.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "horas",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "ta_es_033",
+      "language": "es",
+      "description": "A number at the slot's maximum, inside the range",
+      "category": "in_range_value",
+      "trap": false,
+      "task": "Vender sobres de semillas en la tienda de jardinería",
+      "domain": "tienda de jardinería",
+      "slot_schema": {
+        "slots": [
+          {
+            "name": "variedad",
+            "type": "str",
+            "canonical_values": [
+              "tomate",
+              "pimiento",
+              "lechuga"
+            ]
+          },
+          {
+            "name": "sobres",
+            "type": "int",
+            "minimum": 1,
+            "maximum": 10
+          }
+        ]
+      },
+      "frame_filled": {
+        "variedad": "pimiento"
+      },
+      "history": [
+        {
+          "role": "assistant",
+          "content": "¿Cuántos sobres de semillas de pimiento?"
+        }
+      ],
+      "user_text": "Diez sobres, lo máximo que vendáis.",
+      "expected_act": "values",
+      "expected_extractions": [
+        {
+          "slot": "sobres",
+          "value": 10
+        }
+      ]
+    }
+  ]
+}

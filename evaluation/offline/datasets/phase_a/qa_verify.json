@@ -1,0 +1,990 @@
+{
+  "_instructions": [
+    "Benchmark: the verification of an answer against the material (verify_answer).",
+    "Required fields:",
+    "  id, language (en | es), description, category, trap (an unsupported answer: verifying it is a critical error)",
+    "  material           : [{name, content}], plain-text facts",
+    "  answer             : one or two spoken sentences",
+    "  expected_supported : true only if EVERY claim of the answer is stated in the material (paraphrase, reordering and numbers in words are fine)",
+    "Unsupported answers carry exactly one problem: an extra plausible claim, a changed number, time, place or unit, a generalisation, a conflation of two facts, a negation flip or a hedged addition.",
+    "No content from the evaluation scenarios nor from the examples of the prompts."
+  ],
+  "question": "verify_answer",
+  "cases": [
+    {
+      "id": "qv_en_001",
+      "language": "en",
+      "description": "Paraphrased winter closing time",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "The Riverside Botanical Garden opens daily from 9:30 to 18:30 between April and September, and from 9:30 to 16:00 the rest of the year. Adult tickets cost 6 euros. The greenhouse of tropical plants is next to the main lake. Guided walks start at 11:00 on Saturdays and last one hour. Picnics are allowed only in the meadow by the west gate. Bicycles must be left at the racks outside the entrance."
+        }
+      ],
+      "answer": "Outside the April to September season, the garden closes at four in the afternoon.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_002",
+      "language": "en",
+      "description": "Correct price plus an unstated free entry for children",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "The Riverside Botanical Garden opens daily from 9:30 to 18:30 between April and September, and from 9:30 to 16:00 the rest of the year. Adult tickets cost 6 euros. The greenhouse of tropical plants is next to the main lake. Guided walks start at 11:00 on Saturdays and last one hour. Picnics are allowed only in the meadow by the west gate. Bicycles must be left at the racks outside the entrance."
+        }
+      ],
+      "answer": "An adult ticket costs 6 euros, and children under 12 get in free.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_003",
+      "language": "en",
+      "description": "Duration changed from one hour",
+      "category": "changed_number",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "The Riverside Botanical Garden opens daily from 9:30 to 18:30 between April and September, and from 9:30 to 16:00 the rest of the year. Adult tickets cost 6 euros. The greenhouse of tropical plants is next to the main lake. Guided walks start at 11:00 on Saturdays and last one hour. Picnics are allowed only in the meadow by the west gate. Bicycles must be left at the racks outside the entrance."
+        }
+      ],
+      "answer": "The guided walks start at 11 on Saturdays and last an hour and a half.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_004",
+      "language": "en",
+      "description": "Picnic place paraphrased",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "The Riverside Botanical Garden opens daily from 9:30 to 18:30 between April and September, and from 9:30 to 16:00 the rest of the year. Adult tickets cost 6 euros. The greenhouse of tropical plants is next to the main lake. Guided walks start at 11:00 on Saturdays and last one hour. Picnics are allowed only in the meadow by the west gate. Bicycles must be left at the racks outside the entrance."
+        }
+      ],
+      "answer": "You can have a picnic in the meadow next to the west gate.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_005",
+      "language": "en",
+      "description": "Only the meadow by the west gate",
+      "category": "generalisation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "The Riverside Botanical Garden opens daily from 9:30 to 18:30 between April and September, and from 9:30 to 16:00 the rest of the year. Adult tickets cost 6 euros. The greenhouse of tropical plants is next to the main lake. Guided walks start at 11:00 on Saturdays and last one hour. Picnics are allowed only in the meadow by the west gate. Bicycles must be left at the racks outside the entrance."
+        }
+      ],
+      "answer": "Picnics are allowed anywhere in the garden.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_006",
+      "language": "en",
+      "description": "Duration in words",
+      "category": "number_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "Ferries to Isla Clara leave at 8:30, 12:00 and 17:15 from pier B. The crossing takes 50 minutes. A single adult ticket costs 14 euros; cars pay an extra 30 euros. Tickets are sold at the counter in the main hall and online. Boarding closes 15 minutes before departure. Pets travel free if they stay in a carrier."
+        }
+      ],
+      "answer": "The crossing to Isla Clara lasts fifty minutes.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_007",
+      "language": "en",
+      "description": "Pier changed from B",
+      "category": "changed_place",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Ferries to Isla Clara leave at 8:30, 12:00 and 17:15 from pier B. The crossing takes 50 minutes. A single adult ticket costs 14 euros; cars pay an extra 30 euros. Tickets are sold at the counter in the main hall and online. Boarding closes 15 minutes before departure. Pets travel free if they stay in a carrier."
+        }
+      ],
+      "answer": "The first ferry leaves at 8:30 from pier A.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_008",
+      "language": "en",
+      "description": "Two supported prices",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "Ferries to Isla Clara leave at 8:30, 12:00 and 17:15 from pier B. The crossing takes 50 minutes. A single adult ticket costs 14 euros; cars pay an extra 30 euros. Tickets are sold at the counter in the main hall and online. Boarding closes 15 minutes before departure. Pets travel free if they stay in a carrier."
+        }
+      ],
+      "answer": "A single ticket for an adult is 14 euros, and taking a car costs 30 euros more.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_009",
+      "language": "en",
+      "description": "Drops the condition: only in a carrier",
+      "category": "generalisation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Ferries to Isla Clara leave at 8:30, 12:00 and 17:15 from pier B. The crossing takes 50 minutes. A single adult ticket costs 14 euros; cars pay an extra 30 euros. Tickets are sold at the counter in the main hall and online. Boarding closes 15 minutes before departure. Pets travel free if they stay in a carrier."
+        }
+      ],
+      "answer": "Pets travel free on the ferry.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_010",
+      "language": "en",
+      "description": "Supported fact plus unstated advice",
+      "category": "hedged_addition",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Ferries to Isla Clara leave at 8:30, 12:00 and 17:15 from pier B. The crossing takes 50 minutes. A single adult ticket costs 14 euros; cars pay an extra 30 euros. Tickets are sold at the counter in the main hall and online. Boarding closes 15 minutes before departure. Pets travel free if they stay in a carrier."
+        }
+      ],
+      "answer": "Boarding closes 15 minutes before departure, so you should probably arrive half an hour early.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_011",
+      "language": "en",
+      "description": "Helmet included",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "The ski rental shop opens from 8:00 to 17:30 every day of the season. A full set of skis, boots and poles costs 32 euros per day. Snowboards cost 28 euros per day. Helmets are included free with every rental. Rented equipment must be returned by 17:00. A deposit of 50 euros is required and returned when the equipment comes back undamaged."
+        }
+      ],
+      "answer": "Helmets come free with any rental.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_012",
+      "language": "en",
+      "description": "Price of the ski set given for the snowboard",
+      "category": "conflation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "The ski rental shop opens from 8:00 to 17:30 every day of the season. A full set of skis, boots and poles costs 32 euros per day. Snowboards cost 28 euros per day. Helmets are included free with every rental. Rented equipment must be returned by 17:00. A deposit of 50 euros is required and returned when the equipment comes back undamaged."
+        }
+      ],
+      "answer": "A snowboard costs 32 euros a day.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_013",
+      "language": "en",
+      "description": "Deposit paraphrased",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "The ski rental shop opens from 8:00 to 17:30 every day of the season. A full set of skis, boots and poles costs 32 euros per day. Snowboards cost 28 euros per day. Helmets are included free with every rental. Rented equipment must be returned by 17:00. A deposit of 50 euros is required and returned when the equipment comes back undamaged."
+        }
+      ],
+      "answer": "You leave a 50 euro deposit, which you get back if the equipment comes back undamaged.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_014",
+      "language": "en",
+      "description": "Equipment must be returned by 17:00",
+      "category": "contradiction",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "The ski rental shop opens from 8:00 to 17:30 every day of the season. A full set of skis, boots and poles costs 32 euros per day. Snowboards cost 28 euros per day. Helmets are included free with every rental. Rented equipment must be returned by 17:00. A deposit of 50 euros is required and returned when the equipment comes back undamaged."
+        }
+      ],
+      "answer": "The shop is open until 17:30, and you can return your equipment until closing time.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_015",
+      "language": "en",
+      "description": "Full set price",
+      "category": "reordering",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "The ski rental shop opens from 8:00 to 17:30 every day of the season. A full set of skis, boots and poles costs 32 euros per day. Snowboards cost 28 euros per day. Helmets are included free with every rental. Rented equipment must be returned by 17:00. A deposit of 50 euros is required and returned when the equipment comes back undamaged."
+        }
+      ],
+      "answer": "Skis, boots and poles together are 32 euros per day.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_016",
+      "language": "en",
+      "description": "Barbecues, not campfires, are allowed there",
+      "category": "conflation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Reception at Pinewood Campsite is open from 8:00 to 21:00. A tent pitch costs 18 euros per night for two people; each extra person pays 5 euros. Quiet hours are from 23:00 to 7:00. The showers have hot water all day. Campfires are forbidden everywhere on the site; barbecues are allowed only in the grill area near the playground. The small shop sells bread every morning from 8:00."
+        }
+      ],
+      "answer": "Campfires are allowed in the grill area near the playground.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_017",
+      "language": "en",
+      "description": "Quiet hours in words",
+      "category": "time_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "Reception at Pinewood Campsite is open from 8:00 to 21:00. A tent pitch costs 18 euros per night for two people; each extra person pays 5 euros. Quiet hours are from 23:00 to 7:00. The showers have hot water all day. Campfires are forbidden everywhere on the site; barbecues are allowed only in the grill area near the playground. The small shop sells bread every morning from 8:00."
+        }
+      ],
+      "answer": "Quiet hours run from eleven at night to seven in the morning.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_018",
+      "language": "en",
+      "description": "The price is for two people",
+      "category": "changed_basis",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Reception at Pinewood Campsite is open from 8:00 to 21:00. A tent pitch costs 18 euros per night for two people; each extra person pays 5 euros. Quiet hours are from 23:00 to 7:00. The showers have hot water all day. Campfires are forbidden everywhere on the site; barbecues are allowed only in the grill area near the playground. The small shop sells bread every morning from 8:00."
+        }
+      ],
+      "answer": "A tent pitch costs 18 euros per night per person.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_019",
+      "language": "en",
+      "description": "Extra person supplement",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "Reception at Pinewood Campsite is open from 8:00 to 21:00. A tent pitch costs 18 euros per night for two people; each extra person pays 5 euros. Quiet hours are from 23:00 to 7:00. The showers have hot water all day. Campfires are forbidden everywhere on the site; barbecues are allowed only in the grill area near the playground. The small shop sells bread every morning from 8:00."
+        }
+      ],
+      "answer": "Beyond two people, every extra person pays 5 euros.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_020",
+      "language": "en",
+      "description": "Croissants not stated",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Reception at Pinewood Campsite is open from 8:00 to 21:00. A tent pitch costs 18 euros per night for two people; each extra person pays 5 euros. Quiet hours are from 23:00 to 7:00. The showers have hot water all day. Campfires are forbidden everywhere on the site; barbecues are allowed only in the grill area near the playground. The small shop sells bread every morning from 8:00."
+        }
+      ],
+      "answer": "The shop sells fresh bread every morning from 8:00, and croissants too.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_021",
+      "language": "en",
+      "description": "Weekday closing time",
+      "category": "time_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "Smile Point Dental Clinic is open Monday to Thursday from 9:00 to 20:00 and on Fridays from 9:00 to 15:00. A check-up with cleaning costs 45 euros. Appointments can be booked by phone or at this desk. Please arrive ten minutes before your appointment. Cancellations must be made at least 24 hours in advance. The clinic accepts cash and card payments."
+        }
+      ],
+      "answer": "We're open until 8 in the evening from Monday to Thursday.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_022",
+      "language": "en",
+      "description": "24 hours in the material",
+      "category": "changed_number",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Smile Point Dental Clinic is open Monday to Thursday from 9:00 to 20:00 and on Fridays from 9:00 to 15:00. A check-up with cleaning costs 45 euros. Appointments can be booked by phone or at this desk. Please arrive ten minutes before your appointment. Cancellations must be made at least 24 hours in advance. The clinic accepts cash and card payments."
+        }
+      ],
+      "answer": "Cancellations must be made at least 48 hours in advance.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_023",
+      "language": "en",
+      "description": "Payment methods",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "Smile Point Dental Clinic is open Monday to Thursday from 9:00 to 20:00 and on Fridays from 9:00 to 15:00. A check-up with cleaning costs 45 euros. Appointments can be booked by phone or at this desk. Please arrive ten minutes before your appointment. Cancellations must be made at least 24 hours in advance. The clinic accepts cash and card payments."
+        }
+      ],
+      "answer": "You can pay in cash or by card.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_024",
+      "language": "en",
+      "description": "Friday hours given for Saturdays",
+      "category": "conflation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Smile Point Dental Clinic is open Monday to Thursday from 9:00 to 20:00 and on Fridays from 9:00 to 15:00. A check-up with cleaning costs 45 euros. Appointments can be booked by phone or at this desk. Please arrive ten minutes before your appointment. Cancellations must be made at least 24 hours in advance. The clinic accepts cash and card payments."
+        }
+      ],
+      "answer": "The clinic is also open on Saturdays from 9:00 to 15:00.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_025",
+      "language": "en",
+      "description": "Insurance coverage not stated",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Smile Point Dental Clinic is open Monday to Thursday from 9:00 to 20:00 and on Fridays from 9:00 to 15:00. A check-up with cleaning costs 45 euros. Appointments can be booked by phone or at this desk. Please arrive ten minutes before your appointment. Cancellations must be made at least 24 hours in advance. The clinic accepts cash and card payments."
+        }
+      ],
+      "answer": "A check-up with cleaning costs 45 euros, and it's usually covered by most insurance plans.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_026",
+      "language": "en",
+      "description": "Free first 30 minutes",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "CityPedal bikes can be unlocked with the CityPedal app or with a member card. The annual membership costs 40 euros. The first 30 minutes of each ride are free for members; after that, each extra half hour costs 1 euro. Bikes must be returned to any CityPedal station. The service runs from 6:00 to midnight. Electric bikes cost 50 cents more per ride."
+        }
+      ],
+      "answer": "For members, the first half hour of every ride is free.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_027",
+      "language": "en",
+      "description": "Half hour changed to hour",
+      "category": "changed_unit",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "CityPedal bikes can be unlocked with the CityPedal app or with a member card. The annual membership costs 40 euros. The first 30 minutes of each ride are free for members; after that, each extra half hour costs 1 euro. Bikes must be returned to any CityPedal station. The service runs from 6:00 to midnight. Electric bikes cost 50 cents more per ride."
+        }
+      ],
+      "answer": "After the first 30 minutes, each extra hour costs 1 euro.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_028",
+      "language": "en",
+      "description": "Unlocking methods",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "CityPedal bikes can be unlocked with the CityPedal app or with a member card. The annual membership costs 40 euros. The first 30 minutes of each ride are free for members; after that, each extra half hour costs 1 euro. Bikes must be returned to any CityPedal station. The service runs from 6:00 to midnight. Electric bikes cost 50 cents more per ride."
+        }
+      ],
+      "answer": "You can unlock a bike with the app or with your member card.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_029",
+      "language": "en",
+      "description": "From 6:00 to midnight",
+      "category": "contradiction",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "CityPedal bikes can be unlocked with the CityPedal app or with a member card. The annual membership costs 40 euros. The first 30 minutes of each ride are free for members; after that, each extra half hour costs 1 euro. Bikes must be returned to any CityPedal station. The service runs from 6:00 to midnight. Electric bikes cost 50 cents more per ride."
+        }
+      ],
+      "answer": "The service runs 24 hours a day.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_030",
+      "language": "en",
+      "description": "They cost 50 cents more",
+      "category": "negation_flip",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "CityPedal bikes can be unlocked with the CityPedal app or with a member card. The annual membership costs 40 euros. The first 30 minutes of each ride are free for members; after that, each extra half hour costs 1 euro. Bikes must be returned to any CityPedal station. The service runs from 6:00 to midnight. Electric bikes cost 50 cents more per ride."
+        }
+      ],
+      "answer": "Electric bikes don't cost anything extra.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_031",
+      "language": "en",
+      "description": "Two supported facts",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "CityPedal bikes can be unlocked with the CityPedal app or with a member card. The annual membership costs 40 euros. The first 30 minutes of each ride are free for members; after that, each extra half hour costs 1 euro. Bikes must be returned to any CityPedal station. The service runs from 6:00 to midnight. Electric bikes cost 50 cents more per ride."
+        }
+      ],
+      "answer": "Bikes have to be returned to one of the CityPedal stations, and the yearly membership is 40 euros.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_001",
+      "language": "es",
+      "description": "Market hours paraphrased",
+      "category": "time_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El mercado de productores se celebra todos los sábados de 8:30 a 14:30 en la plaza de la Fuente. Hay unos 30 puestos de fruta, verdura, queso y miel de la comarca. Se puede pagar con tarjeta en la mayoría de los puestos. Hay aparcamiento gratuito en la calle del Molino. Los perros pueden entrar si van atados."
+        }
+      ],
+      "answer": "El mercado se pone los sábados por la mañana, de ocho y media a dos y media, en la plaza de la Fuente.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_002",
+      "language": "es",
+      "description": "Sundays added",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El mercado de productores se celebra todos los sábados de 8:30 a 14:30 en la plaza de la Fuente. Hay unos 30 puestos de fruta, verdura, queso y miel de la comarca. Se puede pagar con tarjeta en la mayoría de los puestos. Hay aparcamiento gratuito en la calle del Molino. Los perros pueden entrar si van atados."
+        }
+      ],
+      "answer": "El mercado se celebra los sábados y los domingos de 8:30 a 14:30.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_003",
+      "language": "es",
+      "description": "Card payment at most stalls",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El mercado de productores se celebra todos los sábados de 8:30 a 14:30 en la plaza de la Fuente. Hay unos 30 puestos de fruta, verdura, queso y miel de la comarca. Se puede pagar con tarjeta en la mayoría de los puestos. Hay aparcamiento gratuito en la calle del Molino. Los perros pueden entrar si van atados."
+        }
+      ],
+      "answer": "En casi todos los puestos se puede pagar con tarjeta.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_004",
+      "language": "es",
+      "description": "The parking is free",
+      "category": "contradiction",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El mercado de productores se celebra todos los sábados de 8:30 a 14:30 en la plaza de la Fuente. Hay unos 30 puestos de fruta, verdura, queso y miel de la comarca. Se puede pagar con tarjeta en la mayoría de los puestos. Hay aparcamiento gratuito en la calle del Molino. Los perros pueden entrar si van atados."
+        }
+      ],
+      "answer": "Aparcar en la calle del Molino cuesta un euro la hora.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_005",
+      "language": "es",
+      "description": "Organic certification not stated",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El mercado de productores se celebra todos los sábados de 8:30 a 14:30 en la plaza de la Fuente. Hay unos 30 puestos de fruta, verdura, queso y miel de la comarca. Se puede pagar con tarjeta en la mayoría de los puestos. Hay aparcamiento gratuito en la calle del Molino. Los perros pueden entrar si van atados."
+        }
+      ],
+      "answer": "Hay unos 30 puestos, todos con productos ecológicos certificados.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_006",
+      "language": "es",
+      "description": "Wednesday price",
+      "category": "number_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El cine Alameda tiene cuatro salas. La entrada normal cuesta 8 euros y los miércoles, día del espectador, cuesta 5 euros. Las taquillas abren media hora antes de la primera sesión. Las sesiones de la tarde empiezan a las 17:00, a las 19:30 y a las 22:00. No se permite entrar con comida de fuera. La sala 2 está adaptada para sillas de ruedas."
+        }
+      ],
+      "answer": "Los miércoles la entrada cuesta cinco euros.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_007",
+      "language": "es",
+      "description": "Room 2 in the material",
+      "category": "changed_number",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El cine Alameda tiene cuatro salas. La entrada normal cuesta 8 euros y los miércoles, día del espectador, cuesta 5 euros. Las taquillas abren media hora antes de la primera sesión. Las sesiones de la tarde empiezan a las 17:00, a las 19:30 y a las 22:00. No se permite entrar con comida de fuera. La sala 2 está adaptada para sillas de ruedas."
+        }
+      ],
+      "answer": "La sala 3 está adaptada para sillas de ruedas.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_008",
+      "language": "es",
+      "description": "Afternoon sessions in words",
+      "category": "time_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El cine Alameda tiene cuatro salas. La entrada normal cuesta 8 euros y los miércoles, día del espectador, cuesta 5 euros. Las taquillas abren media hora antes de la primera sesión. Las sesiones de la tarde empiezan a las 17:00, a las 19:30 y a las 22:00. No se permite entrar con comida de fuera. La sala 2 está adaptada para sillas de ruedas."
+        }
+      ],
+      "answer": "Por la tarde hay sesiones a las cinco, a las siete y media y a las diez.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_009",
+      "language": "es",
+      "description": "Child discount not stated",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El cine Alameda tiene cuatro salas. La entrada normal cuesta 8 euros y los miércoles, día del espectador, cuesta 5 euros. Las taquillas abren media hora antes de la primera sesión. Las sesiones de la tarde empiezan a las 17:00, a las 19:30 y a las 22:00. No se permite entrar con comida de fuera. La sala 2 está adaptada para sillas de ruedas."
+        }
+      ],
+      "answer": "La entrada normal cuesta 8 euros y los menores de 12 años pagan la mitad.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_010",
+      "language": "es",
+      "description": "Half an hour in the material",
+      "category": "changed_number",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El cine Alameda tiene cuatro salas. La entrada normal cuesta 8 euros y los miércoles, día del espectador, cuesta 5 euros. Las taquillas abren media hora antes de la primera sesión. Las sesiones de la tarde empiezan a las 17:00, a las 19:30 y a las 22:00. No se permite entrar con comida de fuera. La sala 2 está adaptada para sillas de ruedas."
+        }
+      ],
+      "answer": "Las taquillas abren una hora antes de la primera sesión.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_011",
+      "language": "es",
+      "description": "Parcel collection",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "La oficina de Correos de la avenida del Puerto abre entre semana de 8:30 a 20:30 y los sábados de 9:30 a 13:00. Enviar una carta nacional de hasta 20 gramos cuesta 0,85 euros. Los paquetes se pueden recoger con el DNI y el aviso de llegada. Hay un buzón exterior que se vacía a las 18:00. Las cajas de embalaje se venden en el mostrador."
+        }
+      ],
+      "answer": "Para recoger un paquete hay que traer el DNI y el aviso de llegada.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_012",
+      "language": "es",
+      "description": "0,85 in the material",
+      "category": "changed_number",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "La oficina de Correos de la avenida del Puerto abre entre semana de 8:30 a 20:30 y los sábados de 9:30 a 13:00. Enviar una carta nacional de hasta 20 gramos cuesta 0,85 euros. Los paquetes se pueden recoger con el DNI y el aviso de llegada. Hay un buzón exterior que se vacía a las 18:00. Las cajas de embalaje se venden en el mostrador."
+        }
+      ],
+      "answer": "Una carta nacional de hasta 20 gramos cuesta 0,58 euros.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_013",
+      "language": "es",
+      "description": "Mailbox collection time",
+      "category": "time_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "La oficina de Correos de la avenida del Puerto abre entre semana de 8:30 a 20:30 y los sábados de 9:30 a 13:00. Enviar una carta nacional de hasta 20 gramos cuesta 0,85 euros. Los paquetes se pueden recoger con el DNI y el aviso de llegada. Hay un buzón exterior que se vacía a las 18:00. Las cajas de embalaje se venden en el mostrador."
+        }
+      ],
+      "answer": "El buzón de fuera se vacía a las seis de la tarde.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_014",
+      "language": "es",
+      "description": "Saturday afternoon hours added",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "La oficina de Correos de la avenida del Puerto abre entre semana de 8:30 a 20:30 y los sábados de 9:30 a 13:00. Enviar una carta nacional de hasta 20 gramos cuesta 0,85 euros. Los paquetes se pueden recoger con el DNI y el aviso de llegada. Hay un buzón exterior que se vacía a las 18:00. Las cajas de embalaje se venden en el mostrador."
+        }
+      ],
+      "answer": "Los sábados la oficina abre de 9:30 a 13:00 y también por la tarde, de 17:00 a 19:00.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_015",
+      "language": "es",
+      "description": "Packing boxes",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "La oficina de Correos de la avenida del Puerto abre entre semana de 8:30 a 20:30 y los sábados de 9:30 a 13:00. Enviar una carta nacional de hasta 20 gramos cuesta 0,85 euros. Los paquetes se pueden recoger con el DNI y el aviso de llegada. Hay un buzón exterior que se vacía a las 18:00. Las cajas de embalaje se venden en el mostrador."
+        }
+      ],
+      "answer": "Las cajas para embalar se compran en el mostrador.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_016",
+      "language": "es",
+      "description": "Two supported prices",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El espacio de coworking Nodo abre entre semana, de 8:00 a 21:00. Un pase de día cuesta 15 euros y la cuota mensual, 140 euros. La sala de reuniones se reserva por horas en recepción y cuesta 10 euros la hora para quien no es socio. El café y el té son gratuitos. La red wifi se llama Nodo-Libre y la contraseña está en el tablón de la entrada."
+        }
+      ],
+      "answer": "El pase de un día son 15 euros y la cuota mensual, 140.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_017",
+      "language": "es",
+      "description": "The price is for non-members only",
+      "category": "generalisation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El espacio de coworking Nodo abre entre semana, de 8:00 a 21:00. Un pase de día cuesta 15 euros y la cuota mensual, 140 euros. La sala de reuniones se reserva por horas en recepción y cuesta 10 euros la hora para quien no es socio. El café y el té son gratuitos. La red wifi se llama Nodo-Libre y la contraseña está en el tablón de la entrada."
+        }
+      ],
+      "answer": "La sala de reuniones cuesta 10 euros la hora para todos, socios incluidos.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_018",
+      "language": "es",
+      "description": "Free coffee and tea",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El espacio de coworking Nodo abre entre semana, de 8:00 a 21:00. Un pase de día cuesta 15 euros y la cuota mensual, 140 euros. La sala de reuniones se reserva por horas en recepción y cuesta 10 euros la hora para quien no es socio. El café y el té son gratuitos. La red wifi se llama Nodo-Libre y la contraseña está en el tablón de la entrada."
+        }
+      ],
+      "answer": "El café y el té no se pagan.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_019",
+      "language": "es",
+      "description": "Nodo-Libre is the network name",
+      "category": "conflation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El espacio de coworking Nodo abre entre semana, de 8:00 a 21:00. Un pase de día cuesta 15 euros y la cuota mensual, 140 euros. La sala de reuniones se reserva por horas en recepción y cuesta 10 euros la hora para quien no es socio. El café y el té son gratuitos. La red wifi se llama Nodo-Libre y la contraseña está en el tablón de la entrada."
+        }
+      ],
+      "answer": "La contraseña de la wifi es Nodo-Libre.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_020",
+      "language": "es",
+      "description": "Weekdays only",
+      "category": "generalisation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El espacio de coworking Nodo abre entre semana, de 8:00 a 21:00. Un pase de día cuesta 15 euros y la cuota mensual, 140 euros. La sala de reuniones se reserva por horas en recepción y cuesta 10 euros la hora para quien no es socio. El café y el té son gratuitos. La red wifi se llama Nodo-Libre y la contraseña está en el tablón de la entrada."
+        }
+      ],
+      "answer": "El coworking abre todos los días de 8:00 a 21:00.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_021",
+      "language": "es",
+      "description": "Life jacket included and compulsory",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El alquiler de piraguas del embalse funciona de junio a septiembre, de 10:30 a 19:30. Una piragua individual cuesta 12 euros la hora y una doble, 18 euros la hora. El chaleco salvavidas está incluido y es obligatorio. Los menores de 14 años deben ir acompañados de un adulto. Hay que dejar el DNI como fianza."
+        }
+      ],
+      "answer": "El chaleco salvavidas va incluido y hay que llevarlo puesto.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_022",
+      "language": "es",
+      "description": "Single kayak price given for the double",
+      "category": "conflation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El alquiler de piraguas del embalse funciona de junio a septiembre, de 10:30 a 19:30. Una piragua individual cuesta 12 euros la hora y una doble, 18 euros la hora. El chaleco salvavidas está incluido y es obligatorio. Los menores de 14 años deben ir acompañados de un adulto. Hay que dejar el DNI como fianza."
+        }
+      ],
+      "answer": "Una piragua doble cuesta 12 euros la hora.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_023",
+      "language": "es",
+      "description": "Minors accompanied",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El alquiler de piraguas del embalse funciona de junio a septiembre, de 10:30 a 19:30. Una piragua individual cuesta 12 euros la hora y una doble, 18 euros la hora. El chaleco salvavidas está incluido y es obligatorio. Los menores de 14 años deben ir acompañados de un adulto. Hay que dejar el DNI como fianza."
+        }
+      ],
+      "answer": "Los menores de 14 años tienen que ir con un adulto.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_024",
+      "language": "es",
+      "description": "Cash alternative not stated",
+      "category": "extra_claim",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El alquiler de piraguas del embalse funciona de junio a septiembre, de 10:30 a 19:30. Una piragua individual cuesta 12 euros la hora y una doble, 18 euros la hora. El chaleco salvavidas está incluido y es obligatorio. Los menores de 14 años deben ir acompañados de un adulto. Hay que dejar el DNI como fianza."
+        }
+      ],
+      "answer": "Como fianza se deja el DNI o 20 euros en efectivo.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_025",
+      "language": "es",
+      "description": "Season and hours",
+      "category": "time_in_words",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El alquiler de piraguas del embalse funciona de junio a septiembre, de 10:30 a 19:30. Una piragua individual cuesta 12 euros la hora y una doble, 18 euros la hora. El chaleco salvavidas está incluido y es obligatorio. Los menores de 14 años deben ir acompañados de un adulto. Hay que dejar el DNI como fianza."
+        }
+      ],
+      "answer": "Se pueden alquilar piraguas de junio a septiembre, entre las diez y media y las siete y media.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_026",
+      "language": "es",
+      "description": "Closed on Mondays",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El vivero Los Almendros atiende de martes a domingo, de 9:30 a 19:30; los lunes cierra. Las macetas de barro pequeñas cuestan 3 euros. Hay servicio de entrega a domicilio para pedidos de más de 50 euros dentro del municipio. Los sábados se regalan esquejes de plantas aromáticas a los clientes. Las plantas de interior están en la nave cubierta."
+        }
+      ],
+      "answer": "Los lunes el vivero está cerrado.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_027",
+      "language": "es",
+      "description": "Only orders over 50 euros within the municipality; free not stated",
+      "category": "generalisation",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El vivero Los Almendros atiende de martes a domingo, de 9:30 a 19:30; los lunes cierra. Las macetas de barro pequeñas cuestan 3 euros. Hay servicio de entrega a domicilio para pedidos de más de 50 euros dentro del municipio. Los sábados se regalan esquejes de plantas aromáticas a los clientes. Las plantas de interior están en la nave cubierta."
+        }
+      ],
+      "answer": "La entrega a domicilio es gratuita para todos los pedidos.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_028",
+      "language": "es",
+      "description": "Small pot price",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El vivero Los Almendros atiende de martes a domingo, de 9:30 a 19:30; los lunes cierra. Las macetas de barro pequeñas cuestan 3 euros. Hay servicio de entrega a domicilio para pedidos de más de 50 euros dentro del municipio. Los sábados se regalan esquejes de plantas aromáticas a los clientes. Las plantas de interior están en la nave cubierta."
+        }
+      ],
+      "answer": "Las macetas de barro pequeñas valen 3 euros cada una.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_029",
+      "language": "es",
+      "description": "Hedged unsupported addition",
+      "category": "hedged_addition",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El vivero Los Almendros atiende de martes a domingo, de 9:30 a 19:30; los lunes cierra. Las macetas de barro pequeñas cuestan 3 euros. Hay servicio de entrega a domicilio para pedidos de más de 50 euros dentro del municipio. Los sábados se regalan esquejes de plantas aromáticas a los clientes. Las plantas de interior están en la nave cubierta."
+        }
+      ],
+      "answer": "Los sábados se regalan esquejes de aromáticas y probablemente también algún plantón de tomate.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_es_030",
+      "language": "es",
+      "description": "Indoor plants location",
+      "category": "paraphrase",
+      "trap": false,
+      "material": [
+        {
+          "name": "information",
+          "content": "El vivero Los Almendros atiende de martes a domingo, de 9:30 a 19:30; los lunes cierra. Las macetas de barro pequeñas cuestan 3 euros. Hay servicio de entrega a domicilio para pedidos de más de 50 euros dentro del municipio. Los sábados se regalan esquejes de plantas aromáticas a los clientes. Las plantas de interior están en la nave cubierta."
+        }
+      ],
+      "answer": "Las plantas de interior están en la nave cubierta.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_031",
+      "language": "es",
+      "description": "Closes at 19:30",
+      "category": "changed_number",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El vivero Los Almendros atiende de martes a domingo, de 9:30 a 19:30; los lunes cierra. Las macetas de barro pequeñas cuestan 3 euros. Hay servicio de entrega a domicilio para pedidos de más de 50 euros dentro del municipio. Los sábados se regalan esquejes de plantas aromáticas a los clientes. Las plantas de interior están en la nave cubierta."
+        }
+      ],
+      "answer": "El vivero atiende de martes a domingo, de 9:30 a 20:30.",
+      "expected_supported": false
+    },
+    {
+      "id": "qv_en_032",
+      "language": "en",
+      "description": "Only the part asked for, no condition dropped: supported",
+      "category": "partial",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Ferries to Isla Clara leave at 8:30, 12:00 and 17:15 from pier B. The crossing takes 50 minutes. A single adult ticket costs 14 euros; cars pay an extra 30 euros. Tickets are sold at the counter in the main hall and online. Boarding closes 15 minutes before departure. Pets travel free if they stay in a carrier."
+        }
+      ],
+      "answer": "Cars pay an extra 30 euros.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_en_033",
+      "language": "en",
+      "description": "An immediate inference (8:30 is in the morning): supported",
+      "category": "inference",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "Ferries to Isla Clara leave at 8:30, 12:00 and 17:15 from pier B. The crossing takes 50 minutes. A single adult ticket costs 14 euros; cars pay an extra 30 euros. Tickets are sold at the counter in the main hall and online. Boarding closes 15 minutes before departure. Pets travel free if they stay in a carrier."
+        }
+      ],
+      "answer": "The first ferry leaves at 8:30 in the morning from pier B.",
+      "expected_supported": true
+    },
+    {
+      "id": "qv_es_032",
+      "language": "es",
+      "description": "An immediate inference (las 22:00 son por la noche): supported",
+      "category": "inference",
+      "trap": true,
+      "material": [
+        {
+          "name": "information",
+          "content": "El cine Alameda tiene cuatro salas. La entrada normal cuesta 8 euros y los miércoles, día del espectador, cuesta 5 euros. Las taquillas abren media hora antes de la primera sesión. Las sesiones de la tarde empiezan a las 17:00, a las 19:30 y a las 22:00. No se permite entrar con comida de fuera. La sala 2 está adaptada para sillas de ruedas."
+        }
+      ],
+      "answer": "La última sesión empieza a las diez de la noche.",
+      "expected_supported": true
+    }
+  ]
+}

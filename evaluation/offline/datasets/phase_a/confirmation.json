@@ -1,0 +1,2981 @@
+{
+ "_instructions": [
+  "Phase A of E0a: the answer to the read-back of slot filling (LLMDialogClient.classify_intent), asked as slot_filling.classify_confirmation asks it.",
+  "Fields: task, domain, slot_schema, frame_filled (complete: every slot filled), user_text (the reply to 'is this correct?'), expected_intent (confirms | corrects | question | unclear, as defined in the classify_intent prompt), expected_corrections ({slot: new value} for corrects, canonical; list operations as {\"_remove\"|\"_replace\": true, \"items\": [...]}), hedged (true for hedged, ironic or half-hearted replies, which are unclear).",
+  "Critical error: a correction or a question taken as confirms. Hedged replies taken as confirms are reported apart.",
+  "Traps: corrections that open with agreement, corrections without a negation, questions that sound like agreement, hedged or ironic replies, corrections to a number outside the slot's allowed range (still corrections, with the number as said: the code rejects it and asks again).",
+  "Each case: id, language (en | es), description (English), category (the kind of case), trap (a case built to provoke the error the question must not make), origin (optional: the case of the student's Spanish dataset it reuses or translates).",
+  "No case may reuse content of an evaluation scenario (evaluation/experiments/scenarios) nor of the examples of config/prompts.yaml; check with: python3 -m core.dataset_check.",
+  "The expected values are decided by a person; a case a careful annotator could label otherwise is dropped, not kept."
+ ],
+ "question": "classify_intent",
+ "cases": [
+  {
+   "id": "cf_en_001",
+   "language": "en",
+   "description": "Informal confirmation",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Book an appointment at the hairdresser",
+   "domain": "hairdresser",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "service",
+      "type": "str",
+      "canonical_values": [
+       "haircut",
+       "colour",
+       "blow-dry"
+      ]
+     },
+     {
+      "name": "day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     },
+     {
+      "name": "time",
+      "type": "str",
+      "canonical_values": [
+       "10:00",
+       "11:00",
+       "16:00",
+       "17:00"
+      ]
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "service": "haircut",
+    "day": "friday",
+    "time": "16:00",
+    "customer_name": "Nadia"
+   },
+   "user_text": "Yep, that's all spot on.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_002",
+   "language": "en",
+   "description": "Informal confirmation",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Book a kayak rental at the lake",
+   "domain": "kayak rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "kayaks",
+      "type": "int"
+     },
+     {
+      "name": "hours",
+      "type": "int"
+     },
+     {
+      "name": "life_jackets",
+      "type": "bool"
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "kayaks": 2,
+    "hours": 3,
+    "life_jackets": true,
+    "customer_name": "Tom"
+   },
+   "user_text": "Sounds good to me.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_003",
+   "language": "en",
+   "description": "Confirmation with satisfaction",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Take a birthday cake order at the bakery",
+   "domain": "bakery",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flavour",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vanilla",
+       "lemon",
+       "carrot"
+      ]
+     },
+     {
+      "name": "servings",
+      "type": "int"
+     },
+     {
+      "name": "pickup_day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "flavour": "chocolate",
+    "servings": 12,
+    "pickup_day": "saturday"
+   },
+   "user_text": "Lovely, that's exactly what I want.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_004",
+   "language": "en",
+   "description": "Confirmation with thanks",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Book an appointment at the veterinary clinic",
+   "domain": "veterinary clinic",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "pet_name",
+      "type": "str"
+     },
+     {
+      "name": "species",
+      "type": "str",
+      "canonical_values": [
+       "dog",
+       "rabbit",
+       "ferret",
+       "parrot"
+      ]
+     },
+     {
+      "name": "reason",
+      "type": "str",
+      "canonical_values": [
+       "vaccination",
+       "check-up",
+       "injury",
+       "dental"
+      ]
+     },
+     {
+      "name": "time_slot",
+      "type": "str",
+      "canonical_values": [
+       "morning",
+       "afternoon"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "pet_name": "Biscuit",
+    "species": "rabbit",
+    "reason": "vaccination",
+    "time_slot": "morning"
+   },
+   "user_text": "Every detail matches, thank you.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_005",
+   "language": "en",
+   "description": "Confirmation with an action verb",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Take a bouquet order at the florist",
+   "domain": "florist",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flowers",
+      "type": "list_str",
+      "canonical_values": [
+       "roses",
+       "tulips",
+       "lilies",
+       "sunflowers",
+       "daisies"
+      ]
+     },
+     {
+      "name": "size",
+      "type": "str",
+      "canonical_values": [
+       "small",
+       "medium",
+       "large"
+      ]
+     },
+     {
+      "name": "delivery",
+      "type": "bool"
+     },
+     {
+      "name": "card_message",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flowers": [
+     "tulips",
+     "roses"
+    ],
+    "size": "medium",
+    "delivery": true,
+    "card_message": "Happy birthday, Gran"
+   },
+   "user_text": "Lovely, go for it.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_006",
+   "language": "en",
+   "description": "Echoes the values back",
+   "category": "echo_confirm",
+   "trap": false,
+   "task": "Book a repair at the bicycle workshop",
+   "domain": "bicycle workshop",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "service",
+      "type": "str",
+      "canonical_values": [
+       "puncture repair",
+       "brake adjustment",
+       "full service",
+       "gear tuning"
+      ]
+     },
+     {
+      "name": "day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "service": "full service",
+    "day": "tuesday",
+    "customer_name": "Omar"
+   },
+   "user_text": "Tuesday, full service, Omar. Spot on.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_007",
+   "language": "en",
+   "description": "Confirmation with an action verb",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Handle a car rental",
+   "domain": "car rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "category",
+      "type": "str",
+      "canonical_values": [
+       "economy",
+       "family",
+       "suv",
+       "premium"
+      ]
+     },
+     {
+      "name": "days",
+      "type": "int"
+     },
+     {
+      "name": "insurance",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "category": "economy",
+    "days": 4,
+    "insurance": false
+   },
+   "user_text": "Brilliant, book it.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_008",
+   "language": "en",
+   "description": "Short confirmation",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Take an ice cream order",
+   "domain": "ice cream parlour",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flavour",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vanilla",
+       "strawberry",
+       "lemon"
+      ]
+     },
+     {
+      "name": "size",
+      "type": "str",
+      "canonical_values": [
+       "small",
+       "medium",
+       "large"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "flavour": "lemon",
+    "size": "small"
+   },
+   "user_text": "Exactly what I asked for.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_009",
+   "language": "en",
+   "description": "Confirmation with an action verb",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Handle a table booking at the restaurant",
+   "domain": "restaurant",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "people",
+      "type": "int"
+     },
+     {
+      "name": "area",
+      "type": "str",
+      "canonical_values": [
+       "indoors",
+       "terrace"
+      ]
+     },
+     {
+      "name": "time",
+      "type": "str",
+      "canonical_values": [
+       "13:00",
+       "14:00",
+       "20:00",
+       "21:00"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "people": 4,
+    "area": "terrace",
+    "time": "20:00"
+   },
+   "user_text": "Yep, book the table.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_010",
+   "language": "en",
+   "description": "A correction that opens with agreement",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Book an appointment at the hairdresser",
+   "domain": "hairdresser",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "service",
+      "type": "str",
+      "canonical_values": [
+       "haircut",
+       "colour",
+       "blow-dry"
+      ]
+     },
+     {
+      "name": "day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     },
+     {
+      "name": "time",
+      "type": "str",
+      "canonical_values": [
+       "10:00",
+       "11:00",
+       "16:00",
+       "17:00"
+      ]
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "service": "haircut",
+    "day": "friday",
+    "time": "16:00",
+    "customer_name": "Nadia"
+   },
+   "user_text": "Yes, all set, only the time should be five rather than four.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "time": "17:00"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_011",
+   "language": "en",
+   "description": "Agreement word, then a change",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Book a kayak rental at the lake",
+   "domain": "kayak rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "kayaks",
+      "type": "int"
+     },
+     {
+      "name": "hours",
+      "type": "int"
+     },
+     {
+      "name": "life_jackets",
+      "type": "bool"
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "kayaks": 2,
+    "hours": 3,
+    "life_jackets": true,
+    "customer_name": "Tom"
+   },
+   "user_text": "Lovely, though make it three kayaks.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "kayaks": 3
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_012",
+   "language": "en",
+   "description": "A correction without a negation",
+   "category": "correction_no_negation",
+   "trap": true,
+   "task": "Book a kayak rental at the lake",
+   "domain": "kayak rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "kayaks",
+      "type": "int"
+     },
+     {
+      "name": "hours",
+      "type": "int"
+     },
+     {
+      "name": "life_jackets",
+      "type": "bool"
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "kayaks": 2,
+    "hours": 3,
+    "life_jackets": true,
+    "customer_name": "Tom"
+   },
+   "user_text": "Four hours, by the way.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "hours": 4
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_013",
+   "language": "en",
+   "description": "Praise, then a change",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Take a birthday cake order at the bakery",
+   "domain": "bakery",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flavour",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vanilla",
+       "lemon",
+       "carrot"
+      ]
+     },
+     {
+      "name": "servings",
+      "type": "int"
+     },
+     {
+      "name": "pickup_day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "flavour": "chocolate",
+    "servings": 12,
+    "pickup_day": "saturday"
+   },
+   "user_text": "Great stuff, just switch it to carrot.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "flavour": "carrot"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_014",
+   "language": "en",
+   "description": "Removes an item of a list",
+   "category": "list_remove",
+   "trap": false,
+   "task": "Take a bouquet order at the florist",
+   "domain": "florist",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flowers",
+      "type": "list_str",
+      "canonical_values": [
+       "roses",
+       "tulips",
+       "lilies",
+       "sunflowers",
+       "daisies"
+      ]
+     },
+     {
+      "name": "size",
+      "type": "str",
+      "canonical_values": [
+       "small",
+       "medium",
+       "large"
+      ]
+     },
+     {
+      "name": "delivery",
+      "type": "bool"
+     },
+     {
+      "name": "card_message",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flowers": [
+     "tulips",
+     "roses"
+    ],
+    "size": "medium",
+    "delivery": true,
+    "card_message": "Happy birthday, Gran"
+   },
+   "user_text": "Leave out the roses, please.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "flowers": {
+     "_remove": true,
+     "items": [
+      "roses"
+     ]
+    }
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_015",
+   "language": "en",
+   "description": "Explicit correction",
+   "category": "plain_correction",
+   "trap": false,
+   "task": "Book an appointment at the veterinary clinic",
+   "domain": "veterinary clinic",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "pet_name",
+      "type": "str"
+     },
+     {
+      "name": "species",
+      "type": "str",
+      "canonical_values": [
+       "dog",
+       "rabbit",
+       "ferret",
+       "parrot"
+      ]
+     },
+     {
+      "name": "reason",
+      "type": "str",
+      "canonical_values": [
+       "vaccination",
+       "check-up",
+       "injury",
+       "dental"
+      ]
+     },
+     {
+      "name": "time_slot",
+      "type": "str",
+      "canonical_values": [
+       "morning",
+       "afternoon"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "pet_name": "Biscuit",
+    "species": "rabbit",
+    "reason": "vaccination",
+    "time_slot": "morning"
+   },
+   "user_text": "No, he's a ferret, not a rabbit.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "species": "ferret"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_016",
+   "language": "en",
+   "description": "Mostly agrees, then completes the name",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Book a repair at the bicycle workshop",
+   "domain": "bicycle workshop",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "service",
+      "type": "str",
+      "canonical_values": [
+       "puncture repair",
+       "brake adjustment",
+       "full service",
+       "gear tuning"
+      ]
+     },
+     {
+      "name": "day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "service": "full service",
+    "day": "tuesday",
+    "customer_name": "Omar"
+   },
+   "user_text": "Mostly right, but the name is Omar Haddad.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "customer_name": "Omar Haddad"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_017",
+   "language": "en",
+   "description": "Changes a boolean without a negation",
+   "category": "correction_no_negation",
+   "trap": true,
+   "task": "Handle a car rental",
+   "domain": "car rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "category",
+      "type": "str",
+      "canonical_values": [
+       "economy",
+       "family",
+       "suv",
+       "premium"
+      ]
+     },
+     {
+      "name": "days",
+      "type": "int"
+     },
+     {
+      "name": "insurance",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "category": "economy",
+    "days": 4,
+    "insurance": false
+   },
+   "user_text": "We'll want the insurance after all.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "insurance": true
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_018",
+   "language": "en",
+   "description": "Agreement, then a change of number",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Handle a table booking at the restaurant",
+   "domain": "restaurant",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "people",
+      "type": "int"
+     },
+     {
+      "name": "area",
+      "type": "str",
+      "canonical_values": [
+       "indoors",
+       "terrace"
+      ]
+     },
+     {
+      "name": "time",
+      "type": "str",
+      "canonical_values": [
+       "13:00",
+       "14:00",
+       "20:00",
+       "21:00"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "people": 4,
+    "area": "terrace",
+    "time": "20:00"
+   },
+   "user_text": "Sounds great, except we're five now.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "people": 5
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_en_019",
+   "language": "en",
+   "description": "A tag question that sounds like agreement",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Book an appointment at the hairdresser",
+   "domain": "hairdresser",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "service",
+      "type": "str",
+      "canonical_values": [
+       "haircut",
+       "colour",
+       "blow-dry"
+      ]
+     },
+     {
+      "name": "day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     },
+     {
+      "name": "time",
+      "type": "str",
+      "canonical_values": [
+       "10:00",
+       "11:00",
+       "16:00",
+       "17:00"
+      ]
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "service": "haircut",
+    "day": "friday",
+    "time": "16:00",
+    "customer_name": "Nadia"
+   },
+   "user_text": "That's for Friday, right?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_020",
+   "language": "en",
+   "description": "Agreement word, then a question",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Book a kayak rental at the lake",
+   "domain": "kayak rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "kayaks",
+      "type": "int"
+     },
+     {
+      "name": "hours",
+      "type": "int"
+     },
+     {
+      "name": "life_jackets",
+      "type": "bool"
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "kayaks": 2,
+    "hours": 3,
+    "life_jackets": true,
+    "customer_name": "Tom"
+   },
+   "user_text": "Great, and is the deposit refundable?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_021",
+   "language": "en",
+   "description": "Checks a detail as a question",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Take a birthday cake order at the bakery",
+   "domain": "bakery",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flavour",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vanilla",
+       "lemon",
+       "carrot"
+      ]
+     },
+     {
+      "name": "servings",
+      "type": "int"
+     },
+     {
+      "name": "pickup_day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "flavour": "chocolate",
+    "servings": 12,
+    "pickup_day": "saturday"
+   },
+   "user_text": "So it's ready by noon on Saturday?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_022",
+   "language": "en",
+   "description": "Agrees, then asks",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Handle a car rental",
+   "domain": "car rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "category",
+      "type": "str",
+      "canonical_values": [
+       "economy",
+       "family",
+       "suv",
+       "premium"
+      ]
+     },
+     {
+      "name": "days",
+      "type": "int"
+     },
+     {
+      "name": "insurance",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "category": "economy",
+    "days": 4,
+    "insurance": false
+   },
+   "user_text": "Looks right. Does the price include a full tank?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_023",
+   "language": "en",
+   "description": "A plain question",
+   "category": "plain_question",
+   "trap": false,
+   "task": "Take a bouquet order at the florist",
+   "domain": "florist",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flowers",
+      "type": "list_str",
+      "canonical_values": [
+       "roses",
+       "tulips",
+       "lilies",
+       "sunflowers",
+       "daisies"
+      ]
+     },
+     {
+      "name": "size",
+      "type": "str",
+      "canonical_values": [
+       "small",
+       "medium",
+       "large"
+      ]
+     },
+     {
+      "name": "delivery",
+      "type": "bool"
+     },
+     {
+      "name": "card_message",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flowers": [
+     "tulips",
+     "roses"
+    ],
+    "size": "medium",
+    "delivery": true,
+    "card_message": "Happy birthday, Gran"
+   },
+   "user_text": "How long will the tulips last?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_024",
+   "language": "en",
+   "description": "A plain question",
+   "category": "plain_question",
+   "trap": false,
+   "task": "Book an appointment at the veterinary clinic",
+   "domain": "veterinary clinic",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "pet_name",
+      "type": "str"
+     },
+     {
+      "name": "species",
+      "type": "str",
+      "canonical_values": [
+       "dog",
+       "rabbit",
+       "ferret",
+       "parrot"
+      ]
+     },
+     {
+      "name": "reason",
+      "type": "str",
+      "canonical_values": [
+       "vaccination",
+       "check-up",
+       "injury",
+       "dental"
+      ]
+     },
+     {
+      "name": "time_slot",
+      "type": "str",
+      "canonical_values": [
+       "morning",
+       "afternoon"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "pet_name": "Biscuit",
+    "species": "rabbit",
+    "reason": "vaccination",
+    "time_slot": "morning"
+   },
+   "user_text": "Do I need to bring his vaccination card?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_025",
+   "language": "en",
+   "description": "Agreement word, then a question",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Handle a table booking at the restaurant",
+   "domain": "restaurant",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "people",
+      "type": "int"
+     },
+     {
+      "name": "area",
+      "type": "str",
+      "canonical_values": [
+       "indoors",
+       "terrace"
+      ]
+     },
+     {
+      "name": "time",
+      "type": "str",
+      "canonical_values": [
+       "13:00",
+       "14:00",
+       "20:00",
+       "21:00"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "people": 4,
+    "area": "terrace",
+    "time": "20:00"
+   },
+   "user_text": "Nice, is the terrace heated in the evening?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_026",
+   "language": "en",
+   "description": "Half-hearted agreement",
+   "category": "hedged",
+   "trap": true,
+   "task": "Book an appointment at the hairdresser",
+   "domain": "hairdresser",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "service",
+      "type": "str",
+      "canonical_values": [
+       "haircut",
+       "colour",
+       "blow-dry"
+      ]
+     },
+     {
+      "name": "day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     },
+     {
+      "name": "time",
+      "type": "str",
+      "canonical_values": [
+       "10:00",
+       "11:00",
+       "16:00",
+       "17:00"
+      ]
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "service": "haircut",
+    "day": "friday",
+    "time": "16:00",
+    "customer_name": "Nadia"
+   },
+   "user_text": "I guess so...",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_en_027",
+   "language": "en",
+   "description": "Ironic, resigned reply",
+   "category": "ironic",
+   "trap": true,
+   "task": "Book a kayak rental at the lake",
+   "domain": "kayak rental",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "kayaks",
+      "type": "int"
+     },
+     {
+      "name": "hours",
+      "type": "int"
+     },
+     {
+      "name": "life_jackets",
+      "type": "bool"
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "kayaks": 2,
+    "hours": 3,
+    "life_jackets": true,
+    "customer_name": "Tom"
+   },
+   "user_text": "Whatever you say, I suppose.",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_en_028",
+   "language": "en",
+   "description": "A yes taken back",
+   "category": "hedged",
+   "trap": true,
+   "task": "Take a birthday cake order at the bakery",
+   "domain": "bakery",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flavour",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vanilla",
+       "lemon",
+       "carrot"
+      ]
+     },
+     {
+      "name": "servings",
+      "type": "int"
+     },
+     {
+      "name": "pickup_day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "flavour": "chocolate",
+    "servings": 12,
+    "pickup_day": "saturday"
+   },
+   "user_text": "Yes... well, I'm not totally sure.",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_en_029",
+   "language": "en",
+   "description": "Objects without saying what",
+   "category": "vague_objection",
+   "trap": false,
+   "task": "Book a repair at the bicycle workshop",
+   "domain": "bicycle workshop",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "service",
+      "type": "str",
+      "canonical_values": [
+       "puncture repair",
+       "brake adjustment",
+       "full service",
+       "gear tuning"
+      ]
+     },
+     {
+      "name": "day",
+      "type": "str",
+      "canonical_values": [
+       "monday",
+       "tuesday",
+       "wednesday",
+       "thursday",
+       "friday",
+       "saturday"
+      ]
+     },
+     {
+      "name": "customer_name",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "service": "full service",
+    "day": "tuesday",
+    "customer_name": "Omar"
+   },
+   "user_text": "Hmm, something about that sounds off.",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_en_030",
+   "language": "en",
+   "description": "Uncertain agreement",
+   "category": "hedged",
+   "trap": true,
+   "task": "Take a bouquet order at the florist",
+   "domain": "florist",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flowers",
+      "type": "list_str",
+      "canonical_values": [
+       "roses",
+       "tulips",
+       "lilies",
+       "sunflowers",
+       "daisies"
+      ]
+     },
+     {
+      "name": "size",
+      "type": "str",
+      "canonical_values": [
+       "small",
+       "medium",
+       "large"
+      ]
+     },
+     {
+      "name": "delivery",
+      "type": "bool"
+     },
+     {
+      "name": "card_message",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flowers": [
+     "tulips",
+     "roses"
+    ],
+    "size": "medium",
+    "delivery": true,
+    "card_message": "Happy birthday, Gran"
+   },
+   "user_text": "Probably, yeah... I'm not sure.",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_es_001",
+   "language": "es",
+   "description": "Plain confirmation",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "chocolate",
+    "tamaño": "grande"
+   },
+   "user_text": "Sí, todo en orden.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_002",
+   "language": "es",
+   "description": "Confirmation with an action verb",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Gestionar el alquiler de un coche",
+   "domain": "alquiler de coches",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "categoria",
+      "type": "str",
+      "canonical_values": [
+       "económico",
+       "familiar",
+       "SUV",
+       "premium"
+      ]
+     },
+     {
+      "name": "dias",
+      "type": "int"
+     },
+     {
+      "name": "seguro",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "categoria": "SUV",
+    "dias": 3,
+    "seguro": true
+   },
+   "user_text": "Así está estupendo, resérvalo.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_003",
+   "language": "es",
+   "description": "Confirmation with satisfaction",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Gestionar la reserva de una mesa en el restaurante",
+   "domain": "restaurante",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "num_personas",
+      "type": "int"
+     },
+     {
+      "name": "hora",
+      "type": "str",
+      "canonical_values": [
+       "13:00",
+       "14:00",
+       "20:00",
+       "21:00"
+      ]
+     },
+     {
+      "name": "zona",
+      "type": "str",
+      "canonical_values": [
+       "interior",
+       "terraza"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "num_personas": 2,
+    "hora": "21:00",
+    "zona": "terraza"
+   },
+   "user_text": "Es justo lo que quería.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_004",
+   "language": "es",
+   "description": "Echoes the values back",
+   "category": "echo_confirm",
+   "trap": false,
+   "task": "Dar cita en la peluquería",
+   "domain": "peluquería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "servicio",
+      "type": "str",
+      "canonical_values": [
+       "corte",
+       "tinte",
+       "peinado"
+      ]
+     },
+     {
+      "name": "dia",
+      "type": "str",
+      "canonical_values": [
+       "lunes",
+       "martes",
+       "miércoles",
+       "jueves",
+       "viernes",
+       "sábado"
+      ]
+     },
+     {
+      "name": "hora",
+      "type": "str",
+      "canonical_values": [
+       "10:00",
+       "11:00",
+       "16:00",
+       "17:00"
+      ]
+     },
+     {
+      "name": "estilista",
+      "type": "str"
+     },
+     {
+      "name": "nombre_cliente",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "servicio": "corte",
+    "dia": "jueves",
+    "hora": "16:00",
+    "estilista": "Carmen",
+    "nombre_cliente": "Marisa"
+   },
+   "user_text": "Jueves, corte, con Carmen y a nombre de Marisa. Clavado.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_005",
+   "language": "es",
+   "description": "Confirmation with an action verb",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Tomar el pedido de un ramo en la floristería",
+   "domain": "floristería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flores",
+      "type": "list_str",
+      "canonical_values": [
+       "rosas",
+       "tulipanes",
+       "lirios",
+       "girasoles",
+       "margaritas"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     },
+     {
+      "name": "envio",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flores": [
+     "girasoles",
+     "rosas"
+    ],
+    "tamaño": "grande",
+    "envio": true
+   },
+   "user_text": "Me parece estupendo, adelante con el pedido.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_006",
+   "language": "es",
+   "description": "Confirmation with thanks",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Alquilar el equipo de esquí",
+   "domain": "alquiler de esquís",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "num_equipos",
+      "type": "int"
+     },
+     {
+      "name": "talla_botas",
+      "type": "int"
+     },
+     {
+      "name": "casco",
+      "type": "bool"
+     },
+     {
+      "name": "dias",
+      "type": "int"
+     }
+    ]
+   },
+   "frame_filled": {
+    "num_equipos": 4,
+    "talla_botas": 42,
+    "casco": true,
+    "dias": 3
+   },
+   "user_text": "Todo cuadra, gracias.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_007",
+   "language": "es",
+   "description": "Informal confirmation",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Pedir cita en el taller de bicicletas",
+   "domain": "taller de bicicletas",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "servicio",
+      "type": "str",
+      "canonical_values": [
+       "reparar pinchazo",
+       "ajustar frenos",
+       "revisión completa",
+       "ajustar cambios"
+      ]
+     },
+     {
+      "name": "dia",
+      "type": "str",
+      "canonical_values": [
+       "lunes",
+       "martes",
+       "miércoles",
+       "jueves",
+       "viernes",
+       "sábado"
+      ]
+     },
+     {
+      "name": "nombre",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "servicio": "ajustar frenos",
+    "dia": "lunes",
+    "nombre": "Iker"
+   },
+   "user_text": "Vale, así me sirve.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_008",
+   "language": "es",
+   "description": "Confirmation",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "fresa",
+    "tamaño": "mediano"
+   },
+   "user_text": "Sin cambios, está bien así.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_009",
+   "language": "es",
+   "description": "Confirmation with an action verb",
+   "category": "plain_confirm",
+   "trap": false,
+   "task": "Pedir cita en la clínica veterinaria",
+   "domain": "clínica veterinaria",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "nombre_mascota",
+      "type": "str"
+     },
+     {
+      "name": "especie",
+      "type": "str",
+      "canonical_values": [
+       "perro",
+       "conejo",
+       "hurón",
+       "loro"
+      ]
+     },
+     {
+      "name": "motivo",
+      "type": "str",
+      "canonical_values": [
+       "vacuna",
+       "revisión",
+       "herida",
+       "dientes"
+      ]
+     },
+     {
+      "name": "franja",
+      "type": "str",
+      "canonical_values": [
+       "mañana",
+       "tarde"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "nombre_mascota": "Lola",
+    "especie": "perro",
+    "motivo": "vacuna",
+    "franja": "tarde"
+   },
+   "user_text": "Genial, apúntalo así.",
+   "expected_intent": "confirms",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_010",
+   "language": "es",
+   "description": "Explicit correction",
+   "category": "plain_correction",
+   "trap": false,
+   "origin": "intent_classification.json:ic_004",
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "chocolate",
+    "tamaño": "pequeño"
+   },
+   "user_text": "No, el tamaño era grande, no pequeño",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "tamaño": "grande"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_011",
+   "language": "es",
+   "description": "A correction without a negation",
+   "category": "correction_no_negation",
+   "trap": true,
+   "origin": "intent_classification.json:ic_005",
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "vainilla",
+    "tamaño": "grande"
+   },
+   "user_text": "En realidad quiero el de fresa",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "sabor": "fresa"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_012",
+   "language": "es",
+   "description": "Correction with an apology",
+   "category": "plain_correction",
+   "trap": false,
+   "origin": "intent_classification.json:ic_028",
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "vainilla",
+    "tamaño": "mediano"
+   },
+   "user_text": "Perdona, quería de chocolate, no vainilla",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "sabor": "chocolate"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_013",
+   "language": "es",
+   "description": "Correction of a number",
+   "category": "plain_correction",
+   "trap": false,
+   "origin": "intent_classification.json:ic_027",
+   "task": "Gestionar la reserva de una mesa en el restaurante",
+   "domain": "restaurante",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "num_personas",
+      "type": "int"
+     },
+     {
+      "name": "hora",
+      "type": "str",
+      "canonical_values": [
+       "13:00",
+       "14:00",
+       "20:00",
+       "21:00"
+      ]
+     },
+     {
+      "name": "zona",
+      "type": "str",
+      "canonical_values": [
+       "interior",
+       "terraza"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "num_personas": 2,
+    "hora": "20:00",
+    "zona": "terraza"
+   },
+   "user_text": "Somos tres, no dos",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "num_personas": 3
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_014",
+   "language": "es",
+   "description": "A correction that opens with agreement",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Dar cita en la peluquería",
+   "domain": "peluquería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "servicio",
+      "type": "str",
+      "canonical_values": [
+       "corte",
+       "tinte",
+       "peinado"
+      ]
+     },
+     {
+      "name": "dia",
+      "type": "str",
+      "canonical_values": [
+       "lunes",
+       "martes",
+       "miércoles",
+       "jueves",
+       "viernes",
+       "sábado"
+      ]
+     },
+     {
+      "name": "hora",
+      "type": "str",
+      "canonical_values": [
+       "10:00",
+       "11:00",
+       "16:00",
+       "17:00"
+      ]
+     },
+     {
+      "name": "estilista",
+      "type": "str"
+     },
+     {
+      "name": "nombre_cliente",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "servicio": "corte",
+    "dia": "jueves",
+    "hora": "16:00",
+    "estilista": "Carmen",
+    "nombre_cliente": "Marisa"
+   },
+   "user_text": "Sí, todo bien, solo que la hora sería a las cinco y no a las cuatro.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "hora": "17:00"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_015",
+   "language": "es",
+   "description": "Praise, then a change",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Alquilar el equipo de esquí",
+   "domain": "alquiler de esquís",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "num_equipos",
+      "type": "int"
+     },
+     {
+      "name": "talla_botas",
+      "type": "int"
+     },
+     {
+      "name": "casco",
+      "type": "bool"
+     },
+     {
+      "name": "dias",
+      "type": "int"
+     }
+    ]
+   },
+   "frame_filled": {
+    "num_equipos": 4,
+    "talla_botas": 42,
+    "casco": true,
+    "dias": 3
+   },
+   "user_text": "Estupendo, aunque al final que sean cinco días.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "dias": 5
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_016",
+   "language": "es",
+   "description": "Agreement word, then removes an item",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Tomar el pedido de un ramo en la floristería",
+   "domain": "floristería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flores",
+      "type": "list_str",
+      "canonical_values": [
+       "rosas",
+       "tulipanes",
+       "lirios",
+       "girasoles",
+       "margaritas"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     },
+     {
+      "name": "envio",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flores": [
+     "girasoles",
+     "rosas"
+    ],
+    "tamaño": "grande",
+    "envio": true
+   },
+   "user_text": "Genial, pero quita las rosas.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "flores": {
+     "_remove": true,
+     "items": [
+      "rosas"
+     ]
+    }
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_017",
+   "language": "es",
+   "description": "A correction without a negation",
+   "category": "correction_no_negation",
+   "trap": true,
+   "task": "Pedir cita en la clínica veterinaria",
+   "domain": "clínica veterinaria",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "nombre_mascota",
+      "type": "str"
+     },
+     {
+      "name": "especie",
+      "type": "str",
+      "canonical_values": [
+       "perro",
+       "conejo",
+       "hurón",
+       "loro"
+      ]
+     },
+     {
+      "name": "motivo",
+      "type": "str",
+      "canonical_values": [
+       "vacuna",
+       "revisión",
+       "herida",
+       "dientes"
+      ]
+     },
+     {
+      "name": "franja",
+      "type": "str",
+      "canonical_values": [
+       "mañana",
+       "tarde"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "nombre_mascota": "Lola",
+    "especie": "perro",
+    "motivo": "vacuna",
+    "franja": "tarde"
+   },
+   "user_text": "Por la mañana, por cierto.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "franja": "mañana"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_018",
+   "language": "es",
+   "description": "Almost agrees, then completes the name",
+   "category": "soft_correction",
+   "trap": true,
+   "task": "Pedir cita en el taller de bicicletas",
+   "domain": "taller de bicicletas",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "servicio",
+      "type": "str",
+      "canonical_values": [
+       "reparar pinchazo",
+       "ajustar frenos",
+       "revisión completa",
+       "ajustar cambios"
+      ]
+     },
+     {
+      "name": "dia",
+      "type": "str",
+      "canonical_values": [
+       "lunes",
+       "martes",
+       "miércoles",
+       "jueves",
+       "viernes",
+       "sábado"
+      ]
+     },
+     {
+      "name": "nombre",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "servicio": "ajustar frenos",
+    "dia": "lunes",
+    "nombre": "Iker"
+   },
+   "user_text": "Casi, el nombre es Iker Etxeberria.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "nombre": "Iker Etxeberria"
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_019",
+   "language": "es",
+   "description": "A question about the pickup",
+   "category": "plain_question",
+   "trap": false,
+   "origin": "intent_classification.json:ic_038",
+   "task": "Gestionar el alquiler de un coche",
+   "domain": "alquiler de coches",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "categoria",
+      "type": "str",
+      "canonical_values": [
+       "económico",
+       "familiar",
+       "SUV",
+       "premium"
+      ]
+     },
+     {
+      "name": "dias",
+      "type": "int"
+     },
+     {
+      "name": "seguro",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "categoria": "SUV",
+    "dias": 3,
+    "seguro": true
+   },
+   "user_text": "¿Dónde tengo que recoger el coche?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_020",
+   "language": "es",
+   "description": "A hypothetical question, not a correction",
+   "category": "hypothetical_question",
+   "trap": true,
+   "origin": "intent_classification.json:ic_040",
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "vainilla",
+    "tamaño": "grande"
+   },
+   "user_text": "¿Y si pido uno de chocolate en vez de vainilla?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_021",
+   "language": "es",
+   "description": "A tag question that sounds like agreement",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Dar cita en la peluquería",
+   "domain": "peluquería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "servicio",
+      "type": "str",
+      "canonical_values": [
+       "corte",
+       "tinte",
+       "peinado"
+      ]
+     },
+     {
+      "name": "dia",
+      "type": "str",
+      "canonical_values": [
+       "lunes",
+       "martes",
+       "miércoles",
+       "jueves",
+       "viernes",
+       "sábado"
+      ]
+     },
+     {
+      "name": "hora",
+      "type": "str",
+      "canonical_values": [
+       "10:00",
+       "11:00",
+       "16:00",
+       "17:00"
+      ]
+     },
+     {
+      "name": "estilista",
+      "type": "str"
+     },
+     {
+      "name": "nombre_cliente",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "servicio": "corte",
+    "dia": "jueves",
+    "hora": "16:00",
+    "estilista": "Carmen",
+    "nombre_cliente": "Marisa"
+   },
+   "user_text": "Es el jueves, ¿verdad?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_022",
+   "language": "es",
+   "description": "Agreement word, then a question",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Alquilar el equipo de esquí",
+   "domain": "alquiler de esquís",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "num_equipos",
+      "type": "int"
+     },
+     {
+      "name": "talla_botas",
+      "type": "int"
+     },
+     {
+      "name": "casco",
+      "type": "bool"
+     },
+     {
+      "name": "dias",
+      "type": "int"
+     }
+    ]
+   },
+   "frame_filled": {
+    "num_equipos": 4,
+    "talla_botas": 42,
+    "casco": true,
+    "dias": 3
+   },
+   "user_text": "Genial, ¿y la fianza me la devolvéis?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_023",
+   "language": "es",
+   "description": "Checks a detail as a question",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Tomar el pedido de un ramo en la floristería",
+   "domain": "floristería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flores",
+      "type": "list_str",
+      "canonical_values": [
+       "rosas",
+       "tulipanes",
+       "lirios",
+       "girasoles",
+       "margaritas"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     },
+     {
+      "name": "envio",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flores": [
+     "girasoles",
+     "rosas"
+    ],
+    "tamaño": "grande",
+    "envio": true
+   },
+   "user_text": "¿Entonces llega antes del mediodía?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_024",
+   "language": "es",
+   "description": "Agrees, then asks",
+   "category": "question_like_agreement",
+   "trap": true,
+   "task": "Pedir cita en el taller de bicicletas",
+   "domain": "taller de bicicletas",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "servicio",
+      "type": "str",
+      "canonical_values": [
+       "reparar pinchazo",
+       "ajustar frenos",
+       "revisión completa",
+       "ajustar cambios"
+      ]
+     },
+     {
+      "name": "dia",
+      "type": "str",
+      "canonical_values": [
+       "lunes",
+       "martes",
+       "miércoles",
+       "jueves",
+       "viernes",
+       "sábado"
+      ]
+     },
+     {
+      "name": "nombre",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "servicio": "ajustar frenos",
+    "dia": "lunes",
+    "nombre": "Iker"
+   },
+   "user_text": "Todo bien, ¿eso incluye cambiar las pastillas?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_025",
+   "language": "es",
+   "description": "A plain question",
+   "category": "plain_question",
+   "trap": false,
+   "task": "Pedir cita en la clínica veterinaria",
+   "domain": "clínica veterinaria",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "nombre_mascota",
+      "type": "str"
+     },
+     {
+      "name": "especie",
+      "type": "str",
+      "canonical_values": [
+       "perro",
+       "conejo",
+       "hurón",
+       "loro"
+      ]
+     },
+     {
+      "name": "motivo",
+      "type": "str",
+      "canonical_values": [
+       "vacuna",
+       "revisión",
+       "herida",
+       "dientes"
+      ]
+     },
+     {
+      "name": "franja",
+      "type": "str",
+      "canonical_values": [
+       "mañana",
+       "tarde"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "nombre_mascota": "Lola",
+    "especie": "perro",
+    "motivo": "vacuna",
+    "franja": "tarde"
+   },
+   "user_text": "¿Tengo que llevar la cartilla de vacunas?",
+   "expected_intent": "question",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_026",
+   "language": "es",
+   "description": "Uncertain agreement",
+   "category": "hedged",
+   "trap": true,
+   "origin": "intent_classification.json:ic_047",
+   "task": "Gestionar el alquiler de un coche",
+   "domain": "alquiler de coches",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "categoria",
+      "type": "str",
+      "canonical_values": [
+       "económico",
+       "familiar",
+       "SUV",
+       "premium"
+      ]
+     },
+     {
+      "name": "dias",
+      "type": "int"
+     },
+     {
+      "name": "seguro",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "categoria": "familiar",
+    "dias": 2,
+    "seguro": false
+   },
+   "user_text": "Supongo que sí",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_es_027",
+   "language": "es",
+   "description": "Possibly sarcastic reply",
+   "category": "ironic",
+   "trap": true,
+   "origin": "intent_classification.json:ic_049",
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "fresa",
+    "tamaño": "pequeño"
+   },
+   "user_text": "Ah claro, como siempre",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_es_028",
+   "language": "es",
+   "description": "Hesitant reply without content",
+   "category": "hedged",
+   "trap": true,
+   "origin": "intent_classification.json:ic_007",
+   "task": "Tomar el pedido de un helado de la heladería",
+   "domain": "heladería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "sabor",
+      "type": "str",
+      "canonical_values": [
+       "chocolate",
+       "vainilla",
+       "fresa",
+       "limón"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     }
+    ]
+   },
+   "frame_filled": {
+    "sabor": "chocolate",
+    "tamaño": "mediano"
+   },
+   "user_text": "Bueno...",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_es_029",
+   "language": "es",
+   "description": "Objects without saying what (text of ic_048, another domain)",
+   "category": "vague_objection",
+   "trap": false,
+   "origin": "intent_classification.json:ic_048",
+   "task": "Tomar el pedido de un ramo en la floristería",
+   "domain": "floristería",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "flores",
+      "type": "list_str",
+      "canonical_values": [
+       "rosas",
+       "tulipanes",
+       "lirios",
+       "girasoles",
+       "margaritas"
+      ]
+     },
+     {
+      "name": "tamaño",
+      "type": "str",
+      "canonical_values": [
+       "pequeño",
+       "mediano",
+       "grande"
+      ]
+     },
+     {
+      "name": "envio",
+      "type": "bool"
+     }
+    ]
+   },
+   "frame_filled": {
+    "flores": [
+     "girasoles"
+    ],
+    "tamaño": "mediano",
+    "envio": false
+   },
+   "user_text": "No exactamente",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": false
+  },
+  {
+   "id": "cf_es_030",
+   "language": "es",
+   "description": "A yes taken back (text of ic_050, another domain)",
+   "category": "hedged",
+   "trap": true,
+   "origin": "intent_classification.json:ic_050",
+   "task": "Pedir cita en el taller de bicicletas",
+   "domain": "taller de bicicletas",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "servicio",
+      "type": "str",
+      "canonical_values": [
+       "reparar pinchazo",
+       "ajustar frenos",
+       "revisión completa",
+       "ajustar cambios"
+      ]
+     },
+     {
+      "name": "dia",
+      "type": "str",
+      "canonical_values": [
+       "lunes",
+       "martes",
+       "miércoles",
+       "jueves",
+       "viernes",
+       "sábado"
+      ]
+     },
+     {
+      "name": "nombre",
+      "type": "str"
+     }
+    ]
+   },
+   "frame_filled": {
+    "servicio": "ajustar frenos",
+    "dia": "lunes",
+    "nombre": "Iker"
+   },
+   "user_text": "Sí, pero no sé...",
+   "expected_intent": "unclear",
+   "expected_corrections": {},
+   "hedged": true
+  },
+  {
+   "id": "cf_en_031",
+   "language": "en",
+   "description": "A correction to a number above the allowed range is still a correction",
+   "category": "out_of_range_correction",
+   "trap": true,
+   "task": "Book a padel court at the sports club",
+   "domain": "sports club",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "court",
+      "type": "str",
+      "canonical_values": [
+       "indoor",
+       "outdoor"
+      ]
+     },
+     {
+      "name": "players",
+      "type": "int",
+      "minimum": 2,
+      "maximum": 4
+     },
+     {
+      "name": "hours",
+      "type": "int",
+      "minimum": 1,
+      "maximum": 3
+     }
+    ]
+   },
+   "frame_filled": {
+    "court": "indoor",
+    "players": 4,
+    "hours": 1
+   },
+   "user_text": "Not one hour, make it five hours.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "hours": 5
+   },
+   "hedged": false
+  },
+  {
+   "id": "cf_es_031",
+   "language": "es",
+   "description": "A correction to a number above the allowed range is still a correction",
+   "category": "out_of_range_correction",
+   "trap": true,
+   "task": "Reservar una pista de pádel en el club deportivo",
+   "domain": "club deportivo",
+   "slot_schema": {
+    "slots": [
+     {
+      "name": "pista",
+      "type": "str",
+      "canonical_values": [
+       "cubierta",
+       "descubierta"
+      ]
+     },
+     {
+      "name": "jugadores",
+      "type": "int",
+      "minimum": 2,
+      "maximum": 4
+     },
+     {
+      "name": "horas",
+      "type": "int",
+      "minimum": 1,
+      "maximum": 3
+     }
+    ]
+   },
+   "frame_filled": {
+    "pista": "cubierta",
+    "jugadores": 4,
+    "horas": 1
+   },
+   "user_text": "Una hora no, ponme cinco horas.",
+   "expected_intent": "corrects",
+   "expected_corrections": {
+    "horas": 5
+   },
+   "hedged": false
+  }
+ ]
+}
