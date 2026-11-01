@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 EmotionDetector — ROS2 node for facial emotion recognition from a camera feed.
 

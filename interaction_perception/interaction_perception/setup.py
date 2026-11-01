@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import setup
 
-package_name = "vision_io"
+package_name = "interaction_perception"
 
 setup(
     name=package_name,
@@ -31,12 +31,13 @@ setup(
     zip_safe=True,
     maintainer="aquintan4",
     maintainer_email="aquintana.camacho@proton.me",
-    description="Camera-agnostic vision input package for ROS 2, providing emotion detection and lip activity detection nodes.",
+    description="The perception subsystem of the interaction system: the state of the user (facial emotion, lip activity) from a camera, served to the interaction system.",
     license="MIT",
     entry_points={
         "console_scripts": [
-            "emotion_detector = vision_io.emotion_detector:main",
-            "lip_activity_detector = vision_io.lip_activity_detector:main",
+            "emotion_detector = interaction_perception.emotion_detector:main",
+            "user_state_server = interaction_perception.user_state_server:main",
+            "lip_activity_detector = interaction_perception.lip_activity_detector:main",
         ],
     },
 )

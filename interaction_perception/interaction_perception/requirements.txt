@@ -1,4 +1,4 @@
-# Runtime dependencies for the vision_io package (OPTIONAL layer: emotion
+# Runtime dependencies for the interaction_perception package (OPTIONAL layer: emotion
 # detection + lip-activity barge-in). Install only if you use the vision nodes.
 # Tested on Python 3.12.
 #
@@ -15,3 +15,8 @@ opencv-python==4.13.0.92
 
 # ── Face landmarks / lip activity ─────────────────────────────────────────────
 mediapipe==0.10.35
+
+# ── Emotion detector (preliminary; only if you run it) ───────────────────────
+transformers
+torch
+Pillow

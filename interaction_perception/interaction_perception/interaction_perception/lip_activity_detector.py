@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """
 LipActivityDetectorNode — ROS2 node that detects lip movement to classify
 whether the user is speaking, using MediaPipe FaceLandmarker (Tasks API).

@@ -1,0 +1,4 @@
+# The latest state of the user. available is false when no estimate has been received yet
+---
+bool available
+UserState state
