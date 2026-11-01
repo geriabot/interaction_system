@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="GroundedQA">
+  <include path="common.xml"/>
+
+  <!-- Answer the user's questions only from the material of the request (an information-seeking
+       dialogue: the initiative is the user's). Each turn is one question to the intelligence,
+       which answers from the material and verifies the answer against it, or abstains (not in
+       the material), or declines (outside the task), and sets the reply in every case. The tree
+       decides the rest: the user has no more questions (the closing: success), asks to repeat
+       the last answer, or says something not understood (both turns without progress). The
+       result is each question with its resolution: answered, abstained or declined. -->
+  <BehaviorTree ID="GroundedQA">
+    <Sequence>
+      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
+      <WithFillers budget_s="{opening_budget}">
+        <SubTree ID="GroundedQAOpening" _autoremap="true"/>
+      </WithFillers>
+      <Speak text="{reply}"/>
+      <Fallback>
+        <Repeat num_cycles="-1">
+          <Sequence>
+            <SubTree ID="TurnLimit" _autoremap="true"/>
+            <IfThenElse>
+              <SubTree ID="ListenToUser" _autoremap="true"/>
+              <Sequence>
+                <!-- The reply to the turn, with fillers while it is prepared -->
+                <WithFillers>
+                  <Fallback>
+                    <SubTree ID="CancelCheck" _autoremap="true"/>
+                    <SubTree ID="GroundedQATurn" _autoremap="true"/>
+                  </Fallback>
+                </WithFillers>
+                <SubTree ID="CountProgress" _autoremap="true"/>
+                <Speak text="{reply}"/>
+              </Sequence>
+              <SubTree ID="UserSilent" _autoremap="true"/>
+            </IfThenElse>
+            <ScriptCondition code="done == false"/>
+          </Sequence>
+        </Repeat>
+        <SubTree ID="Conclude" _autoremap="true"/>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="GroundedQAOpening">
+    <Sequence>
+      <SubTree ID="Begin" _autoremap="true"/>
+      <IfThenElse>
+        <ScriptCondition code="skip_intro == true"/>
+        <AskIntelligence skill="grounded_qa.open_direct"/>
+        <AskIntelligence skill="grounded_qa.open"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="GroundedQATurn">
+    <Sequence>
+      <AskIntelligence skill="grounded_qa.answer" user_text="{user_text}"/>
+      <Switch5 variable="{label}" case_1="done" case_2="repeat" case_3="other"
+               case_4="declined" case_5="comment">
+        <Script code="done := true"/>
+        <!-- The last answer again (already the reply), or close after max_stalled turns
+             without progress -->
+        <Fallback>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </Fallback>
+        <Fallback>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </Fallback>
+        <!-- Declined (outside the task): counted; after max_off_task in a row (0 = unlimited)
+             the robot closes with its own reason, for the requesting behavior to decide what
+             follows (decided by the author, 2026-11-01) -->
+        <Sequence>
+          <Script code="off_task += 1"/>
+          <Fallback>
+            <ScriptCondition code="max_off_task &lt;= 0 || off_task &lt; max_off_task"/>
+            <SubTree ID="EndDialogue" _autoremap="true" reason="off_task"/>
+          </Fallback>
+        </Sequence>
+        <!-- A reaction: the count of requests outside the task goes on -->
+        <AlwaysSuccess/>
+        <!-- Answered or abstained (a question within the task): the reply is set, and the count
+             of requests outside the task starts again -->
+        <Script code="off_task := 0"/>
+      </Switch5>
+    </Sequence>
+  </BehaviorTree>
+</root>
