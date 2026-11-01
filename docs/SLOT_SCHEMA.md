@@ -1,9 +1,9 @@
-# Slot Schema Reference
+# Slot schema reference
 
-This document describes the slot schema accepted by the slot-filling strategy
-through the `frame_schema_json` field of the `/dialog/execute_task` goal. See
-[architecture.md](architecture.md) for how the `DialogFrame` fits into the
-dialogue engine.
+The slot schema that the slot-filling strategy accepts in the `frame_schema_json` field of the
+`/dialog/execute_task` goal: the fields of a slot, numeric bounds, conditional slots, unanswered
+slots and the validation errors. How the strategy uses the frame turn by turn is in
+[slot filling](behaviors/slot_filling.md).
 
 When `frame_schema_json` is empty, the LLM designs the schema from the task
 description. When it is set, LLM generation is skipped and the schema is
@@ -50,6 +50,25 @@ user has already failed to answer keeps priority until it is filled.
 `list_str` slots accumulate items across turns, and the user can add, remove or
 replace items ("add milk", "remove the sugar", "actually only tea").
 
+## Unanswered slots
+
+Every slot can be left unanswered: the conversation never insists forever.
+
+- **The user cannot or will not give it** ("I don't know", "I'd rather not say", "skip it"): the
+  slot asked is left unanswered at once, and the robot says so ("Alright, we'll leave that one
+  blank.").
+- **It is not obtained after the attempts allowed**: a turn that neither fills the slot asked nor
+  asks a question (an unintelligible answer, a value out of range, a request to repeat) is a
+  failed attempt. After `max_attempts` failed attempts the slot is asked differently (a simpler,
+  closed question), and after one more it is left unanswered.
+
+An unanswered slot stays empty, is not asked again and does not appear in the result's frame.
+The slots conditioned on it are out of scope (their condition cannot hold). A value the user
+gives later (also as a correction while confirming) fills it. The read-back for confirmation says
+which slots are left blank, and the outcome of a confirmed frame with an unanswered slot is
+`partial`, with `failure_reason` `Unanswered slots: <names>`
+([slot filling](behaviors/slot_filling.md)).
+
 ## Numeric bounds
 
 Bounds restrict the values an `int` or `float` slot accepts. Each side is
@@ -65,7 +84,8 @@ At runtime, a value outside the range is **not stored**:
 
 - **Gathering:** the value is rejected and counts as a failed attempt on the
   slot. The robot tells the user the allowed range and asks again
-  ("It has to be between 18 and 99. How old are you?").
+  ("It has to be between 18 and 99. How old are you?"). After too many failed
+  attempts the slot is left unanswered ([above](#unanswered-slots)).
 - **Confirming:** an out-of-range correction empties the slot (the old value
   was declared wrong by the user, the new one is invalid) and the dialogue
   returns to gathering to ask for it again.
@@ -131,5 +151,6 @@ The schema is rejected before the dialogue starts when:
 
 The rejection explanation relies on the `{rejected_summary}` placeholder of the
 `generate_response` prompt. If you override that prompt (GUI prompt editor or a
-custom `prompts.yaml`), keep `{rejected_summary}` and its rule, or the robot
-will still reject out-of-range values but will not say why.
+custom `prompts.yaml`, [PROMPTS.md](PROMPTS.md#changing-the-questions)), keep
+`{rejected_summary}` and its rule, or the robot will still reject out-of-range
+values but will not say why.

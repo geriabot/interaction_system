@@ -1,251 +1,471 @@
-# DialoStack Architecture
+# Architecture: design, nodes and flow
 
-This document describes how DialoStack is designed: the process topology, the dialogue engine internals, the LLM session model, and the seams where you can extend the system.
+This page explains how the interaction system is built and why: the layers of the capability,
+the state machine of a request, the nodes, the processing of one request node by node, how the
+Behavior Trees and the interaction intelligence divide the work, and the LLM gateway. Each
+strategy and each shared mechanism has its own page in [docs/behaviors](behaviors/README.md);
+the parameters and configuration files are in [CONFIGURATION.md](CONFIGURATION.md), and every
+topic, service and action in [ROS_INTERFACES.md](ROS_INTERFACES.md).
 
-## Design philosophy
+## Interaction as a capability with the robot's layers inside
 
-DialoStack draws a hard line between two responsibilities:
+The interaction system is built with
+[`behavior_architecture`](https://github.com/geriabot/behavior_architecture), the framework of
+the behavioral control architecture of the GERIABOT robot. The robot is controlled by layers:
+deliberation and planning when the context requires them, coordination by a finite state machine
+(FSM) that manages the plan of the task, and action by a *behavior forest* of Behavior Trees,
+which the FSM activates phase by phase. The capabilities of the robot (perception, navigation,
+attention, interaction) are autonomous subsystems, activated by the behaviors that need them.
+Each capability can have the same layers inside and offers a standard interface to the rest of
+the robot. The interaction system is one of them (right of the figure; left, the robot running
+the plan of a social task).
 
-| Concern | Owner | Why |
-|---------|-------|-----|
-| Control flow: phases, turn limits, timeouts, confirmation, cancellation | Plain Python (FSM + strategies) | Deterministic, unit-testable, debuggable |
-| Language: understanding utterances, phrasing replies | LLM (via prompt templates) | Flexible, natural, language-agnostic |
+**It executes requests; it does not decide the robot's task.** The interaction system is
+autonomous in how it holds a conversation, but it takes no decision about what the robot does:
+a behavior of the robot sets the goal through the `DialogTask` action, the interaction system
+completes it, and the result says whether it succeeded or failed and why
+([endings](behaviors/endings.md)). What follows (launching the same interaction again, another
+one, calling a person, any mitigation) is decided by the requesting behavior. This is why the
+mechanisms end a conversation that is going nowhere instead of prolonging it.
 
-The LLM never decides *what happens next*. It only answers narrow, schema-constrained questions ("which slots does this utterance fill?", "is this a confirmation or a correction?") or generates a single utterance. Every LLM call has a timeout, bounded retries and a deterministic fallback, so a misbehaving model degrades the experience but never hangs or derails the dialogue.
+![The interaction system as an autonomous subsystem that follows the pattern of the robot's behavioral control architecture](../media/interaction_fractal_architecture.drawio.svg)
 
-A second separation keeps understanding and generation honest. Each dialogue owns **two independent LLM sessions**, one for NLU (classification and extraction, stateless, schema-constrained) and one for NLG (utterance generation). Extraction prompts never pollute the generation context, and the reverse never happens.
+<sub>Editable with draw.io, like the other figures in `media/`.</sub>
 
-## Process topology
+| Layer | In the robot's architecture | In the interaction system | Code |
+|---|---|---|---|
+| Deliberation, planning | Decide the goals and provide the FSM, when needed | Not needed: the goal comes in `/dialog/execute_task`, and the FSM is fixed | — |
+| Coordination | An FSM, the plan of the task | An FSM, the life of a request (below) | `/interaction_orchestrator`, a `BaseOrchestrator` |
+| Action | The behavior forest: one tree per phase of the task | One tree per dialogue strategy, each in its own `BehaviorRunner` (a lifecycle node); only the chosen one is active | `interaction_system_behaviors/behavior_tree_xml/*.xml` |
+| Capabilities | Perception, navigation, interaction, attention | Speech (speech-to-text and text-to-speech) and the perception of the user (lip activity; emotion, preliminary); the embodiment follows the conversation's signals | simple_hri, `interaction_perception`, `robots/nao` |
+| External service | — | The LLM, asked which strategy fits a request (by the FSM) and the narrow questions of the strategies (by the trees). The model is interchangeable | `/interaction_intelligence`, `ros2_llm_manager` |
 
-Five core nodes plus optional perception and embodiment:
+For the rest of the robot, the interaction system is one more capability, with the same
+interface as any other:
 
-| Node | Package | Role |
-|------|---------|------|
-| `dialog_manager_node` | ros2_dialog_manager | Orchestrator. Action server for `/dialog/execute_task` |
-| `llm_manager_node` | ros2_llm_manager | LLM gateway. One node, many provider backends |
-| `speech_to_text_node` | speech_io | Microphone to text (faster-whisper + Silero VAD) |
-| `text_to_speech_node` | speech_io | Text to audio (Piper), action server for `/speak` |
-| `emotion_detector` | vision_io | Camera to facial emotion (optional) |
-| `lip_activity_detector` | vision_io | Camera to a user-speaking signal (optional) |
-| `audio_bridge_node` | speech_io | Remote microphone and speaker over `AudioChunk` topics (optional) |
-| `gesture_manager` / `arm_gesture_manager`, `eye_led_feedback` | robots/nao | Embodiment (optional) |
+| | What | Interface |
+|---|---|---|
+| In | Activation and deactivation | ROS 2 lifecycle of `/interaction_orchestrator`, configured and activated by `mission_executor` at start |
+| In | The goal and its parameters | `/dialog/execute_task`: the task in natural language and, optionally, the strategy, a slot schema, values to resume from, resources, a domain and the limits of the conversation |
+| Out | Feedback | The action's feedback on every robot utterance, and `/interaction_system/status` |
+| Out | Result | The outcome of the conversation, its data, the reason when it did not complete, and its turns |
 
-On top of the graph, the **web GUI** (`dialostack_gui`) configures, launches and monitors the engine through a small HTTP server and rosbridge. See [The web GUI](#the-web-gui-dialostack_gui).
+The fields of the goal, the feedback and the result are in
+[ROS_INTERFACES.md](ROS_INTERFACES.md#the-public-interface).
 
-### Communication reference
+### The coordination layer: the state machine of a request
 
-**Topics**
-
-| Topic | Type | Publisher | Subscriber | Purpose |
-|-------|------|-----------|------------|---------|
-| `/transcription` | `std_msgs/String` | speech_to_text_node | dialog_manager_node | Final ASR text |
-| `/is_speaking` | `std_msgs/Bool` (latched) | text_to_speech_node | speech_to_text_node, gesture managers, eye_led_feedback | TTS is playing: mute mic, drive gestures and LEDs |
-| `/user_vad` | `std_msgs/Float32` | speech_to_text_node | eye_led_feedback | Raw voice-activity probability [0, 1] |
-| `/user_emotion` | `std_msgs/String` (JSON) | emotion_detector | dialog_manager_node | `{"emotion", "confidence", "source"}` |
-| `/user_speaking` | `std_msgs/Bool` | lip_activity_detector | dialog_manager_node | Visual speaking signal (barge-in) |
-| `/lip_activity` | `std_msgs/Float32` | lip_activity_detector | none | Raw lip-gap signal (debug) |
-| `/target_pose` | `std_msgs/String` | any | gesture managers | Force a named pose. `"AUTO"` resumes automatic mode |
-| `/barge_in` | `BargeIn` | dialog_manager_node | GUI Monitor | The user cut the robot off mid-utterance (`utterance`, `spoken_ms`) |
-| `/audio_in` | `AudioChunk` | audio_bridge_node, GUI page, robot driver | speech_to_text_node (topic mode) | Raw microphone PCM |
-| `/audio_out` | `AudioChunk` | text_to_speech_node (topic mode) | audio_bridge_node, GUI page, robot driver | Synthesized PCM, paced to playback |
-
-**Actions**
-
-| Action | Type | Server | Client |
-|--------|------|--------|--------|
-| `/dialog/execute_task` | `DialogTask` | dialog_manager_node | your application |
-| `/llm/inference` | `LlmInference` | llm_manager_node | dialog_manager_node |
-| `/speak` | `SpeakText` | text_to_speech_node | dialog_manager_node |
-
-**Services**
-
-| Service | Type | Server | Purpose |
-|---------|------|--------|---------|
-| `/llm/session/create` | `CreateSession` | llm_manager_node | Open an NLU or NLG session (provider, model, system prompt, stateful flag) |
-| `/llm/session/delete` | `DeleteSession` | llm_manager_node | Tear down a session |
-| `/llm/session/list` | `ListSessions` | llm_manager_node | Inspect active sessions (debug) |
-
-## Lifecycle of a dialogue
-
-```mermaid
-sequenceDiagram
-    participant C as Action client
-    participant DM as dialog_manager_node
-    participant LLM as llm_manager_node
-    participant STT as speech_to_text_node
-    participant TTS as text_to_speech_node
-
-    C->>DM: DialogTask goal
-    DM->>LLM: create NLU + NLG sessions
-    DM->>DM: resolve strategy (explicit or auto-detect)
-    DM->>DM: strategy.on_init(): build frame / opening
-    DM->>TTS: /speak (opening utterance)
-    TTS-->>STT: /is_speaking = true … false
-    loop one turn per user utterance
-        STT->>DM: /transcription
-        DM->>LLM: NLU: extract / classify (JSON-constrained)
-        DM->>DM: update frame / phase
-        DM->>LLM: NLG: phrase the reply
-        DM->>TTS: /speak (reply)
-        DM-->>C: feedback (state, frame, utterance, turns)
-    end
-    DM->>LLM: delete sessions
-    DM-->>C: result (success, final_frame_json, total_turns)
-```
-
-In detail:
-
-1. **Goal received.** `dialog_manager_node` accepts a `DialogTask` goal and builds a `DialogContext` from `resources_json`, `domain` and the live user-state feed.
-2. **Sessions.** Two LLM sessions are created via `/llm/session/create`, named `nlu` and `nlg`. They bind to the provider and model selected by parameters, or to the LLM node's defaults.
-3. **Strategy resolution.** If `dialog_mode` is set, that strategy is built from the registry. If empty, a classification prompt picks between `slot_filling` and `explanation` (`quiz`, `procedure` and `roleplay` are never auto-detected, because they require a question bank, a step list or a scene in `resources_json`).
-4. **Initialization.** The strategy's `on_init()` prepares its state. For slot filling that means obtaining a frame. It comes from `frame_schema_json` if the caller supplied one, otherwise the LLM generates it from the task description and audits it against the available resources.
-5. **Turn loop.** `DialogFSM` drives `listen → strategy.on_user_turn() → speak` until the strategy reports completion, the turn budget runs out, or consecutive timeouts/unclear answers hit their limits. Cancellation (both ROS-level and spoken, e.g. *"stop, forget it"*) is checked every turn.
-6. **Finalization.** Sessions are deleted, the transcript log is flushed, and the result carries `success`, `final_frame_json`, `failure_reason` and `total_turns`.
-
-## The dialogue engine (`ros2_dialog_manager`)
-
-```
-dialog_manager_node.py     ROS shell: action server, parameters, topic plumbing
-dialog_fsm.py              Turn loop: timeouts, cancellation, transcript logging
-strategies/
-  base.py                  Strategy contract + registry + shared cancel flow
-  slot_filling.py          gathering → confirming → done
-  explanation.py           explain → check understanding → rephrase (bounded)
-  quiz.py                  question bank → evaluate → score
-  procedure.py             present step → done / help / repeat / back / skip → summary
-  roleplay.py              act out a scene (+ hints) → score the rubric → feedback
-dialog_frame.py            Typed, thread-safe slot store
-dialog_context.py          Static resources + live user state → [CONTEXT] block
-llm_client.py              NLU/NLG facade: retries, JSON parsing, fallbacks
-prompt_builder.py          prompts.yaml templates → (prompt, JSON schema)
-audio_io.py                AudioIO abstraction + ROS implementation
-utils.py                   ASR cleaning, normalization, loose-JSON parsing
-```
-
-### The strategy contract
-
-A strategy is a class registered under a mode name:
-
-```python
-from ros2_dialog_manager.strategies.base import BaseDialogStrategy, register_strategy
-
-@register_strategy("my_mode")
-class MyStrategy(BaseDialogStrategy):
-    def on_init(self, task: str) -> str:
-        """Prepare state. Return the opening utterance."""
-
-    def on_user_turn(self, task: str, user_text: str) -> tuple[str, bool]:
-        """Process one utterance. Return (reply, done)."""
-
-    def succeeded(self) -> bool: ...
-    def current_data(self) -> dict: ...
-```
-
-The FSM knows nothing about slots, explanations or quizzes. It only calls this contract. `BaseDialogStrategy` provides the shared spoken-cancellation flow (detect the intent, ask for confirmation, then abort or resume), so every strategy gets it for free.
-
-### Slot filling
+`/interaction_orchestrator` runs this machine every control cycle (`control_cycle_rate_ms`,
+`InteractionOrchestrator::control_cycle`):
 
 ```mermaid
 stateDiagram-v2
-    [*] --> gathering
-    gathering --> gathering: extract slots / ask next
-    gathering --> confirming: frame complete
-    confirming --> done: user confirms
-    confirming --> gathering: user corrects
-    confirming --> confirming: question / unclear
-    done --> [*]
+  [*] --> IDLE
+  IDLE --> SETTING_BEHAVIOR_ACTION: a DialogTask goal
+  SETTING_BEHAVIOR_ACTION --> SETTING_BEHAVIOR_INPUT: dialog_mode names a behavior of the catalog
+  SETTING_BEHAVIOR_ACTION --> SETTING_BEHAVIOR_INPUT: the intelligence chose one of the offered behaviors
+  SETTING_BEHAVIOR_ACTION --> IDLE: unknown mode, nothing offered, intelligence not available, or cancelled (aborted / canceled)
+  SETTING_BEHAVIOR_INPUT --> ACTING: the request, the limits and the counters in the blackboard
+  ACTING --> IDLE: the tree ends (succeeded or aborted)
+  ACTING --> IDLE: the goal is cancelled (canceled)
+  ACTING --> IDLE: the runner could not be activated (aborted)
 ```
 
-The **DialogFrame** is the heart of this strategy: a typed slot store (`str`, `int`, `float`, `bool`, `list_str`) supporting canonical values (normalize "venti" to "large"), numeric ranges (reject an age of 150 and say why), conditional slots (only ask for `detail_a` when `type == A`, or for `pension` when `age >= 65`), list operations (SET/ADD/REMOVE/REPLACE), per-slot attempt tracking and full history. On each user turn the NLU session extracts operations from the utterance, the frame applies them, and the NLG session phrases an acknowledgment plus the next question. When the frame is complete the strategy switches to **confirming**, where every utterance is classified as `confirms`, `corrects`, `question` or `unclear` and handled accordingly. The schema format is documented in [slot_schema.md](slot_schema.md).
+| State | What it does | Published as |
+|---|---|---|
+| `IDLE` | Nothing active; takes the next accepted goal | `IDLE`, or `FAILED` after a conversation that did not succeed |
+| `SETTING_BEHAVIOR_ACTION` | Chooses the dialogue behavior: the one `dialog_mode` names, or the one the intelligence chooses ([below](#the-choice-of-the-dialogue-behavior)) | `REASONING` |
+| `SETTING_BEHAVIOR_INPUT` | Writes the request (as JSON), the limits and the counters to the blackboard | `REASONING` |
+| `ACTING` | Activates the behavior's runner, sends the feedback on every new utterance, and the result when the tree ends | `RUNNING` (with the behavior and its phase) |
 
-### Context injection
+One conversation runs at a time: a goal that arrives while another is being prepared or run is
+rejected (one microphone, one voice). Cancelling the goal deactivates the runner, which halts the
+tree (and with it the voice and the listening), and returns `canceled`. Deactivating the
+orchestrator aborts the running conversation. When a conversation ends, the orchestrator asks the
+intelligence the skill `finish`: its pending LLM calls are cancelled, its LLM sessions deleted and
+its transcript closed.
 
-`DialogContext` renders a `[CONTEXT]` block with the domain, the resources, and the user's current emotion (included only when notable: non-neutral, confident enough, and fresh within a TTL). `PromptBuilder` injects this block into the templates that opt in. This is how a detected frown can change the robot's tone mid-dialogue without any strategy code knowing about emotions.
+### Why this design
 
-### Robustness layers
+- A request has a few discrete modes with explicit transitions, which a state machine expresses
+  and logs directly, and the status topic reports one to one. A conversation is reactive and
+  modular (listen, understand, decide, reply; with silences, cancellations and interruptions at
+  any point), which is what Behavior Trees are for.
+- The control of a conversation is explicit: the phases, the counters and the limits are nodes
+  of the tree, visible in the XML and in Groot2, and the same in every run. The LLM never decides
+  what happens next: it only answers narrow questions (*understanding*, with a JSON schema) or
+  phrases one utterance (*generation*). A model that answers badly degrades the conversation; it
+  cannot skip the confirmation, forget a slot or end the task.
+- The strategies share the handling of silences, the turn limit, the spoken cancellation, the
+  exit on a communication breakdown and the endings: they are the same subtrees in every tree.
+  Every conversation ends with a closing line and an outcome with its reason, so the calling
+  behavior can act on how it ended.
+- The intelligence keeps no state: the state of the conversation travels in the blackboard of the
+  tree, so every question can be logged, replayed and tested on its own, and the intelligence can
+  be restarted without losing a conversation.
+- Any client of `/dialog/execute_task` can play the role of the calling behavior, so the
+  interaction system can be developed, tested and replaced on its own; the same holds for its
+  capabilities (speech, perception) and the LLM.
+- Only the chosen behavior's runner is active, so no two trees compete for the voice or the
+  microphone.
 
-- **ASR hygiene**: `clean_user_input()` filters hallucinated filler ("subtitles by...", stray punctuation) before it reaches the LLM.
-- **Constrained decoding**: NLU prompts ship a JSON schema. Providers enforce it (Gemini, Claude and OpenAI server-side, Ollama through grammar-constrained decoding), and `parse_loose_json()` tolerates the rest.
-- **Deterministic NLU on local models**: Ollama runs every call with a JSON schema at temperature 0, so the same utterance is always classified the same way; spoken replies keep the model's temperature. Measured with the evaluation suite on `llama3.2:3b` (3 runs each), every benchmark scored the same or higher and gave the same answer on every run (slot extraction went from 18% of utterances consistent across runs to 100%). Cloud providers keep their own defaults; Claude does not accept a temperature.
-- **Bounded retries and fallbacks**: every NLU call retries on unparseable output, then falls back to a safe deterministic answer. NLG falls back to fixed phrases in the configured language.
-- **Spoken cancellation**: a fast local keyword check handles obvious cases ("stop", "cancel"). Ambiguous ones go to the LLM with a strict yes/no schema.
-- **Prompt caching**: templates put their fixed instructions first and the per-turn data (user text, history, slot state) last, under `CURRENT TURN`. `PromptBuilder` marks where the stable part ends (instructions plus the `[CONTEXT]` block) and sends it as `cache_prefix_len` on `/llm/inference`. Claude caches that prefix explicitly; OpenAI, Gemini and Ollama reuse a repeated prefix on their own. Keep new templates in the same order.
-- **Timeout ladder**: silence triggers a re-engagement prompt. After `max_timeouts` consecutive silences the dialogue aborts gracefully.
+## The nodes
+
+The nodes of the interaction system, and the behavioral control architecture, speech, perception
+of the user, embodiment and models around it:
+
+![The nodes of the interaction system, and the behavioral control architecture, speech, perception of the user, embodiment and models around it](../media/interaction_system_architecture.drawio.svg)
+
+<sub>Editable with draw.io: open `media/interaction_system_architecture.drawio.svg` in diagrams.net
+or in VS Code with the Draw.io Integration extension, and save it to the same file.</sub>
+
+| Block | Node | What it does |
+|---|---|---|
+| Interaction system (`interaction_system`) | `/interaction_orchestrator` | Serves `/dialog/execute_task`, chooses the dialogue behavior (from the request or by asking the intelligence), activates its runner, writes the request to the blackboard, sends the feedback and the result, publishes `/interaction_system/status`. A plugin of `behavior_architecture` (`mission_executor`), loaded from `libinteraction_system.so` |
+| | Behavior runners (`/interaction_slot_filling`, `/interaction_explanation`, `/interaction_quiz`, `/interaction_procedure`, `/interaction_roleplay`, `/interaction_grounded_qa`, `/interaction_questionnaire`) | One lifecycle node per behavior. Each ticks its Behavior Tree every 50 ms (`control_period_ms`) while active and reports the result on `/behavior_status`. The tree nodes (`libinteraction_system_behaviors_bt_plugins.so`) share one ROS node, `/interaction_system_bt_node` |
+| | `/interaction_intelligence` | Answers the skills of the trees and the choice of the behavior: builds each question from the prompt templates, sends it to the LLM gateway in the conversation's understanding or generation session, parses and validates the answer, applies what was understood to the state of the conversation, and falls back to a safe answer when the model fails. Also cleans the transcriptions (drops noise) and writes the transcript |
+| LLM gateway (`ros2_llm_manager`) | `/llm_manager_node` | One inference action and session services in front of Ollama and cloud providers |
+| Speech capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and says on request ([SPEECH.md](SPEECH.md)) |
+| Perception (`interaction_perception`) | `/user_state_server`, `/emotion_detector`, `/lip_activity_detector_node` | The state of the user, served on request; the lip activity as a stream for barge-in |
+
+## A request, node by node
+
+![The interaction pipeline: the processing of one request, and one user turn of the conversation](../media/interaction_pipeline.drawio.svg)
+
+The columns of the figure are the states of the state machine of `/interaction_orchestrator`. In
+`SETTING_BEHAVIOR_ACTION`, unless the request names its behavior, the orchestrator asks the
+intelligence, which filters the catalog by the material of the request and, if more than one
+behavior passes, asks question 1 ([below](#the-choice-of-the-dialogue-behavior)). Everything in
+`ACTING` is the Behavior Tree of the chosen behavior: one user turn per cycle, with question 2,
+the strategy's narrow question, at its centre.
+
+The example below is "Take a coffee order", with `dialog_mode: slot_filling` and simple_hri as
+the speech capability:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant O as /interaction_orchestrator
+  participant T as runner + Behavior Tree
+  participant I as /interaction_intelligence
+  participant M as LLM (/llm/inference)
+  participant S as speech capability
+  C->>O: /dialog/execute_task (task, dialog_mode)
+  O->>O: the behavior of the mode (SlotFilling)
+  O->>T: the request in the blackboard, activate the runner
+  T->>I: begin (the request); closing (error: the line kept for a failure)
+  I->>M: create the understanding and generation sessions
+  T->>I: slot_filling.prepare
+  I->>M: create_frame (understanding), audit_frame
+  T->>I: slot_filling.opening
+  I->>M: opening (generation)
+  T->>S: say (/tts_action); feedback to the client
+  loop one user turn per cycle
+    T->>S: listen (/stt_action)
+    S-->>I: /listened_text
+    I-->>T: /interaction/user_utterance (not noise)
+    T->>I: cancel_check (exact stop commands locally; the LLM otherwise)
+    T->>I: slot_filling.update (what the turn does, the slots; apply them)
+    I->>M: extract_slots (understanding, JSON schema)
+    T->>I: slot_filling.next_question or confirmation_question
+    I->>M: generate_response / ask_confirmation (generation)
+    T->>S: say; feedback to the client
+  end
+  T->>I: result (the outcome and its reason)
+  T-->>O: SUCCESS (/behavior_status)
+  O-->>C: result (success, outcome, final_frame_json, total_turns)
+  O->>I: finish (sessions deleted, transcript closed)
+```
+
+Along the way:
+
+- Each skill gets the state of the conversation from the blackboard (`dialogue`) and returns it
+  updated, with the reply to say, the label the tree branches on, the phase and the data. A skill
+  that cannot run (a quiz without a question bank, a schema with errors) fails with its reason,
+  which becomes the `failure_reason` of the result (outcome `error`).
+- The feedback is sent when an utterance starts, so the client sees it while the robot speaks.
+- While a reply is prepared (between the user's turn and the `say` that follows), a reply not
+  ready in two seconds is preceded by a conversational filler on the same voice, with no feedback
+  ([Conversational fillers](behaviors/fillers.md)).
+
+## The frame of the task
+
+What bounds the conversation is the **frame of the task**: the structured list of the elements the
+conversation must go through, each with a state. The behavior of the robot that asks for the
+conversation sends the frame, or the material it is built from, in its goal, and gets the frame
+back filled in the result (`final_frame_json`, also when the conversation did not complete; the
+feedback shows it as it fills, `current_frame_json`).
+
+| Strategy | Elements of the frame | States | Comes in the goal as |
+|---|---|---|---|
+| Slot filling | fields: typed, with allowed values, ranges and conditions | missing, filled, unanswered | `frame_schema_json` ([format](SLOT_SCHEMA.md)), or designed by the LLM from the task |
+| Explanation | key points of the material (critical or not) | pending, correct, wrong | `resources_json`: the material and its key points (or listed by the LLM from it) |
+| Quiz | questions of the bank | pending, correct, incorrect, unanswered | `resources_json`: the bank |
+| Guided procedure | steps (optional; with a duration) | pending, done, skipped, stuck | `resources_json`: the steps |
+| Role play | exchanges of the scene; criteria of the rubric | scored, not scored | `resources_json`: the scene and its criteria |
+| Grounded QA | the user's questions, against the material | answered, abstained, declined | `resources_json`: the material |
+| Questionnaire | items with their response options | pending, answered, refused, unanswered | `resources_json`: the instrument |
+
+The frame is held outside the LLM, in the state of the conversation that travels with every
+request to the [interaction intelligence](#the-interaction-intelligence), and the LLM takes part
+only through it:
+
+- **what it is asked**: one question about the current element and the user's last turn (which
+  value does this utterance give for this field? does this restatement cover this key point?),
+  with the state of the frame in the prompt;
+- **what of its answer enters**: the answer is validated against the frame (the type of the field,
+  its allowed values or range, the options of the item) before it changes the state; an answer that
+  does not fit is rejected;
+- **what it may say**: the reply is phrased for the element the tree chose, with the content the
+  frame and its material allow;
+- **what is returned**: the filled frame, to the behavior that made the request, with the outcome.
+
+The tree decides which element to work on and when one is done; the LLM never does. How tightly
+the frame bounds the LLM depends on the strategy: in slot filling, the quiz, the procedure and the
+questionnaire each turn is about one element and what the LLM returns is a value, a grade, a label
+or an option (the questionnaire's items are even read without it); in the role play the LLM writes
+the character's lines with more freedom, within the scene and its criteria.
+
+Frames come from the frame-based dialogue systems (form filling, since the 1970s), where
+understanding and generation were written by hand and the frame organised what the system had to
+obtain. Here the frame takes a second role: it is the contract that governs a generative model.
+
+## The action layer: the dialogue behaviors
+
+Every behavior begins the conversation, runs one user turn per cycle until the conversation is
+done or aborted, and concludes with its outcome:
+
+```text
+begin -> open -> say -> repeat { turn limit -> listen -> (spoken cancellation | the strategy's turn)
+                                 -> count progress -> say }
+                     -> conclude
+```
+
+The opening and the reply to each turn are prepared inside `WithFillers`: a reply that is not
+ready in two seconds is preceded by a fixed conversational filler, which is not a turn
+([Conversational fillers](behaviors/fillers.md)).
+
+The tree decides with counters and limits; the LLM only classifies the turn or phrases the reply.
+
+### The shared mechanisms
+
+The subtrees shared by every behavior are in `behavior_tree_xml/common.xml`:
+
+| Subtree | What it does | Page |
+|---|---|---|
+| `Begin` | Builds the state of the conversation and fetches the fixed closing line for a failure of the system and the conversational fillers | [Endings and outcome](behaviors/endings.md), [Fillers](behaviors/fillers.md) |
+| `TurnLimit` | Ends the conversation at `max_turns` (outcome `turn_limit`) | [Endings and outcome](behaviors/endings.md) |
+| `ListenToUser`, `UserSilent` | Waits for the user; on a silence, prompts or stays quiet, and ends at `max_silence` (outcome `user_silent`) | [Silence](behaviors/silence.md) |
+| `CancelCheck` | A spoken request to stop, confirmed before it ends the conversation (outcome `cancelled`) | [Spoken cancellation](behaviors/cancellation.md) |
+| `NoProgress`, `CountProgress` | Count the turns without progress; `max_stalled` in a row end the conversation (outcome `breakdown`) | [Recovery and breakdown](behaviors/no_progress.md) |
+| `EndDialogue`, `Conclude` | The closing line of an ending decided by the tree or of a failure (outcome `error`), and the outcome with its reason | [Endings and outcome](behaviors/endings.md) |
+
+Within each strategy, an element the user cannot answer (a slot, a question, a step, an item) has
+a bounded recovery ladder that ends by leaving it unfinished
+([Recovery and breakdown](behaviors/no_progress.md)). Barge-in is in the `Speak` node, not in a
+subtree, and is experimental ([Barge-in](behaviors/barge_in.md)). The conversational fillers are
+in the `WithFillers` node, which each strategy wraps around its opening and around the reply to a
+user turn: a reply not ready after `filler_after_s` (2 s) is preceded by one fixed filler ("Hmm…",
+"Just a moment…"), and by one more `filler_repeat_s` (4 s) later; a filler is not a turn and
+changes no counter ([Conversational fillers](behaviors/fillers.md)).
+
+### The strategies
+
+| Strategy (`dialog_mode`) | What the robot does |
+|---|---|
+| [Slot filling](behaviors/slot_filling.md) (`slot_filling`) | Collects the slots of a frame (from a [slot schema](SLOT_SCHEMA.md), or designed by the LLM), applies each turn to the frame with deterministic checks, and reads it back for confirmation |
+| [Explanation](behaviors/explanation.md) (`explanation`) | Explains a topic and verifies it with teach-back against its key points, explaining again only what was missing or wrong |
+| [Quiz](behaviors/quiz.md) (`quiz`) | Asks the questions of a bank, grades each spoken answer and gives the score |
+| [Procedure](behaviors/procedure.md) (`procedure`) | Guides the user through a list of steps while the user does them |
+| [Role play](behaviors/roleplay.md) (`roleplay`) | Plays a character of a scene, then scores the user on each criterion of a rubric |
+| [Grounded question answering](behaviors/grounded_qa.md) (`grounded_qa`) | Answers the user's questions only from the material of the request, verifying each answer and abstaining when the material does not have it |
+| [Standardized questionnaire](behaviors/questionnaire.md) (`questionnaire`) | Reads an instrument word for word, maps each answer to an option and computes the score by code |
+
+The outcomes (`completed`, `partial`, `failed`, `cancelled`, `user_silent`, `breakdown`,
+`turn_limit`, `error`) are defined in [Endings and outcome](behaviors/endings.md).
+
+### The blackboard
+
+The orchestrator writes before activating the runner; the trees read and write the rest:
+
+| Key | Written by | What |
+|---|---|---|
+| `goal` | Orchestrator | The request as JSON: the `DialogTask` fields, the mode of the behavior, and the resolved `max_turns` and `wait_timeout` |
+| `dialogue_id` | Orchestrator | The id of the conversation (the goal's id) |
+| `dialogue` | The intelligence, through `AskIntelligence` | The state of the conversation (JSON): the request, the frame or the bank or the steps or the scene, the history, the counters of the strategy |
+| `behavior`, `skip_intro` | Orchestrator | From the request |
+| `max_turns`, `max_silent_waits`, `max_stalled` | Orchestrator | The limits of the request, or the orchestrator's parameters when it leaves them unset; `max_silent_waits` is `max_silence` counted in waits of `wait_timeout` (0 = never) |
+| `wait_timeout`, `max_attempts`, `tts_timeout`, `intelligence_timeout`, `reply_budget`, `opening_budget`, `user_speaking_topic` | Orchestrator | The other limits and the barge-in topic (parameters of the orchestrator) |
+| `reply_deadline` | Orchestrator (0), `WithFillers` | When the time budget of the reply being prepared ends (steady clock, s; 0 while none is): each `AskIntelligence` sends what is left of it with its request |
+| `filler_after_s`, `filler_repeat_s` | Orchestrator | When the conversational fillers are said: `filler_after_s` from the request, or the orchestrator's parameter when it leaves it unset (0 = none) |
+| `turns`, `timeouts`, `stalled`, `attempts`, `help`, `done`, `progress` | Orchestrator (zero, `false`, `true`), trees | The counters of the conversation (user turns, silent waits in a row, turns without progress in a row, per-element attempts, helps with a step), whether it is done, and whether the last turn made progress |
+| `user_text`, `reply`, `label`, `phase`, `data` | Trees | The last utterance of the user, the reply to say, what the last skill found, the phase and the data of the conversation |
+| `spoken`, `last_utterance` | `Speak` | How many utterances were said, and the last one (the orchestrator sends the feedback when `spoken` changes; the cancellation and the silence prompts resume with it) |
+| `error_closing` | `Begin` | The closing line for a failure of the system |
+| `fillers`, `last_filler` | `Begin`, `WithFillers` | The filler phrases (one per line) and the last one said (not repeated in a row) |
+| `ending` | Trees | An ending decided by the tree (`user_silent`, `breakdown`, `turn_limit`, `error`) |
+| `outcome`, `result_reason` | `Conclude` | The outcome and why it is not `completed` |
+| `failure_reason` | `AskIntelligence` | The error of a skill that failed |
+
+## The choice of the dialogue behavior
+
+A request without `dialog_mode` is resolved by `/interaction/ask_intelligence_for_behavior`. The
+orchestrator sends its catalog (each behavior with its explanation and its needs); the
+intelligence offers only the behaviors whose needs the request provides, deciding it by parsing
+the resources, without the LLM (`interaction_intelligence/selection.py`):
+
+| Need | The request provides it when its resources have |
+|---|---|
+| `question_bank` | A JSON list of `{question, answer}` (quiz) |
+| `steps` | A JSON list of steps (procedure) |
+| `scene` | A JSON object with `scenario` and `role` (role play) |
+| `material` | A resource with plain text, not JSON and not named `handover` (grounded question answering) |
+| `instrument` | A JSON object with a list `items`, each item with answer options (questionnaire) |
+
+Slot filling and explanation need nothing, so they are always offered. If one behavior is
+offered, it is chosen; if several, the LLM chooses among them from their explanations (prompt
+`choose_dialogue_behavior`). An answer that is not an offered behavior falls back to slot filling
+(or to the first offered one). If none is offered the request is aborted. The orchestrator only
+accepts an offered behavior. The catalog is configured in
+[CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behaviors).
+
+## The interaction intelligence
+
+`/interaction_intelligence` answers two services:
+
+- `/interaction/ask_intelligence_for_behavior`: the choice above.
+- `/interaction/ask_intelligence`: one *skill* of a tree: one narrow question to the LLM, or one
+  deterministic operation on the data of the conversation. It receives the state of the
+  conversation and returns it updated, with the reply, a label, the phase and the data.
+
+| Skills | Described in |
+|---|---|
+| `begin`, `closing`, `result` | [Endings and outcome](behaviors/endings.md) |
+| `fillers` | [Conversational fillers](behaviors/fillers.md) |
+| `silence` | [Silence](behaviors/silence.md) |
+| `cancel_check` | [Spoken cancellation](behaviors/cancellation.md) |
+| `slot_filling.prepare`, `.opening`, `.opening_direct`, `.resume_opening`, `.update`, `.next_question`, `.confirmation_question`, `.classify_confirmation`, `.confirmed`, `.answer_question`, `.correction_reply` | [Slot filling](behaviors/slot_filling.md) |
+| `explanation.open`, `.open_direct`, `.check`, `.confirmed`, `.answer`, `.ask_again`, `.targeted`, `.repair`, `.give_up` | [Explanation](behaviors/explanation.md) |
+| `quiz.open`, `.first_question`, `.evaluate`, `.repeat`, `.unanswered`, `.next_question`, `.summary` | [Quiz](behaviors/quiz.md) |
+| `procedure.open`, `.first_step`, `.classify`, `.advance`, `.answer`, `.help`, `.repeat`, `.back`, `.remind` | [Procedure](behaviors/procedure.md) |
+| `roleplay.open`, `.open_direct`, `.classify`, `.reply`, `.coach`, `.finish` | [Role play](behaviors/roleplay.md) |
+| `grounded_qa.open`, `.open_direct`, `.answer` | [Grounded question answering](behaviors/grounded_qa.md) |
+| `questionnaire.open`, `.ask`, `.record`, `.clarify`, `.options`, `.unanswered`, `.finish` | [Questionnaire](behaviors/questionnaire.md) |
+| `finish` | Asked by the orchestrator when a conversation ends: cancel its LLM calls, delete its sessions, close its transcript |
+
+The skills live in `interaction_intelligence/skills/`, one module per strategy and `common.py`
+for the shared ones. Which prompt each skill uses is in [PROMPTS.md](PROMPTS.md). More skills (a
+new strategy, an ablation) are loaded from Python modules with the parameter `skill_modules`
+([ADDING_DIALOGUE_BEHAVIORS.md](ADDING_DIALOGUE_BEHAVIORS.md)).
+
+**Two LLM sessions per conversation.** Each conversation has one session for understanding
+(stateless, every call with a JSON schema) and one for generation (utterances), created at
+`begin` and deleted at `finish`, so extraction prompts never enter the generation context. The
+parameter `routes` sends some questions to another model (e.g. the extraction to a stronger one):
+the conversation then has one more pair of sessions per routed model
+([MODELS.md](MODELS.md#one-model-per-question-routes)).
+
+**Context.** `DialogContext` renders a `[CONTEXT]` block with the domain and the resources (minus
+the hidden ones, such as a role play's scene) for the templates that use it
+([PROMPTS.md](PROMPTS.md#placeholders-context-and-caching)). It can also carry the user's emotion
+from the perception subsystem, but that path is off by default (`user_state_service` is empty)
+because the emotion detector is preliminary and not validated
+([interaction_perception](../interaction_perception/interaction_perception/README.md)).
+
+**Languages.** Everything that depends on the language of the conversation is in one file per
+language (`interaction_intelligence/config/languages/<language>.yaml`), selected by the
+parameter `language`: the fixed phrases, the acknowledgments and fillers, the exact stop
+commands, the yes/no words, the noise phrases of the recognizer and the speech settings that
+`main.launch.py` gives simple_hri. The prompts are one set in English that asks for the replies
+in `{language}`. English and Spanish ship; a language without a file stops the node at startup
+([ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md)).
+
+**Transcriptions.** The intelligence subscribes to the transcriptions of the speech capability
+and to typed text (`transcription_topics`), drops the noise (Whisper hallucinations such as
+subtitle credits, fillers, empty text: an utterance made only of the noise phrases of every
+language file; a noise phrase inside real words keeps the utterance) and publishes
+the rest on `/interaction/user_utterance`,
+where `Listen` takes the next one. The turns taken (`/interaction/user_turn`) and what the robot
+says (`/robot_utterance`, and its conversational fillers, `/robot_filler`, with the role
+`filler`) go to the transcript (`conversation_log_path`).
+
+**Trace.** Every skill asked is published on `/interaction/skill_trace` (JSON: the conversation,
+the skill, the label, whether it succeeded, how long it took, the time budget it got, and its
+calls to the model that timed out or were not made), for diagnosis and evaluation.
+
+### Errors of speech recognition and of the LLM
+
+Noise in the transcriptions is dropped before it reaches the LLM and is never a turn. Every
+understanding question ships a JSON schema that the provider enforces (Ollama also runs it at
+temperature 0), and its answer is validated, retried and, if still unusable, replaced by a safe
+default (e.g. "not understood"); every utterance falls back to a fixed phrase of the
+conversation's language ([PROMPTS.md](PROMPTS.md#understanding-and-generation)). The wait for the
+model is bounded: each call waits at most `llm_timeout` and is not repeated if it times out (the
+other calls of the same skill then fail at once), and all the calls that prepare one reply share
+its time budget (`reply_budget` from the end of the user's turn; `opening_budget` for the
+opening), after which they fall back without asking the model; `intelligence_timeout` is the
+hard limit of a request to the intelligence
+([The wait for the model](behaviors/endings.md#the-wait-for-the-model)). A sustained failure
+therefore ends in one of the shared endings (`breakdown` or `error`) rather than in a loop or in
+silence ([Endings and outcome](behaviors/endings.md)).
 
 ## The LLM gateway (`ros2_llm_manager`)
 
-One node hides every provider behind `/llm/inference` (action, with token streaming in feedback) and the session services. A **session** pins a provider, model, system prompt and statefulness. Stateful sessions keep conversation history server-side (`SessionManager`), and stateless ones are pure functions.
+One node hides every provider behind `/llm/inference` (an action, with token streaming in its
+feedback) and the session services. A **session** pins a provider, a model, a system prompt and
+whether it keeps history. The interaction system uses stateless sessions with Ollama; Gemini,
+Claude, OpenAI and any OpenAI-compatible server remain available. Which model answers each
+question, and how to change it, is in [MODELS.md](MODELS.md).
 
-| Provider | Type | Streaming | Constrained JSON | Notes |
-|----------|------|-----------|------------------|-------|
-| Gemini (`google-genai`) | Cloud | ✅ | ✅ (`response_schema`) | Thinking disabled for predictable latency |
-| Claude (`anthropic`) | Cloud | ✅ | ✅ (`output_config.format`) | Haiku by default; low thinking effort for latency; prompt caching of the instruction prefix; refusals retried on Anthropic's fallback model (larger models) |
-| OpenAI (`openai`) | Cloud | ✅ | ✅ (`response_format`, strict when the schema allows) | Chat Completions, so `base_url` also reaches OpenAI-compatible servers; reasoning effort `none` for latency |
-| Ollama | Local | ✅ | ✅ (`format`) | HTTP keep-alive pool, model pre-warming on startup; `think: false` for reasoning models |
+| Provider | Type | Constrained JSON | Notes |
+|---|---|---|---|
+| Ollama | Local or a GPU server | `format` | HTTP keep-alive pool; model pre-warming on startup; `think: false` for reasoning models |
+| Gemini, Claude, OpenAI | Cloud | Server-side | API keys from the environment ([CONFIGURATION.md](CONFIGURATION.md#llm_manager_node)) |
 
-Adding a provider means implementing `BaseProvider` (`connect`, `ensure_model_ready`, `generate`) and registering it in the node's startup. Nothing else in the stack changes.
+Adding a provider means implementing `BaseProvider` (`connect`, `ensure_model_ready`, `generate`)
+and registering it in the node's startup ([ros2_llm_manager](../ros2_llm_manager/README.md)).
 
-## Speech I/O (`speech_io`)
+## Speech, perception and embodiment
 
-**STT** runs three cooperating loops: a capture loop feeding 512-sample chunks into a queue, a Silero-VAD loop that segments speech into phrases (closing after `grace_period` of silence, force-closing at `max_phrase_secs`), and a faster-whisper inference loop publishing final text. While `/is_speaking` is high the node discards audio, so the robot never hears itself.
-
-**TTS** serves the `/speak` action by piping text through Piper (`--output-raw`) and streaming the raw PCM to the audio device chunk by chunk, so speech starts before synthesis finishes. Goals are preemptable and cancellable mid-utterance (this is what makes barge-in possible), and `/is_speaking` is always lowered on exit, even on error. When the user interrupts, the dialogue manager publishes `/barge_in` with the cut-off text and how long the robot had been speaking.
-
-### Audio routing
-
-Where the sound is captured and played is decoupled from where the models run. Both speech nodes can use local hardware (`audio_source: microphone`, `audio_sink: speaker`) or exchange raw PCM over ROS with the `AudioChunk` message on `/audio_in` and `/audio_out` (`topic` mode). In topic mode the TTS node paces its chunks to real-time playback, so rosbridge and slow links do not drop audio, and it holds `/is_speaking` until the remote speaker has finished.
-
-Three producers and consumers of `AudioChunk` ship with the stack:
-
-- **The GUI page** (*This browser*): the browser captures the microphone with echo cancellation, resamples it to 16 kHz S16LE and publishes it through rosbridge, and plays the TTS audio back. No host audio setup (PulseAudio, WSLg) is involved, which is why the Docker quick start works with no audio configuration.
-- **`audio_bridge_node`**: runs on the device with the microphone and speaker (a NAO head, a Raspberry Pi) while Whisper, Piper and the LLM run on a laptop or a GPU server. `nao_min.launch.py` and `nao_demo.launch.py` bring it up on a NAO.
-- **Your robot's driver**: any node that speaks `AudioChunk` on those topics works, with no bridge.
-
-## Perception (`vision_io`)
-
-- **emotion_detector**: face detection (MediaPipe) plus a Hugging Face image-classification model, publishing `{"emotion", "confidence", "source"}` JSON on `/user_emotion`.
-- **lip_activity_detector**: MediaPipe FaceLandmarker. It classifies speaking versus silent from the *variance* of lip-gap changes (speech oscillates fast, while yawns and smiles move monotonically), with onset and offset hysteresis before it flips `/user_speaking`.
-
-Both are optional. The dialogue engine works without them and only loses the corresponding context.
-
-## Robot embodiment (`robots/nao`)
-
-The NAO layer consumes only generic signals (`/is_speaking`, `/user_vad`, `/target_pose`). The dialogue core has no NAO-specific code.
-
-- **gesture_manager** (simulation) and **arm_gesture_manager** (real robot, via `nao_lola_command_msgs`) share the same logic: while the robot speaks, cycle through a pool of talking poses with randomized hold times. Otherwise they rest in listening and idle poses. Joints interpolate smoothly at 20 Hz. The real-robot variant drives arms only and republishes joint stiffness periodically.
-- **eye_led_feedback** maps conversation state to eye color with smooth fades. Blue is idle, green scaled by `/user_vad` is hearing you, and pulsing warm white is speaking.
-- **Pose tooling** (`pose_saver`, `pose_tester`, `gui_trigger`, `keyboard_trigger`) captures live `/joint_states` into `nao_saved_poses.yaml` and replays them in RViz. This is the workflow used to author the shipped pose library (17 poses).
-
-Porting to another robot means re-implementing this layer for your platform's effectors.
+- **Speech** is a capability that the trees use when they need it: `Listen` asks it to listen
+  and `Speak` (and `WithFillers`, for the conversational fillers) asks it to say, through
+  simple_hri's actions `/stt_action` and `/tts_action`; both publish `/is_speaking` for the
+  embodiment ([SPEECH.md](SPEECH.md)).
+- **Perception of the user** (`interaction_perception`) is a separate, optional subsystem used
+  through a service (the state of the user) and a topic (the lip activity, for barge-in). Without
+  it the conversation only loses the visual barge-in
+  ([interaction_perception](../interaction_perception/interaction_perception/README.md)).
+- **Embodiment** (`robots/nao`) consumes only generic signals (`/is_speaking`, `/target_pose`, and
+  `/user_vad` if something publishes it): talking gestures, idle poses and eye LEDs. The
+  interaction system has no NAO-specific code ([robots/nao](../robots/nao/README.md)).
 
 ## The web GUI (`dialostack_gui`)
 
-A React single-page app plus a small Python server (`server.py`). The server turns the GUI configuration into ROS parameter files, starts and stops the engine, and serves the engine's default prompts and phrases; the page talks to ROS through rosbridge. It has five pages:
+A React single-page app plus a small Python server (`server.py`). The server turns the GUI
+configuration into a ROS parameter file (the parameters of the LLM gateway, the intelligence and
+the orchestrator) and the speech choices into launch arguments, starts and stops the whole stack
+(`main.launch.py`), and serves the default prompts and phrases; the page talks to ROS through
+rosbridge.
 
 | Page | What it does |
-|------|--------------|
-| **Monitor** | Live chat timeline of the dialogue with STT, LLM and TTS latencies, barge-in marks, the live frame and user emotion, camera images, a composer to type as the user or make the robot say something, and export of the session to CSV, JSON or Markdown |
-| **Frame Builder** | Visual editors for each strategy's input: slots with types, canonical values, ranges and conditions; quiz banks; procedure steps; roleplay scenes and rubrics; resources. Frames are saved to a library and launched from the Monitor |
-| **Prompts** | Override any LLM prompt template, with validation of its placeholders |
-| **Strategies** | Edit each strategy's fixed phrases per language |
-| **Configuration** | LLM provider and model, dialogue limits, STT, TTS and audio routing, saved as named profiles that can be imported and exported |
+|---|---|
+| **Monitor** | Live timeline of the conversation with speech, LLM and voice latencies, barge-in marks, the frame filling up, the user's emotion, camera images, a composer to type as the user or make the robot say something, and export of the session to CSV, JSON or Markdown |
+| **Frame Builder** | Visual editors for each strategy's input: slots with types, allowed values, ranges and conditions; quiz banks; procedure steps; role-play scenes and rubrics; resources |
+| **Prompts** | Override any prompt template, with validation of its placeholders |
+| **Strategies** | Edit each strategy's fixed phrases per language, including the prompts while the user is silent and the closing line of every ending |
+| **Configuration** | LLM provider and model, the limits of a conversation, the speech capability (simple_hri or none) and its speech-to-text and text-to-speech engines, saved as named profiles |
 
-The GUI's internal design is documented in [`dialostack_gui/src/README.md`](../dialostack_gui/src/README.md).
+The GUI's internal design is in [`dialostack_gui/src/README.md`](../dialostack_gui/src/README.md).
 
-## Extension points
+## Limitations
 
-| You want to… | Touch |
-|--------------|-------|
-| Add a dialogue mode | New strategy class and `@register_strategy`. See [the contract](#the-strategy-contract) |
-| Change what the robot says | `ros2_dialog_manager/config/prompts.yaml` (no code) |
-| Switch dialogue language | `language` parameter (prompts adapt, and you add fallback phrases for the new language in `llm_client.py`) |
-| Add an LLM provider | Subclass `BaseProvider` in `ros2_llm_manager/providers/` |
-| Use different STT/TTS | Replace the speech_io node, keep `/transcription`, `/speak`, `/is_speaking` |
-| Capture and play audio on your robot | Publish `/audio_in` and play `/audio_out` (`AudioChunk`), or run `audio_bridge_node` on it |
-| Support another robot | New package under `robots/` consuming `/is_speaking`, `/user_vad`, `/target_pose` |
-
-## Testing & evaluation
-
-- **Unit tests** (`ros2_dialog_manager/test/`, 267 tests) cover the deterministic core: frame semantics, strategy phase logic, context rendering and input hygiene. They use fake LLMs and need no ROS.
-- **GUI tests** (`dialostack_gui`, 96 tests with Vitest) cover the pure logic in `src/lib/`: the Monitor timeline reducer, frame validation, browser-audio resampling and session export.
-- **Statistical evaluation** ([`evaluation/`](../evaluation)) measures the LLM-dependent behavior per capability and end-to-end, against hand-annotated datasets, for any configured provider. Use it to compare models or validate prompt changes before deploying.
+1. One conversation at a time; a new request is rejected while one runs, and the calling
+   behavior must cancel the running one first.
+2. The choice of the behavior relies on the resources for the strategies that need them; between
+   slot filling and explanation, it relies on the LLM.
+3. The control is in the trees, but what the user said is understood by the LLM: a value
+   extracted wrongly but within its type and range reaches the frame, and only the confirmation
+   lets the user correct it.
+4. With simple_hri, the robot does not listen while it speaks, so the user can only interrupt it
+   through the visual barge-in, which is experimental.
