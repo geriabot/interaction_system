@@ -1,17 +1,19 @@
-# DialoStack environment — SOURCE this file (do not execute it):
+# Prepares a terminal for the native installation with a Python virtual environment
+# (docs/INSTALL_NATIVE.md): system ROS 2, the workspace overlay and the environment's packages.
+# Source this file, do not execute it:
 #
-#     source src/DialoStack/activate.sh
+#     source <workspace>/src/interaction_system/activate.sh
 #
-# Edit the two variables below once for your machine. Nothing is auto-detected
-# or searched for on your system.
+# Edit the two variables below once for your computer. Nothing is detected automatically.
 
 # ── edit these ───────────────────────────────────────────────────────────────
 
-# ROS 2 distro installed under /opt/ros/<distro>.
+# The ROS 2 distribution installed under /opt/ros/<distro> (a ROS_DISTRO already set in the
+# environment is kept).
 : "${ROS_DISTRO:=jazzy}"
 
-# Absolute path to the Python venv where you ran the `pip install -r ...` steps.
-# Leave EMPTY ("") if you installed the deps into the same Python that ROS uses.
+# Absolute path of the virtual environment where requirements.txt was installed.
+# Empty ("") when the packages were installed in the system Python (--break-system-packages).
 DIALOSTACK_VENV=""
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -23,16 +25,16 @@ else
   echo "DialoStack: /opt/ros/${ROS_DISTRO}/setup.bash not found — set ROS_DISTRO at the top of activate.sh" >&2
 fi
 
-# 2) Workspace overlay. This file lives at <workspace>/src/DialoStack/, so the
-#    workspace root is two levels up. Sourced only if it has been built.
+# 2) The workspace overlay. This file is in <workspace>/src/interaction_system/, so the root of
+#    the workspace is two levels up. Sourced only once it has been built.
 _dialostack_ws="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)"
 if [ -f "${_dialostack_ws}/install/setup.bash" ]; then
   source "${_dialostack_ws}/install/setup.bash"
 fi
 
-# 3) venv. Sourcing the overlay reorders PYTHONPATH, so the venv's packages must
-#    go back in front or the ROS nodes fail with ModuleNotFoundError
-#    (sounddevice, torch, faster-whisper...). Only touched if you set the path.
+# 3) The virtual environment. Sourcing the overlay reorders PYTHONPATH, so the environment's
+#    packages must go back in front, or the nodes fail with ModuleNotFoundError (sounddevice,
+#    torch, faster-whisper...). Skipped when DIALOSTACK_VENV is empty.
 if [ -n "${DIALOSTACK_VENV}" ]; then
   [ -f "${DIALOSTACK_VENV}/bin/activate" ] && source "${DIALOSTACK_VENV}/bin/activate"
   for _sp in "${DIALOSTACK_VENV}"/lib/python*/site-packages; do
@@ -40,7 +42,4 @@ if [ -n "${DIALOSTACK_VENV}" ]; then
   done
 fi
 
-# 4) Where the TTS node looks for Piper voices (scripts/download_models.sh fills it).
-export DIALOSTACK_MODELS_DIR="${DIALOSTACK_MODELS_DIR:-$HOME/.local/share/dialostack/models}"
-
-echo "DialoStack env ready — ROS ${ROS_DISTRO}, models ${DIALOSTACK_MODELS_DIR}"
+echo "DialoStack env ready — ROS ${ROS_DISTRO}"

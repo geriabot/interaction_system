@@ -1,0 +1,18 @@
+# The Python packages of the native installation (system ROS 2 Jazzy), from the requirement files
+# of each package (docs/INSTALL_NATIVE.md). The pixi environment does not use this file.
+#
+#   pip install -r src/interaction_system/requirements.txt          (from <workspace>)
+#
+# Paths are relative to this file. simple_hri's is in the workspace, fetched by thirdparty.repos:
+# this repository must be at <workspace>/src/interaction_system and simple_hri at
+# <workspace>/src/third_party/simple_hri.
+
+# The LLM gateway: Ollama (httpx) and the cloud providers' SDKs
+-r ros2_llm_manager/config/requirements.txt
+
+# The speech capability: faster-whisper, Whisper, Piper, MMS-TTS, Silero VAD (PyTorch)
+-r ../third_party/simple_hri/simple_hri/requirements.txt
+
+# Optional, the perception of the user (MediaPipe, OpenCV, the emotion classifier): install it
+# apart, only if it is used
+#   pip install -r src/interaction_system/interaction_perception/interaction_perception/requirements.txt

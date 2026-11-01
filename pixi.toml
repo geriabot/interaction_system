@@ -1,0 +1,124 @@
+# Reproducible ROS 2 environments (RoboStack) to build and run interaction_system without a
+# system-wide ROS installation. See docs/PIXI.md and the README.
+#
+# The manifest lives in the repository (<workspace>/src/interaction_system), but it is used from
+# the root of the colcon workspace, through two links that pixi/setup_workspace.sh creates there
+# (pixi.toml and pixi.lock): the environment (.pixi) lives at the root of the workspace, and every
+# path below is relative to it. From the root of the workspace:
+#
+#   pixi run build               # ROS 2 Jazzy (default environment): build/ and install/
+#   pixi shell                   # shell with ROS 2 Jazzy and every dependency
+#   pixi run build-lyrical       # ROS 2 Lyrical: build_lyrical/ and install_lyrical/
+#   pixi shell -e lyrical
+
+[workspace]
+name = "interaction_system"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[activation]
+# Keep the fontconfig cache of this environment apart from the host one, and let its ALSA reach
+# the host's sound server (see each script)
+scripts = ["src/interaction_system/pixi/activate-fontconfig.sh",
+           "src/interaction_system/pixi/activate-alsa.sh"]
+
+[activation.env]
+# The user's own Python packages (~/.local) must not mix with the environment's
+PYTHONNOUSERSITE = "1"
+
+[dependencies]
+# Build tooling
+compilers = "*"
+cmake = "*"
+ninja = "*"
+make = "*"
+pkg-config = "*"
+colcon-common-extensions = "*"
+setuptools = "<80"  # >=80 breaks `setup.py develop` used by colcon --symlink-install
+vcstool = "*"
+yaml-cpp = "*"
+nlohmann_json = "*"
+
+# Python packages of the nodes and the tests
+numpy = "*"
+pyyaml = "*"
+httpx = "*"
+requests = "*"
+pytest = "*"
+portaudio = "*"   # sounddevice loads libportaudio at runtime
+# The web GUI (dialostack_gui: Vite build and its tests)
+nodejs = "*"
+
+[pypi-dependencies]
+sounddevice = "==0.5.5"
+faster-whisper = "==1.2.1"
+piper-tts = "==1.4.2"
+torch = "*"        # Silero VAD (faster-whisper), Whisper and MMS-TTS (simple_hri)
+torchaudio = "*"
+# simple_hri (the speech capability): the same as its requirements.txt
+webrtcvad-wheels = ">=2.0.11.post1"
+openai-whisper = ">=20230314"
+numba = ">=0.67.0"
+scipy = ">=1.10.0"
+transformers = ">=4.57.0,<5"
+huggingface-hub = ">=0.20.0"
+openai = ">=1.32.0"  # simple_hri's Extract and Yes/No through Ollama (OpenAI-compatible API)
+                     # and the gateway's OpenAI provider
+google-genai = "*"   # the gateway's Gemini provider (a Gemini system model)
+
+[tasks.test]
+description = "Unit tests that need no running system (dialogue skills and frame)"
+cwd = "src/interaction_system/interaction_system_core/interaction_intelligence"
+cmd = "python -m pytest -q test --deselect test/test_flake8.py::test_flake8 --deselect test/test_pep257.py::test_pep257 --deselect test/test_copyright.py::test_copyright"
+
+# ---------------------------------------------------------------------------
+# ROS 2 distributions. Jazzy is the default; Lyrical builds into its own folders
+# (behavior_architecture needs its `lyrical` branch: see docs/PIXI.md)
+# ---------------------------------------------------------------------------
+
+[feature.jazzy]
+channels = ["robostack-jazzy"]
+
+[feature.jazzy.dependencies]
+python = "3.12.*"
+ros-jazzy-ros-base = "*"
+ros-jazzy-behaviortree-cpp = "*"
+ros-jazzy-rclcpp-cascade-lifecycle = "*"
+ros-jazzy-rosbridge-suite = "*"
+ros-jazzy-ament-cmake-auto = "*"
+
+[feature.jazzy.tasks.build]
+description = "Build interaction_system and its dependencies (ROS 2 Jazzy)"
+cmd = """colcon build --symlink-install \
+  --packages-up-to interaction_system interaction_system_behaviors interaction_intelligence \
+    ros2_llm_manager simple_hri interaction_perception dialostack_bt_client \
+    interaction_sim interaction_ablations \
+  --cmake-args \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python \
+  -DBUILD_TESTING=OFF"""
+
+[feature.lyrical]
+channels = ["robostack-lyrical"]
+
+[feature.lyrical.dependencies]
+ros-lyrical-ros-base = "*"
+ros-lyrical-behaviortree-cpp = "*"
+ros-lyrical-rclcpp-cascade-lifecycle = "*"
+ros-lyrical-rosbridge-suite = "*"
+ros-lyrical-ament-cmake-auto = "*"
+
+[feature.lyrical.tasks.build-lyrical]
+description = "Build interaction_system and its dependencies for ROS 2 Lyrical"
+cmd = """colcon build --symlink-install --build-base build_lyrical --install-base install_lyrical \
+  --packages-up-to interaction_system interaction_system_behaviors interaction_intelligence \
+    ros2_llm_manager simple_hri interaction_perception dialostack_bt_client \
+    interaction_sim interaction_ablations \
+  --cmake-args \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python \
+  -DBUILD_TESTING=OFF"""
+
+[environments]
+default = ["jazzy"]
+lyrical = ["lyrical"]

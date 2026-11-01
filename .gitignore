@@ -29,3 +29,14 @@ evaluation/results/*.csv
 # Secrets (never commit API keys)
 .env
 *.key
+
+# Environments (pixi/conda)
+.pixi/
+
+# The paper, and the results and private notes of the evaluation (the runs write their results
+# in evaluation/results; evaluation/private holds what stays out of the repository)
+paper/
+evaluation/results/
+evaluation/offline/results/
+evaluation/results_archive/
+evaluation/private/

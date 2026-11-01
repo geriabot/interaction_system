@@ -1,0 +1,13 @@
+# Source dependencies of the interaction system: vcs import src < src/interaction_system/thirdparty.repos
+repositories:
+  # The behavioral control architecture (orchestrator + behavior runners). Only its base is
+  # needed: its optional LLM orchestrators (its llm.repos) are not used here
+  third_party/behavior_architecture:
+    type: git
+    url: https://github.com/geriabot/behavior_architecture.git
+    version: main
+  # The speech capability: speech-to-text and text-to-speech actions
+  third_party/simple_hri:
+    type: git
+    url: https://github.com/rodperex/simple_hri.git
+    version: main
