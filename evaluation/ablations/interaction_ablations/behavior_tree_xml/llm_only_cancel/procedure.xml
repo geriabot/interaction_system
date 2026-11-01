@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="Procedure">
+  <include path="common.xml"/>
+
+  <!-- Guide the user through the steps of a procedure (in the resources of the request).
+       Each turn is understood against the current step: done (the next step), skip (the next
+       step, this one skipped), a question (answered), a problem (help with the step; after
+       max_attempts helps the step is marked stuck and the procedure goes on), repeat, back
+       (the previous step) or unclear (a reminder to say when the step is done). Repeat and
+       unclear are turns without progress. A step may declare its duration: the robot waits
+       in silence that long before prompting. After the last step the robot sums up. The
+       result says which steps were done (partial if a step that is not optional was skipped
+       or stuck). -->
+  <BehaviorTree ID="Procedure">
+    <Sequence>
+      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
+      <WithFillers budget_s="{opening_budget}">
+        <SubTree ID="ProcedureOpening" _autoremap="true"/>
+      </WithFillers>
+      <Speak text="{reply}"/>
+      <Fallback>
+        <Repeat num_cycles="-1">
+          <Sequence>
+            <SubTree ID="TurnLimit" _autoremap="true"/>
+            <IfThenElse>
+              <SubTree ID="ListenToUser" _autoremap="true"/>
+              <Sequence>
+                <!-- The reply to the turn, with fillers while it is prepared -->
+                <WithFillers>
+                  <Fallback>
+                    <SubTree ID="CancelCheck" _autoremap="true"/>
+                    <SubTree ID="ProcedureTurn" _autoremap="true"/>
+                  </Fallback>
+                </WithFillers>
+                <SubTree ID="CountProgress" _autoremap="true"/>
+                <Speak text="{reply}"/>
+              </Sequence>
+              <SubTree ID="UserSilent" _autoremap="true"/>
+            </IfThenElse>
+            <ScriptCondition code="done == false"/>
+          </Sequence>
+        </Repeat>
+        <SubTree ID="Conclude" _autoremap="true"/>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="ProcedureOpening">
+    <Sequence>
+      <SubTree ID="Begin" _autoremap="true"/>
+      <IfThenElse>
+        <ScriptCondition code="skip_intro == true"/>
+        <AskIntelligence skill="procedure.first_step"/>
+        <AskIntelligence skill="procedure.open"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="ProcedureTurn">
+    <Sequence>
+      <AskIntelligence skill="procedure.classify" user_text="{user_text}"/>
+      <Switch6 variable="{label}" case_1="done" case_2="skip" case_3="question"
+               case_4="problem" case_5="repeat" case_6="back">
+        <SubTree ID="ProcedureAdvance" _autoremap="true" step_status="done"/>
+        <SubTree ID="ProcedureAdvance" _autoremap="true" step_status="skipped"/>
+        <AskIntelligence skill="procedure.answer" user_text="{user_text}"/>
+        <!-- A problem: help with the step, or leave it stuck after max_attempts helps -->
+        <Sequence>
+          <Script code="help += 1"/>
+          <IfThenElse>
+            <ScriptCondition code="help &gt;= max_attempts"/>
+            <SubTree ID="ProcedureAdvance" _autoremap="true" step_status="stuck"/>
+            <AskIntelligence skill="procedure.help" number="{help}"/>
+          </IfThenElse>
+        </Sequence>
+        <!-- Asked to hear the step again: repeat it (a turn without progress) -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="procedure.repeat"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <Sequence>
+          <AskIntelligence skill="procedure.back"/>
+          <Script code="help := 0"/>
+        </Sequence>
+        <!-- Unclear: a reminder to say when the step is done (a turn without progress) -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="procedure.remind"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+      </Switch6>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- Close the current step with its status (done, skipped, stuck) and present the next
+       one; after the last step, the summary ends the dialogue -->
+  <BehaviorTree ID="ProcedureAdvance">
+    <Sequence>
+      <AskIntelligence skill="procedure.advance" option="{step_status}"/>
+      <Script code="help := 0; done := label == 'finished'"/>
+    </Sequence>
+  </BehaviorTree>
+</root>

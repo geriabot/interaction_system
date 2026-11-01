@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="Questionnaire">
+  <include path="common.xml"/>
+
+  <!-- Administer a standardized questionnaire (the instrument in the resources of the request):
+       every item and its options read as written, in order (no LLM); the intelligence only maps
+       the user's answer to an option of the scale. An answer between options gets the options
+       again, without suggesting any (a turn without progress; after max_attempts the item is left
+       without an answer); a question about the meaning gets the instrument's clarification or
+       the item again; the user may decline an item. After the last item the robot closes; the
+       score is computed by code and returned, never said. The result is the answer to each item
+       and the score (partial if an item has no answer). -->
+  <BehaviorTree ID="Questionnaire">
+    <Sequence>
+      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
+      <WithFillers budget_s="{opening_budget}">
+        <SubTree ID="QuestionnaireOpening" _autoremap="true"/>
+      </WithFillers>
+      <Speak text="{reply}"/>
+      <Fallback>
+        <Repeat num_cycles="-1">
+          <Sequence>
+            <SubTree ID="TurnLimit" _autoremap="true"/>
+            <IfThenElse>
+              <SubTree ID="ListenToUser" _autoremap="true"/>
+              <Sequence>
+                <!-- The reply to the turn, with fillers while it is prepared -->
+                <WithFillers>
+                  <Fallback>
+                    <SubTree ID="CancelCheck" _autoremap="true"/>
+                    <SubTree ID="QuestionnaireTurn" _autoremap="true"/>
+                  </Fallback>
+                </WithFillers>
+                <SubTree ID="CountProgress" _autoremap="true"/>
+                <Speak text="{reply}"/>
+              </Sequence>
+              <SubTree ID="UserSilent" _autoremap="true"/>
+            </IfThenElse>
+            <ScriptCondition code="done == false"/>
+          </Sequence>
+        </Repeat>
+        <SubTree ID="Conclude" _autoremap="true"/>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="QuestionnaireOpening">
+    <Sequence>
+      <SubTree ID="Begin" _autoremap="true"/>
+      <!-- The instructions of the instrument are part of its administration: no skip_intro -->
+      <AskIntelligence skill="questionnaire.open"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="QuestionnaireTurn">
+    <Sequence>
+      <AskIntelligence skill="questionnaire.record" user_text="{user_text}"/>
+      <Switch4 variable="{label}" case_1="meaning" case_2="ambiguous" case_3="repeat"
+               case_4="other">
+        <AskIntelligence skill="questionnaire.clarify"/>
+        <!-- Between options: the options again, or the item without an answer after
+             max_attempts; a turn without progress -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <Sequence>
+            <Script code="attempts += 1"/>
+            <IfThenElse>
+              <ScriptCondition code="attempts &lt; max_attempts"/>
+              <AskIntelligence skill="questionnaire.options"/>
+              <Sequence>
+                <AskIntelligence skill="questionnaire.unanswered"/>
+                <SubTree ID="QuestionnaireNext" _autoremap="true"/>
+              </Sequence>
+            </IfThenElse>
+          </Sequence>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <!-- The item again (repeat requested, or not understood): turns without progress -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="questionnaire.ask"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="questionnaire.ask"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <!-- An option or a refusal recorded (label next or last) -->
+        <SubTree ID="QuestionnaireNext" _autoremap="true"/>
+      </Switch4>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- After an item is closed: the next item, or the closing after the last one -->
+  <BehaviorTree ID="QuestionnaireNext">
+    <Sequence>
+      <Script code="attempts := 0"/>
+      <IfThenElse>
+        <ScriptCondition code="label == 'last'"/>
+        <Sequence>
+          <AskIntelligence skill="questionnaire.finish"/>
+          <Script code="done := true"/>
+        </Sequence>
+        <AskIntelligence skill="questionnaire.ask"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+</root>

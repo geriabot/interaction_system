@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="Roleplay">
+  <include path="common.xml"/>
+
+  <!-- Play a character in a scene (in the resources of the request) so that the user can
+       practise a situation, then step out of the role and score the user on each criterion
+       of the rubric (1 to 5), with feedback.
+
+       Each turn is understood as: continue (the character replies), repeat (the user did not
+       hear the character's last line: said again literally, then in other words; a turn
+       without progress), coach (the user asks for help: a hint out of character), end (the
+       user wants to stop), scene_end (the scene reached its natural end), limit (the last
+       exchange the scene allows) or unclear (the model could not read the turn: the robot asks
+       to repeat it with a fixed phrase, a turn without progress, so that a sustained failure of
+       the model ends as a breakdown). Only continue turns count as exchanges. end, scene_end
+       and limit close the scene and score it. The result is the scores and the feedback. -->
+  <BehaviorTree ID="Roleplay">
+    <Sequence>
+      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
+      <WithFillers budget_s="{opening_budget}">
+        <SubTree ID="RoleplayOpening" _autoremap="true"/>
+      </WithFillers>
+      <Speak text="{reply}"/>
+      <Fallback>
+        <Repeat num_cycles="-1">
+          <Sequence>
+            <SubTree ID="TurnLimit" _autoremap="true"/>
+            <IfThenElse>
+              <SubTree ID="ListenToUser" _autoremap="true"/>
+              <Sequence>
+                <!-- The reply to the turn, with fillers while it is prepared -->
+                <WithFillers>
+                  <Fallback>
+                    <SubTree ID="CancelCheck" _autoremap="true"/>
+                    <SubTree ID="RoleplayTurn" _autoremap="true"/>
+                  </Fallback>
+                </WithFillers>
+                <SubTree ID="CountProgress" _autoremap="true"/>
+                <Speak text="{reply}"/>
+              </Sequence>
+              <SubTree ID="UserSilent" _autoremap="true"/>
+            </IfThenElse>
+            <ScriptCondition code="done == false"/>
+          </Sequence>
+        </Repeat>
+        <SubTree ID="Conclude" _autoremap="true"/>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="RoleplayOpening">
+    <Sequence>
+      <SubTree ID="Begin" _autoremap="true"/>
+      <IfThenElse>
+        <ScriptCondition code="skip_intro == true"/>
+        <AskIntelligence skill="roleplay.open_direct"/>
+        <AskIntelligence skill="roleplay.open"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="RoleplayTurn">
+    <Sequence>
+      <AskIntelligence skill="roleplay.classify" user_text="{user_text}"/>
+      <Switch6 variable="{label}" case_1="end" case_2="scene_end" case_3="limit"
+               case_4="coach" case_5="repeat" case_6="unclear">
+        <SubTree ID="RoleplayFinish" _autoremap="true" ended_by="user"/>
+        <SubTree ID="RoleplayFinish" _autoremap="true" ended_by="scene"/>
+        <SubTree ID="RoleplayFinish" _autoremap="true" ended_by="limit"/>
+        <AskIntelligence skill="roleplay.coach" user_text="{user_text}"/>
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="roleplay.repeat" user_text="{user_text}"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <!-- Unclear: the request to repeat is already the reply; close after max_stalled
+             turns without progress -->
+        <Fallback>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </Fallback>
+        <!-- Continue: the character replies -->
+        <AskIntelligence skill="roleplay.reply"/>
+      </Switch6>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="RoleplayFinish">
+    <Sequence>
+      <AskIntelligence skill="roleplay.finish" option="{ended_by}"/>
+      <Script code="done := true"/>
+    </Sequence>
+  </BehaviorTree>
+</root>

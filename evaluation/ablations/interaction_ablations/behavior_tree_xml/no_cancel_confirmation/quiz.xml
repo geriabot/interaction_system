@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="Quiz">
+  <include path="common.xml"/>
+
+  <!-- Ask the questions of a bank (in the resources of the request) and grade each spoken
+       answer against the expected one. A reply that is not an answer (asked to repeat or
+       clarify) is not graded: the question is asked again, and after max_attempts such
+       replies it is left unanswered. After the last question the robot gives the score.
+       The result is the score and the answer to each question (partial if one was left
+       unanswered). -->
+  <BehaviorTree ID="Quiz">
+    <Sequence>
+      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
+      <WithFillers budget_s="{opening_budget}">
+        <SubTree ID="QuizOpening" _autoremap="true"/>
+      </WithFillers>
+      <Speak text="{reply}"/>
+      <Fallback>
+        <Repeat num_cycles="-1">
+          <Sequence>
+            <SubTree ID="TurnLimit" _autoremap="true"/>
+            <IfThenElse>
+              <SubTree ID="ListenToUser" _autoremap="true"/>
+              <Sequence>
+                <!-- The reply to the turn, with fillers while it is prepared -->
+                <WithFillers>
+                  <Fallback>
+                    <SubTree ID="CancelCheck" _autoremap="true"/>
+                    <SubTree ID="QuizTurn" _autoremap="true"/>
+                  </Fallback>
+                </WithFillers>
+                <SubTree ID="CountProgress" _autoremap="true"/>
+                <Speak text="{reply}"/>
+              </Sequence>
+              <SubTree ID="UserSilent" _autoremap="true"/>
+            </IfThenElse>
+            <ScriptCondition code="done == false"/>
+          </Sequence>
+        </Repeat>
+        <SubTree ID="Conclude" _autoremap="true"/>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="QuizOpening">
+    <Sequence>
+      <SubTree ID="Begin" _autoremap="true"/>
+      <IfThenElse>
+        <ScriptCondition code="skip_intro == true"/>
+        <AskIntelligence skill="quiz.first_question"/>
+        <AskIntelligence skill="quiz.open"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="QuizTurn">
+    <Sequence>
+      <AskIntelligence skill="quiz.evaluate" user_text="{user_text}"/>
+      <IfThenElse>
+        <ScriptCondition code="label == 'repeat'"/>
+        <!-- Not an answer (asked to repeat or clarify, did not hear or understand it): ask the
+             question again, literally and then in simpler words; after max_attempts such
+             replies leave it unanswered and go on. A turn without progress -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <Sequence>
+            <Script code="attempts += 1"/>
+            <IfThenElse>
+              <ScriptCondition code="attempts &lt; max_attempts"/>
+              <AskIntelligence skill="quiz.repeat" number="{attempts}"/>
+              <Sequence>
+                <AskIntelligence skill="quiz.unanswered"/>
+                <SubTree ID="QuizNext" _autoremap="true"/>
+              </Sequence>
+            </IfThenElse>
+          </Sequence>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <!-- An answer, graded -->
+        <SubTree ID="QuizNext" _autoremap="true"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- After a question is closed (graded or unanswered): the next question, or the score after
+       the last one -->
+  <BehaviorTree ID="QuizNext">
+    <Sequence>
+      <Script code="attempts := 0"/>
+      <IfThenElse>
+        <ScriptCondition code="label == 'last'"/>
+        <Sequence>
+          <AskIntelligence skill="quiz.summary"/>
+          <Script code="done := true"/>
+        </Sequence>
+        <AskIntelligence skill="quiz.next_question"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+</root>
