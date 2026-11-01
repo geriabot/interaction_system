@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Saves the current joint state to a YAML file when triggered.
 
 Listens on /joint_states for the live pose and on /save_pose_trigger for a

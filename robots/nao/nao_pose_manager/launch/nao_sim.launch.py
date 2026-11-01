@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 # Simulation bringup: robot_state_publisher, RViz, and the pose tooling nodes.
 
 import os

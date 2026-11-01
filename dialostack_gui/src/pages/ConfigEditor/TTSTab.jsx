@@ -1,45 +1,41 @@
-/** TTS tab: Piper voice model and output audio device settings. */
-import { Speaker, Volume2 } from 'lucide-react'
-import { Field, SectionCard, Select, inputCls } from '../../components/ui'
+/** TTS tab: simple_hri's speech synthesis engine. */
+import { Volume2 } from 'lucide-react'
+import { Field, SectionCard, Select } from '../../components/ui'
 
-export function TTSTab({ tts, update }) {
+export function TTSTab({ tts, update, speech }) {
+  if (speech.capability === 'none') {
+    return (
+      <SectionCard icon={Volume2} title="Speech synthesis" description="Not started">
+        <p className="text-xs text-slate-500 leading-relaxed">
+          The speech capability is off (STT tab): the robot's replies are only shown in
+          the Monitor.
+        </p>
+      </SectionCard>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <SectionCard
         icon={Volume2}
-        title="Piper voice"
-        description="Neural speech synthesis model"
+        title="Speech synthesis"
+        description="simple_hri's text-to-speech"
       >
-        <Field label="Piper voice"
-          hint="Voice filename (resolved under DIALOSTACK_MODELS_DIR) or an absolute .onnx path. The .onnx.json must sit next to it.">
-          <input type="text" value={tts.model_path}
-            onChange={e => update({ model_path: e.target.value })}
-            placeholder="en_US-lessac-medium.onnx"
-            className={inputCls} />
+        <Field label="Engine"
+          hint="Piper runs on the CPU with a neural voice; MMS-TTS (facebook/mms-tts-*) runs on the GPU when there is one">
+          <Select value={tts.engine} onChange={e => update({ engine: e.target.value })}>
+            <option value="piper">Piper</option>
+            <option value="mms">MMS-TTS</option>
+          </Select>
         </Field>
-      </SectionCard>
-
-      <SectionCard
-        icon={Speaker}
-        title="Output audio"
-        description="Playback device and format"
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Sample rate"
-            hint="Must match the Piper model's (22050 for medium models)">
-            <Select value={tts.sample_rate} onChange={e => update({ sample_rate: Number(e.target.value) })}>
-              <option value={22050}>22050 Hz</option>
-              <option value={16000}>16000 Hz</option>
-              <option value={24000}>24000 Hz</option>
-            </Select>
-          </Field>
-          <Field label="Audio device"
-            hint="ALSA name of the speaker: default, hw:0,0, plughw:1,0...">
-            <input type="text" value={tts.audio_device}
-              onChange={e => update({ audio_device: e.target.value })}
-              placeholder="default" className={inputCls} />
-          </Field>
-        </div>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          The voice follows the dialogue language, as its language file sets it
+          (<span className="font-mono">interaction_intelligence/config/languages</span>): Piper uses{' '}
+          <span className="font-mono">en_US-lessac-medium</span> or{' '}
+          <span className="font-mono">es_ES-sharvard-medium</span>, MMS-TTS{' '}
+          <span className="font-mono">mms-tts-eng</span> or <span className="font-mono">mms-tts-spa</span>.
+          The audio plays on the default speaker of the machine running the engine.
+        </p>
       </SectionCard>
     </div>
   )

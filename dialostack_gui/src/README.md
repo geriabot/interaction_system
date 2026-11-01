@@ -1,39 +1,46 @@
 # DialoStack GUI architecture
 
-A single-page React app (Vite + Tailwind) to **configure, launch and monitor**
-DialoStack dialogues. It talks to two backends:
+The internal design of the web GUI, for those who change it: a single-page
+React app (Vite + Tailwind) to configure, launch and monitor the conversations
+of the interaction system. What each page does is in
+[ARCHITECTURE.md](../../docs/ARCHITECTURE.md#the-web-gui-dialostack_gui), and how
+to start it in [INSTALLATION.md](../../docs/INSTALLATION.md#the-web-gui). It
+talks to two backends:
 
 - **The GUI server** (`../server.py`) over HTTP (`lib/api.js`). It generates the
-  ROS parameter YAML, serves engine defaults (prompts, phrases), starts and stops
-  the engine, and exposes mic and system helpers. **All YAML/param generation lives
-  in the server, never in the frontend.**
+  ROS parameter YAML (for the LLM gateway, the interaction intelligence and the
+  orchestrator), serves engine defaults (prompts, phrases), starts and stops the
+  engine (`interaction_system main.launch.py`, with the speech choices as launch
+  arguments: `speech:=simple_hri stt:=… tts:=… whisper_model:=…`, or
+  `speech:=none` for typed text only), and exposes mic and system helpers.
+  **All YAML/param generation lives in the server, never in the frontend.**
 - **rosbridge** over WebSocket (roslib) for live ROS topics and the dialog action,
   via the hooks in `hooks/`.
 
 ```
 src/
-├── main.jsx            Entry: mounts providers (Engine, ROS, Config, BrowserAudio) + router
+├── main.jsx            Entry: mounts providers (Engine, ROS, Config) + router
 ├── App.jsx             Shell: sidebar + routes + the shared dialogue timeline
 ├── components/         Shared UI, built from here, not redefined per page
 │   ├── ui.jsx          Form atoms (Field, Select, NumberField…), ModifiedTag, badges
-│   ├── FileImportButton.jsx, Sidebar.jsx, ConnectionBadge.jsx, BrowserAudioBadge.jsx, EngineNotices.jsx
+│   ├── FileImportButton.jsx, Sidebar.jsx, ConnectionBadge.jsx, EngineNotices.jsx
 ├── contexts/           Cross-page global state
 │   ├── ConfigContext   The whole config object (localStorage-backed) + updateSection
 │   ├── EngineContext   Engine status polling, start/stop/killAll, keepalive
-│   ├── ROSContext      rosbridge connection
-│   └── BrowserAudioContext  "browser" audio routing: this page as mic + speaker
+│   └── ROSContext      rosbridge connection
 ├── hooks/              Reusable React/IO logic
 │   ├── useTopic / usePublisher / useActionClient   ROS plumbing
 │   ├── useDialogTimeline                            Topics → timeline reducer actions
-│   ├── usePersistentState / usePopover / useFlash / useLlmError / useImageTopic(s)
+│   ├── usePersistentState / usePopover / useFlash / useLlmError / useImageTopic(s) / useTheme
 ├── lib/                Pure logic + constants (unit-tested with *.test.js)
 │   ├── api.js          The ONLY HTTP client (timeouts, typed ApiError)
 │   ├── ros.js          Topic/action names + types (single source)
-│   ├── browserAudio.js Mic capture/resampling and TTS playback over AudioChunk
 │   ├── formatters.js   Time/duration formatting (shared by Monitor + export)
 │   ├── prompts.js / strategies.js   Editor metadata + validation/grouping
 │   ├── frames.js       Frame Builder data layer + Builder↔page handoff
 │   ├── sessionExport.js  Timeline → CSV/JSON/Markdown
+│   ├── configProfiles.js  Named configuration profiles (Configuration page)
+│   ├── download.js / status.js  File downloads; how the ROS and engine states are shown
 │   ├── storageKeys.js  localStorage keys (single source)
 │   └── timeline/reducer.js  Pure Monitor state machine (no React/ROS, fully tested)
 └── pages/              One folder per route
@@ -41,7 +48,7 @@ src/
     ├── FrameBuilder/   Build a frame per strategy (slots / quiz / resources)
     ├── PromptsEditor/  Override the LLM prompt templates
     ├── StrategiesEditor/  Edit each strategy's canned phrases (per language)
-    └── ConfigEditor/   Parameter tabs (LLM, Dialogue, STT, TTS, Audio) + engine panel
+    └── ConfigEditor/   Parameter tabs (LLM, Dialogue, STT, TTS) + engine panel
 ```
 
 ## Data flow
@@ -49,7 +56,19 @@ src/
 **Config → engine.** Editors write into `config.<section>` via
 `updateSection` (ConfigContext, persisted to localStorage). On engine start,
 `EngineContext` POSTs the whole config. `server.py` turns it into a ROS params
-file and launches the engine. The frontend never builds YAML.
+file plus the speech launch arguments and launches the engine. The frontend
+never builds YAML.
+
+**Speech.** The speech capability is simple_hri, started by `main.launch.py` on
+the engine machine: it listens when the dialogue asks and plays on that
+machine's speaker, so the page carries no audio. The STT tab chooses simple_hri
+or none (typed text only) plus the STT engine (faster-whisper or Whisper) and
+the Whisper model; the TTS tab the TTS engine (Piper or MMS-TTS). The STT
+language and the TTS voice follow the dialogue language (English or Spanish,
+the ones `main.launch.py` knows). The Monitor's composer publishes typed text on
+`/transcription`, and `/say <text>` speaks through simple_hri's `/tts_action`.
+`ConfigContext.mergeConfig` drops the fields that older versions of the GUI
+saved, so old configurations and profiles still load.
 
 **ROS → screen.** `useDialogTimeline` subscribes to the dialog topics/feedback
 and dispatches actions into the pure `timeline/reducer.js`. The Monitor renders
@@ -66,13 +85,13 @@ valid, changed ones as node parameters (defaults always win otherwise).
 - **Add a config parameter:** default it in `ConfigContext` `DEFAULT_CONFIG`,
   add a field in the matching `ConfigEditor/<Tab>.jsx` calling
   `update({ key: value })`, and map it to a ROS param in `server.py`'s
-  `build_params`.
+  `build_params` (or to a `main.launch.py` argument in `launch_args`).
 - **Add a page:** create `pages/<Name>/index.jsx`, route it in `App.jsx`, and
   add it to `PAGES` in `components/Sidebar.jsx`.
 - **Add a ROS topic:** add it to `TOPICS` in `lib/ros.js`, then
   `useTopic(name, type, cb)` (or `usePublisher`) where needed.
 - **Add an editable phrase/prompt:** add it to the engine's defaults
-  (`ros2_dialog_manager`), expose via the existing `/api/{prompts,phrases}`
+  (`interaction_intelligence`), expose via the existing `/api/{prompts,phrases}`
   endpoints, and it shows up in the corresponding editor automatically.
 
 ## Conventions

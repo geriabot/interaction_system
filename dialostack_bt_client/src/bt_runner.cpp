@@ -1,3 +1,7 @@
+// Copyright 2026 Álvaro Quintana Camacho
+//
+// Licensed under the MIT License. See the LICENSE file of the repository.
+
 // Generic runner: loads a BehaviorTree.CPP XML tree, puts an rclcpp::Node on the
 // blackboard (the DialoStack nodes need it), and ticks until the tree finishes.
 //

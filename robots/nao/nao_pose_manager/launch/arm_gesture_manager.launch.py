@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 # Launch the arm gesture manager and eye LED feedback nodes for the real NAO.
 
 import os

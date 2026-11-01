@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Tkinter tool to preview saved poses in simulation.
 
 Lists the poses from nao_saved_poses.yaml as buttons; clicking one publishes

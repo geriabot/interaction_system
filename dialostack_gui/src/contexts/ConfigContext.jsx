@@ -1,7 +1,7 @@
 /**
- * Configuration context: holds the engine config (LLM, dialogue, STT, TTS,
- * prompt overrides), persisting it to localStorage and exposing per-section
- * update/reset helpers.
+ * Configuration context: holds the engine config (LLM, dialogue, speech, STT,
+ * TTS, prompt overrides), persisting it to localStorage and exposing
+ * per-section update/reset helpers.
  */
 import { createContext, useContext, useState, useCallback } from 'react'
 import { STORAGE } from '../lib/storageKeys'
@@ -25,11 +25,11 @@ export const DEFAULT_CONFIG = {
   },
   dialog: {
     language: 'English',
-    wait_timeout: 20,
-    llm_timeout: 120,
+    wait_timeout: 15,
+    llm_timeout: 15,
     tts_timeout: 60,
-    max_timeouts: 2,
-    max_unclear: 3,
+    max_silence: 90,
+    max_stalled: 4,
     max_attempts: 3,
     timeout_prompt: '',
     history_max_turns: 200,
@@ -39,35 +39,20 @@ export const DEFAULT_CONFIG = {
     conversation_log_path: '/tmp/dialog_conversations.log',
     conversation_log_max_mb: 10.0,
   },
+  // The speech capability: simple_hri listens and speaks on the engine
+  // machine's own microphone and speaker; 'none' starts no speech nodes, so the
+  // conversation is typed text only (the Monitor's composer).
+  speech: {
+    capability: 'simple_hri',
+  },
+  // simple_hri engines. The STT language and the TTS voice follow the dialogue
+  // language.
   stt: {
-    model_size: 'small',
-    device: 'auto',
-    compute_type: 'auto',
-    language: 'en',
-    vad_threshold: 0.5,
-    grace_period: 0.8,
-    max_phrase_secs: 8.0,
-    cpu_threads: 4,
-    sample_rate: 16000,
-    input_device: '',
-    silent_mode: false,
+    engine: 'faster_whisper',
+    whisper_model: 'small',
   },
   tts: {
-    model_path: '',
-    sample_rate: 22050,
-    audio_device: 'default',
-  },
-  // Audio routing ("flavour"): where speech is captured and played.
-  //   browser -> this GUI page's mic/speaker, streamed as AudioChunk over
-  //              rosbridge (works anywhere, no host audio setup)
-  //   local   -> the engine machine's mic/speaker (sounddevice)
-  //   topic   -> AudioChunk over ROS (a robot, the audio_bridge_node, or any
-  //              producer/consumer of the contract) via in_topic / out_topic.
-  audio: {
-    mode: 'browser',
-    in_topic: '/audio_in',
-    out_topic: '/audio_out',
-    topic_latency_pad: 0.3,
+    engine: 'piper',
   },
   // Prompt overrides: { <key>: template }. Only contains the prompts the user
   // has modified; the rest always come from prompts.yaml (the defaults).
@@ -79,17 +64,31 @@ export const DEFAULT_CONFIG = {
 
 const LS_KEY = STORAGE.config
 
+// Sections that are free maps (any key is valid), not a fixed set of fields.
+const FREE_SECTIONS = ['prompts', 'phrases']
+
+/**
+ * A full config from a stored or imported one: every section of DEFAULT_CONFIG,
+ * missing keys filled with the defaults and unknown ones dropped, so a config
+ * saved by an older GUI (e.g. with the removed audio routing) still loads.
+ */
+export function mergeConfig(source) {
+  return Object.fromEntries(
+    Object.entries(DEFAULT_CONFIG).map(([section, defaults]) => {
+      const saved = source?.[section]
+      const values = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {}
+      const known = FREE_SECTIONS.includes(section)
+        ? values
+        : Object.fromEntries(Object.entries(values).filter(([k]) => k in defaults))
+      return [section, { ...defaults, ...known }]
+    })
+  )
+}
+
 function loadConfig() {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    if (!raw) return DEFAULT_CONFIG
-    const parsed = JSON.parse(raw)
-    return Object.fromEntries(
-      Object.entries(DEFAULT_CONFIG).map(([section, defaults]) => [
-        section,
-        { ...defaults, ...(parsed[section] ?? {}) },
-      ])
-    )
+    return raw ? mergeConfig(JSON.parse(raw)) : DEFAULT_CONFIG
   } catch {
     return DEFAULT_CONFIG
   }

@@ -12,6 +12,13 @@ find_package(behaviortree_cpp REQUIRED)
 find_package(ros2_dialog_interfaces REQUIRED)
 
 set(deps rclcpp rclcpp_action behaviortree_cpp ros2_dialog_interfaces)
+# The targets of those dependencies (ament_target_dependencies() no longer exists in ROS 2 Lyrical)
+set(dep_targets
+  rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
+  behaviortree_cpp::behaviortree_cpp
+  ${ros2_dialog_interfaces_TARGETS}
+)
 
 include_directories(include)
 
@@ -20,12 +27,11 @@ add_library(dialostack_bt_client_plugin SHARED
   src/execute_dialog.cpp
   src/bt_plugins.cpp
 )
-ament_target_dependencies(dialostack_bt_client_plugin ${deps})
+target_link_libraries(dialostack_bt_client_plugin ${dep_targets})
 
 # Generic runner: loads a tree XML and ticks it.
 add_executable(bt_runner src/bt_runner.cpp)
-target_link_libraries(bt_runner dialostack_bt_client_plugin)
-ament_target_dependencies(bt_runner ${deps})
+target_link_libraries(bt_runner dialostack_bt_client_plugin ${dep_targets})
 
 install(TARGETS dialostack_bt_client_plugin
   ARCHIVE DESTINATION lib

@@ -1,6 +1,6 @@
 /** Configuration page: engine panel, tabbed parameter editor, YAML export and reset. */
 import { useState } from 'react'
-import { Check, Copy, MessagesSquare, Mic, Moon, Radio, RotateCcw, Sparkles, Sun, Volume2, X } from 'lucide-react'
+import { Check, Copy, MessagesSquare, Mic, Moon, RotateCcw, Sparkles, Sun, Volume2, X } from 'lucide-react'
 import { useConfig } from '../../contexts/ConfigContext'
 import { useTheme } from '../../hooks/useTheme'
 import { api } from '../../lib/api'
@@ -10,14 +10,12 @@ import { LLMTab } from './LLMTab'
 import { DialogTab } from './DialogTab'
 import { STTTab } from './STTTab'
 import { TTSTab } from './TTSTab'
-import { AudioTab } from './AudioTab'
 
 const TABS = [
   { id: 'llm',    label: 'LLM',     icon: Sparkles       },
   { id: 'dialog', label: 'Dialogue', icon: MessagesSquare },
   { id: 'stt',    label: 'STT',     icon: Mic            },
   { id: 'tts',    label: 'TTS',     icon: Volume2        },
-  { id: 'audio',  label: 'Audio',   icon: Radio          },
 ]
 
 const THEME_OPTIONS = [
@@ -131,9 +129,10 @@ export function ConfigEditor() {
           <div className="pb-8">
             {activeTab === 'llm'    && <LLMTab    llm={config.llm}       update={v => updateSection('llm', v)}    />}
             {activeTab === 'dialog' && <DialogTab dialog={config.dialog} update={v => updateSection('dialog', v)} />}
-            {activeTab === 'stt'    && <STTTab    stt={config.stt}       update={v => updateSection('stt', v)}    />}
-            {activeTab === 'tts'    && <TTSTab    tts={config.tts}       update={v => updateSection('tts', v)}    />}
-            {activeTab === 'audio'  && <AudioTab  audio={config.audio}   update={v => updateSection('audio', v)}  />}
+            {activeTab === 'stt'    && <STTTab    stt={config.stt}       update={v => updateSection('stt', v)}
+                                                  speech={config.speech} updateSpeech={v => updateSection('speech', v)} />}
+            {activeTab === 'tts'    && <TTSTab    tts={config.tts}       update={v => updateSection('tts', v)}
+                                                  speech={config.speech} />}
           </div>
         </div>
       </div>

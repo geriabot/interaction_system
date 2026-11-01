@@ -9,7 +9,7 @@ import { api } from '../../lib/api'
 const LOG_POLL_MS = 3000
 
 const KILL_CONFIRM =
-  'This kills ALL DialoStack processes (engine, LLM, audio, vision, NAO) ' +
+  'This kills ALL DialoStack processes (engine, LLM, speech, vision, NAO) ' +
   'across every terminal, not just the GUI-launched engine.\n\n' +
   'rosbridge and the GUI itself keep running. Continue?'
 
@@ -91,7 +91,7 @@ export function EnginePanel() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm
               bg-red-950/40 border border-red-800/50 text-red-400/90 hover:bg-red-900/50
               hover:text-red-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Kill every DialoStack process across all terminals (engine, LLM, audio, vision, NAO). Leaves rosbridge and the GUI alive.">
+            title="Kill every DialoStack process across all terminals (engine, LLM, speech, vision, NAO). Leaves rosbridge and the GUI alive.">
             {killing ? <Loader2 size={13} className="animate-spin" /> : <Skull size={13} />}
             Kill all
           </button>

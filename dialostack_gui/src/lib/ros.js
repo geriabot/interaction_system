@@ -12,19 +12,17 @@ export const ROSBRIDGE_URL = `ws://${ROS_HOST}:9090`
 export const DIALOG_ACTION = '/dialog/execute_task'
 export const DIALOG_ACTION_TYPE = 'ros2_dialog_interfaces/action/DialogTask'
 
-// TTS action, used directly by the Composer's `/say <text>` test command to
-// speak arbitrary text without going through the dialog engine.
-export const SPEAK_ACTION = '/speak'
-export const SPEAK_ACTION_TYPE = 'ros2_dialog_interfaces/action/SpeakText'
-
-// Raw PCM contract between the speech nodes and whatever captures/plays sound
-// (a robot, the audio_bridge_node, or this page in "browser" audio routing).
-export const AUDIO_CHUNK_TYPE = 'ros2_dialog_interfaces/msg/AudioChunk'
+// simple_hri's TTS action, used directly by the Composer's `/say <text>` test
+// command to speak arbitrary text without going through the dialog engine.
+export const SAY_ACTION = '/tts_action'
+export const SAY_ACTION_TYPE = 'simple_hri_interfaces/action/Say'
 
 export const TOPICS = {
   transcription: { name: '/transcription', type: 'std_msgs/String' },
   robotUtterance: { name: '/robot_utterance', type: 'std_msgs/String' },
   isSpeaking: { name: '/is_speaking', type: 'std_msgs/Bool' },
+  // Voice activity of the user, for any node that publishes it: simple_hri does
+  // not, so with it the Monitor shows no "speaking"/"transcribing" bubbles.
   userVad: { name: '/user_vad', type: 'std_msgs/Float32' },
   userSpeaking: { name: '/user_speaking', type: 'std_msgs/Bool' },
   // Authoritative barge-in: published by the dialog manager only when it really

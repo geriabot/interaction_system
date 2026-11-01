@@ -36,16 +36,24 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
 fi
 
 # ─── Source ROS 2 ───────────────────────────────────────────────────────────
-if   [ -f /opt/ros/jazzy/setup.bash ];  then source /opt/ros/jazzy/setup.bash
+# Inside pixi (pixi shell / pixi run) ROS 2 is already in the environment; otherwise the system
+# installation under /opt/ros.
+ENV_ROS=false
+if command -v ros2 &>/dev/null && [ -n "${ROS_DISTRO:-}" ]; then
+  ENV_ROS=true
+  echo -e "  ROS 2:     ${GREEN}${ROS_DISTRO} (this environment)${NC}"
+elif [ -f /opt/ros/lyrical/setup.bash ]; then source /opt/ros/lyrical/setup.bash
+elif [ -f /opt/ros/jazzy/setup.bash ];  then source /opt/ros/jazzy/setup.bash
 elif [ -f /opt/ros/humble/setup.bash ]; then source /opt/ros/humble/setup.bash
 else
-  echo -e "${RED}ERROR: ROS 2 installation not found${NC}" >&2
+  echo -e "${RED}ERROR: ROS 2 not found (run it inside pixi, or install ROS 2 Jazzy or Lyrical)${NC}" >&2
   exit 1
 fi
 
 # ─── Workspace overlay (detected once, reused below) ────────────────────────
 WS_SETUP=""
 for _candidate in \
+  "$(realpath "$SCRIPT_DIR/../../install/setup.bash" 2>/dev/null || true)" \
   "$SCRIPT_DIR/install/setup.bash" \
   "$(realpath "$SCRIPT_DIR/../dialostack_ws/install/setup.bash" 2>/dev/null || true)"
 do
@@ -89,8 +97,8 @@ need_npm() {
   fi
 }
 
-# node_modules is only needed to develop or to build: with a prebuilt dist/
-# (e.g. the Docker image) production mode does not need npm.
+# node_modules is only needed to develop or to build: with a prebuilt dist/ production mode does
+# not need npm.
 if [ ! -d "$GUI_DIR/node_modules" ] && { [ "$DEV_MODE" = true ] || [ ! -d "$GUI_DIR/dist" ]; }; then
   need_npm
   echo -e "${YELLOW}[DEPS]${NC} Installing npm dependencies..."
@@ -115,11 +123,17 @@ SYSTEM_PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "dialostack_venv" | tr '\n' '
 BRIDGE_WS_SOURCE=""
 [ -n "$WS_SETUP" ] && BRIDGE_WS_SOURCE="source $WS_SETUP &&"
 
-env -i HOME="$HOME" PATH="$SYSTEM_PATH" ROS_DISTRO="${ROS_DISTRO:-jazzy}" \
-  bash -c "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && \
-    $BRIDGE_WS_SOURCE \
-    ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=$BRIDGE_PORT" \
-  >"$BRIDGE_LOG" 2>&1 &
+if [ "$ENV_ROS" = true ]; then
+  # pixi: rosbridge is in the same environment
+  ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=$BRIDGE_PORT \
+    >"$BRIDGE_LOG" 2>&1 &
+else
+  env -i HOME="$HOME" PATH="$SYSTEM_PATH" ROS_DISTRO="${ROS_DISTRO:-jazzy}" \
+    bash -c "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && \
+      $BRIDGE_WS_SOURCE \
+      ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=$BRIDGE_PORT" \
+    >"$BRIDGE_LOG" 2>&1 &
+fi
 
 sleep 1
 

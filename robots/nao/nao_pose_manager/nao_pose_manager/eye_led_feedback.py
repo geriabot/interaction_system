@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Drives the NAO eye LEDs to give subtle interaction feedback.
 
 Maps interaction state to eye color: warm-white pulse while the robot speaks

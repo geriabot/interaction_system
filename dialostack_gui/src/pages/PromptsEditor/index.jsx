@@ -190,7 +190,7 @@ export function PromptsEditor() {
           Could not read the engine default templates.
         </p>
         <p className="text-xs text-slate-600 max-w-sm leading-relaxed">
-          The editor needs the <span className="font-mono">ros2_dialog_manager</span> package in
+          The editor needs the <span className="font-mono">interaction_intelligence</span> package in
           the environment. Start the GUI with the environment activated (<span className="font-mono">gui.sh</span>).
         </p>
       </div>

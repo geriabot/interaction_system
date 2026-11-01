@@ -1,3 +1,7 @@
+// Copyright 2026 Álvaro Quintana Camacho
+//
+// Licensed under the MIT License. See the LICENSE file of the repository.
+
 // Registers the DialoStack BT nodes so the library can be loaded at runtime
 // with BT::BehaviorTreeFactory::registerFromPlugin("libdialostack_bt_client_plugin.so").
 #include "behaviortree_cpp/bt_factory.h"

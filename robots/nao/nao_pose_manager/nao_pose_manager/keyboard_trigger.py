@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Keyboard front-end for triggering pose saves.
 
 Reads single keypresses from the terminal and publishes auto-numbered pose

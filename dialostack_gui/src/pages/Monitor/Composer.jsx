@@ -4,12 +4,12 @@ import { Mic, MicOff, Send, Volume2 } from 'lucide-react'
 import { usePublisher } from '../../hooks/usePublisher'
 import { useActionClient } from '../../hooks/useActionClient'
 import { api } from '../../lib/api'
-import { TOPICS, SPEAK_ACTION, SPEAK_ACTION_TYPE } from '../../lib/ros'
+import { TOPICS, SAY_ACTION, SAY_ACTION_TYPE } from '../../lib/ros'
 
 const MIC_POLL_MS = 10_000
 
-// `/say <text>` speaks the text straight through the TTS action, bypassing the
-// dialog engine — handy for testing the voice/model.
+// `/say <text>` speaks the text straight through simple_hri's TTS action,
+// bypassing the dialog engine — handy for testing the voice/model.
 const SAY_RE = /^\/say\s+([\s\S]+)/i
 const isSayCommand = (t) => /^\/say\b/i.test(t.trim())
 
@@ -64,7 +64,7 @@ function MicButton() {
 export function Composer({ rosStatus, onLocalMessage }) {
   const publishTranscription = usePublisher(TOPICS.transcription.name, TOPICS.transcription.type)
   const publishSpeaking = usePublisher(TOPICS.userSpeaking.name, TOPICS.userSpeaking.type)
-  const { sendGoal: speak } = useActionClient(SPEAK_ACTION, SPEAK_ACTION_TYPE)
+  const { sendGoal: speak } = useActionClient(SAY_ACTION, SAY_ACTION_TYPE)
   const [text, setText] = useState('')
   const speakingRef = useRef(false)
 
@@ -98,7 +98,7 @@ export function Composer({ rosStatus, onLocalMessage }) {
       // Speak the text directly via the TTS action; no dialog turn, no bubble.
       // `/say` with no text is a no-op (never sent as a user message).
       const say = t.match(SAY_RE)
-      if (say) speak({ text: say[1].trim(), voice: '', speed: 1.0 })
+      if (say) speak({ text: say[1].trim() })
       setText('')
       return
     }

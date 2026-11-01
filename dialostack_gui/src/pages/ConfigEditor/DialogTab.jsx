@@ -1,10 +1,21 @@
 /** Dialogue tab: language, prompts, timeouts/limits and conversation logging. */
+import { useEffect, useState } from 'react'
 import { FileText, Languages, Timer } from 'lucide-react'
 import { Field, NumberField, SectionCard, Select, SliderField, ToggleField, inputCls } from '../../components/ui'
-
-const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Portuguese', 'Catalan', 'Italian']
+import { api } from '../../lib/api'
+import { languageOptions } from '../../lib/languages'
 
 export function DialogTab({ dialog, update }) {
+  const [engineLanguages, setEngineLanguages] = useState(null)
+  useEffect(() => {
+    let active = true
+    api.phrases(dialog.language || 'English')
+      .then((d) => active && setEngineLanguages(d.languages))
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
+  const languages = languageOptions(engineLanguages, dialog.language)
+
   return (
     <div className="space-y-4">
       <SectionCard
@@ -14,7 +25,7 @@ export function DialogTab({ dialog, update }) {
       >
         <Field label="Dialogue language">
           <Select value={dialog.language} onChange={e => update({ language: e.target.value })}>
-            {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+            {languages.map(l => <option key={l} value={l}>{l}</option>)}
           </Select>
         </Field>
         <ToggleField label="Acknowledgment phrases"
@@ -33,21 +44,22 @@ export function DialogTab({ dialog, update }) {
         description="When to insist and when to abort the task"
       >
         <div className="grid grid-cols-3 gap-4">
-          <NumberField label="Response wait" unit="s" min={5} max={120}
-            hint="Maximum time waiting for the user to speak"
+          <NumberField label="Silence before a prompt" unit="s" min={5} max={120}
+            hint="Silence of the user before each 'take your time' prompt"
             value={dialog.wait_timeout} onChange={v => update({ wait_timeout: v })} />
-          <NumberField label="LLM timeout" unit="s" min={10} max={300}
+          <NumberField label="LLM timeout" unit="s" min={5} max={300}
+            hint="Longest wait for one call to the LLM; a reply never waits more than the orchestrator's reply_budget (20 s)"
             value={dialog.llm_timeout} onChange={v => update({ llm_timeout: v })} />
           <NumberField label="TTS timeout" unit="s" min={5} max={120}
             value={dialog.tts_timeout} onChange={v => update({ tts_timeout: v })} />
-          <NumberField label="Consecutive timeouts" min={1} max={10}
-            hint="Consecutive expired waits before aborting"
-            value={dialog.max_timeouts} onChange={v => update({ max_timeouts: v })} />
-          <NumberField label="Not understood" min={1} max={10}
-            hint="Consecutive unintelligible responses before aborting"
-            value={dialog.max_unclear} onChange={v => update({ max_unclear: v })} />
-          <NumberField label="Attempts per slot" min={1} max={10}
-            hint="Times the same value is asked for before giving up"
+          <NumberField label="Silence that ends it" unit="s" min={0} max={600}
+            hint="Continuous silence after which the robot closes the dialogue (0 = never)"
+            value={dialog.max_silence} onChange={v => update({ max_silence: v })} />
+          <NumberField label="Turns without progress" min={0} max={20}
+            hint="Turns in a row not understood before the robot closes the dialogue (0 = unlimited)"
+            value={dialog.max_stalled} onChange={v => update({ max_stalled: v })} />
+          <NumberField label="Attempts per element" min={1} max={10}
+            hint="Askings of a slot, repetitions of a question, helps with a step, explanations"
             value={dialog.max_attempts} onChange={v => update({ max_attempts: v })} />
         </div>
         <SliderField

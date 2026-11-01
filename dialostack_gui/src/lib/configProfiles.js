@@ -1,13 +1,13 @@
 /**
  * Configuration profiles: named snapshots of the whole engine config (LLM,
- * dialogue, STT, TTS, audio, prompt and phrase overrides) so switching setup
- * - typically the language, with its STT language and TTS voice model path -
- * is one click instead of editing field by field.
+ * dialogue, speech, STT, TTS, prompt and phrase overrides) so switching setup
+ * - typically the language, the LLM or the speech engines - is one click
+ * instead of editing field by field.
  *
  * Pure module (no React, no storage): the page keeps the list in
  * localStorage and calls these helpers.
  */
-import { DEFAULT_CONFIG } from '../contexts/ConfigContext'
+import { DEFAULT_CONFIG, mergeConfig } from '../contexts/ConfigContext'
 
 // ==== SECRETS ====
 // Credentials are machine/user specific, not part of a "setup": they are never
@@ -33,16 +33,11 @@ export function snapshotConfig(config) {
 /**
  * Config that results from applying `profileConfig` on top of `current`:
  * every section comes from the profile (missing keys fall back to the
- * defaults, so profiles saved by an older GUI still load), and the secrets
- * of `current` are preserved.
+ * defaults and removed ones are dropped, so profiles saved by an older GUI
+ * still load), and the secrets of `current` are preserved.
  */
 export function applyProfileConfig(current, profileConfig) {
-  const next = Object.fromEntries(
-    Object.entries(DEFAULT_CONFIG).map(([section, defaults]) => [
-      section,
-      { ...defaults, ...(profileConfig?.[section] ?? {}) },
-    ])
-  )
+  const next = mergeConfig(profileConfig)
   for (const [section, keys] of Object.entries(SECRET_FIELDS)) {
     for (const k of keys) {
       if (current?.[section]?.[k] !== undefined) next[section][k] = current[section][k]
@@ -70,11 +65,16 @@ function stableStringify(value) {
 
 // ==== SHORT SUMMARY ====
 
-/** One-line description shown under the profile name (e.g. "English · en · gemini"). */
+/**
+ * One-line description shown under the profile name
+ * (e.g. "English · gemini · faster_whisper small · piper").
+ */
 export function describeProfile(profileConfig) {
   const c = applyProfileConfig({}, profileConfig)
-  const voice = c.tts.model_path ? c.tts.model_path.split('/').pop().replace(/\.onnx$/, '') : ''
-  return [c.dialog.language, c.stt.language, c.llm.provider, voice].filter(Boolean).join(' · ')
+  const speech = c.speech.capability === 'none'
+    ? ['typed text only']
+    : [`${c.stt.engine} ${c.stt.whisper_model}`, c.tts.engine]
+  return [c.dialog.language, c.llm.provider, ...speech].filter(Boolean).join(' · ')
 }
 
 // ==== IMPORT / EXPORT ====

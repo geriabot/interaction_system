@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Tkinter front-end for triggering pose saves.
 
 Provides a small window to type a pose name and publish it on

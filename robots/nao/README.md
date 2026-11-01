@@ -1,47 +1,38 @@
 # robots/nao: NAO embodiment layer
 
-Optional robot-embodiment layer for the SoftBank NAO. It contains the robot model
-(`nao_description`) and the pose/gesture/LED tooling (`nao_pose_manager`). This layer is
-a pure consumer of the dialog stack's signals: the dialogue core has no NAO dependency
-and runs unchanged without it. These nodes only subscribe to `/is_speaking`, `/user_vad`
-and `/target_pose` and drive the robot accordingly.
-
-See [../../docs/architecture.md](../../docs/architecture.md) for the full design.
+Optional embodiment layer for the SoftBank NAO: the robot model (`nao_description`) and the
+pose, gesture and eye LED tooling (`nao_pose_manager`). It only consumes the signals of the
+conversation (`/is_speaking`, `/target_pose`, and `/user_vad` if something publishes it): the
+interaction system has no NAO dependency and runs unchanged without it. `/is_speaking` is
+published by the interaction system's `Speak` node while the robot speaks, whatever the speech
+capability, so the gestures and the eye LEDs follow the conversation. How a robot connects to the
+interaction system, with the NAO as the worked example, is in
+[ADDING_A_ROBOT.md](../../docs/ADDING_A_ROBOT.md).
 
 ## Packages
 
 - **nao_description**: URDF and RViz config for the NAO V40, plus a sim bringup.
 - **nao_pose_manager**: pose capture, playback, gesture managers and eye-LED feedback.
 
-> **Note on meshes:** the NAO 3D meshes are licensed by SoftBank Robotics and cannot be
-> redistributed here (`meshes/` and `texture/` are git-ignored). To visualise the full
-> model, install them with the official `nao_meshes` installer. See the setup steps in
-> [`nao_description/README.md`](nao_description/README.md).
+The NAO 3D meshes are licensed by SoftBank Robotics and cannot be redistributed here (`meshes/`
+and `texture/` are git-ignored). To visualize the full model, install them with the official
+`nao_meshes` installer ([`nao_description/README.md`](nao_description/README.md)).
 
 ## Nodes (nao_pose_manager)
 
 | Node (ros2 run name) | Description |
 | --- | --- |
-| `gesture_manager` | Simulation gesture FSM. Publishes `JointState` to `/pose_tester_joints` for RViz. |
-| `arm_gesture_manager` | Real-robot arm gesture FSM. Drives nao_lola effector topics. |
-| `eye_led_feedback` | Maps interaction state to NAO eye-LED colors. |
+| `gesture_manager` | Gesture state machine for the simulation: talking gestures while `/is_speaking` is true, idle poses otherwise, published as `JointState` for RViz. |
+| `arm_gesture_manager` | The same state machine on the real robot, through the nao_lola effector topics. |
+| `eye_led_feedback` | Sets the color of the eye LEDs from `/is_speaking` (and `/user_vad`). |
 | `pose_saver` | Saves the live `/joint_states` pose to `nao_saved_poses.yaml` on trigger. |
 | `pose_tester` | Tkinter tool to preview saved poses in simulation. |
 | `keyboard_trigger` / `gui_trigger` | Terminal / GUI front-ends that publish pose-save names. |
 
 ## Interfaces
 
-| Name | Type | Direction |
-| --- | --- | --- |
-| `/is_speaking` | `std_msgs/Bool` | subscribe (gesture, arm, led) |
-| `/user_vad` | `std_msgs/Float32` | subscribe (eye_led_feedback) |
-| `/target_pose` | `std_msgs/String` | subscribe (gesture, arm) |
-| `/pose_tester_joints` | `sensor_msgs/JointState` | publish (sim gesture, tester) |
-| `/save_pose_trigger` | `std_msgs/String` | publish (triggers) / subscribe (saver) |
-| `/selected_pose_name` | `std_msgs/String` | publish (tester) / subscribe (gui) |
-| `/joint_states` | `sensor_msgs/JointState` | subscribe (pose_saver) |
-| `/effectors/joint_positions`, `/effectors/joint_stiffnesses` | `nao_lola_command_msgs/*` | publish (arm) |
-| `/effectors/left_eye_leds`, `/effectors/right_eye_leds` | `nao_lola_command_msgs/*` | publish (led) |
+Every topic these nodes publish or subscribe to is in
+[ROS_INTERFACES.md](../../docs/ROS_INTERFACES.md#the-embodiment-nao).
 
 ### External dependency
 
@@ -50,6 +41,11 @@ The real-robot nodes (`arm_gesture_manager`, `eye_led_feedback`) require
 bridge on the robot. The simulation path does not need it.
 
 ## Usage
+
+These packages are not in the `build` task of pixi nor in the package list of the README's
+build: build them with colcon (`--packages-select nao_description nao_pose_manager`). The
+simulation also needs `xacro`, `joint_state_publisher_gui` and RViz, which the pixi environment
+(`ros-base`) does not include.
 
 Simulation (RViz + pose tooling, no robot):
 
@@ -73,6 +69,7 @@ ros2 launch nao_pose_manager arm_gesture_manager.launch.py
 
 ## Configuration
 
-Saved poses and RViz views live in `nao_pose_manager/config/` (`nao_saved_poses.yaml`,
-`config.rviz`). Gesture timing and stiffness are launch arguments on
-`arm_gesture_manager.launch.py`. See [../../docs/configuration.md](../../docs/configuration.md).
+Saved poses and the RViz view are in `nao_pose_manager/config/` (`nao_saved_poses.yaml`,
+`config.rviz`). The parameters of the nodes are in
+[CONFIGURATION.md](../../docs/CONFIGURATION.md#gesture_manager), and the arguments of
+`arm_gesture_manager.launch.py` in [LAUNCH_ARGUMENTS.md](../../docs/LAUNCH_ARGUMENTS.md#nao).

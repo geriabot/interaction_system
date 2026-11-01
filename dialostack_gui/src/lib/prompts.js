@@ -3,7 +3,8 @@
  * (server.py `_valid_prompt_override`) and the node boot.
  *
  * Golden safety rule: an edited template may only use placeholders that already
- * appear in the default template (union {language}). Any other would raise a
+ * appear in the default template (union {language} and {address}, which the
+ * PromptBuilder gives every template). Any other would raise a
  * KeyError in `str.format` at runtime. Literal braces must also be doubled
  * ({{ }}), just like in the engine.
  */
@@ -40,7 +41,7 @@ export function validateOverride(template, defaultTpl) {
   if (malformed.length) {
     return `Malformed placeholder: ${malformed.map((n) => `{${n}}`).join(', ')}`
   }
-  const allowed = new Set([...placeholders(defaultTpl), 'language'])
+  const allowed = new Set([...placeholders(defaultTpl), 'language', 'address'])
   const unknown = used.filter((n) => !allowed.has(n))
   if (unknown.length) {
     return `Placeholder not available here: ${unknown.map((n) => `{${n}}`).join(', ')}`
@@ -51,17 +52,20 @@ export function validateOverride(template, defaultTpl) {
 // Grouping of the prompts by strategy for the side list. Keys returned by
 // the server that are not here fall into "Other" (robust to changes).
 export const PROMPT_GROUPS = [
+  // Not prompts: rules the PromptBuilder inserts into them ({address}; list_slot_rule only
+  // when generate_response asks for a list slot)
+  { label: 'Shared rules', keys: ['address_rule', 'list_slot_rule'] },
   { label: 'General', keys: ['classify_task_mode'] },
   { label: 'Slot filling', keys: [
     'create_frame', 'audit_frame', 'opening', 'resume_opening', 'extract_slots',
     'generate_response', 'ask_confirmation', 'classify_intent', 'response_to_intent',
     'answer_confirmation_question',
   ] },
-  { label: 'Quiz', keys: ['quiz_opening', 'evaluate_quiz_answer', 'quiz_next_question', 'quiz_summary'] },
+  { label: 'Quiz', keys: ['quiz_opening', 'evaluate_quiz_answer', 'quiz_rephrase_question', 'quiz_next_question', 'quiz_summary'] },
   { label: 'Explanation', keys: [
-    'explanation_opening', 'check_understanding', 'classify_understanding',
+    'explanation_opening', 'extract_key_points', 'judge_teach_back',
     'answer_explanation_question', 'rephrase_explanation', 'understanding_confirmed',
-    'explanation_max_attempts',
+    'repair_explanation', 'targeted_question',
   ] },
   { label: 'Procedure', keys: [
     'procedure_opening', 'procedure_step', 'classify_step_turn', 'procedure_answer_question',
@@ -71,9 +75,11 @@ export const PROMPT_GROUPS = [
     'roleplay_intro', 'roleplay_reply', 'classify_roleplay_turn', 'roleplay_coach',
     'evaluate_roleplay', 'roleplay_feedback',
   ] },
+  { label: 'Grounded Q&A', keys: ['qa_opening', 'answer_from_material', 'verify_answer'] },
+  { label: 'Questionnaire', keys: ['map_scale_answer'] },
   { label: 'Cancellation', keys: [
-    'detect_cancel_intent', 'detect_cancel_confirmation', 'ask_cancel_confirmation',
-    'cancel_confirmed_response', 'cancel_denied_response',
+    'detect_cancel_intent', 'classify_cancel_reply', 'ask_cancel_confirmation',
+    'cancel_confirmed_response',
   ] },
 ]
 

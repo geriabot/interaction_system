@@ -23,6 +23,10 @@ describe('validateOverride - the safety net', () => {
     expect(validateOverride('In {language}: {task}', DEFAULT)).toBeNull()
   })
 
+  it('always allows {address} (the shared rule on how to address the user)', () => {
+    expect(validateOverride('- {address}\n{task}', DEFAULT)).toBeNull()
+  })
+
   it('REJECTS an unknown placeholder (would cause a KeyError at runtime)', () => {
     expect(validateOverride('Hi {user}', DEFAULT)).toMatch(/not available/i)
   })
@@ -47,5 +51,11 @@ describe('groupPrompts', () => {
     const other = groups.find((g) => g.label === 'Other')
     expect(other.keys).toEqual(['clave_rara'])
     expect(groups.find((g) => g.label === 'General').keys).toContain('classify_task_mode')
+  })
+
+  it('lists the shared rules apart', () => {
+    const groups = groupPrompts(['address_rule', 'list_slot_rule', 'generate_response'])
+    expect(groups.find((g) => g.label === 'Shared rules').keys)
+      .toEqual(['address_rule', 'list_slot_rule'])
   })
 })

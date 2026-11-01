@@ -1,3 +1,7 @@
+# Copyright 2026 Álvaro Quintana Camacho
+#
+# Licensed under the MIT License. See the LICENSE file of the repository.
+
 """Arm gesture manager for the real NAO robot.
 
 Selects conversational/idle arm poses based on /is_speaking and /target_pose,

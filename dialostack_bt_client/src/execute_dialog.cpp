@@ -1,3 +1,7 @@
+// Copyright 2026 Álvaro Quintana Camacho
+//
+// Licensed under the MIT License. See the LICENSE file of the repository.
+
 #include "dialostack_bt_client/execute_dialog.hpp"
 
 #include <algorithm>
@@ -45,6 +49,7 @@ BT::NodeStatus ExecuteDialog::onStart()
   goal_succeeded_ = false;
   final_frame_json_ = "";
   failure_reason_ = "";
+  outcome_ = "";
   total_turns_ = 0;
   goal_handle_.reset();
 
@@ -125,9 +130,22 @@ BT::NodeStatus ExecuteDialog::onStart()
     goal_msg.resources_json = resources_json;
   }
 
-  int max_turns = 0;
+  // Unset limits (-1) leave the system's values
+  int max_turns = DialogTask::Goal::USE_DEFAULT;
   if (getInput("max_turns", max_turns)) {
     goal_msg.max_turns = max_turns;
+  }
+  double max_silence = DialogTask::Goal::USE_DEFAULT_SECONDS;
+  if (getInput("max_silence", max_silence)) {
+    goal_msg.max_silence = max_silence;
+  }
+  int max_stalled = DialogTask::Goal::USE_DEFAULT;
+  if (getInput("max_stalled", max_stalled)) {
+    goal_msg.max_stalled = max_stalled;
+  }
+  double filler_after_s = DialogTask::Goal::USE_DEFAULT_SECONDS;
+  if (getInput("filler_after_s", filler_after_s)) {
+    goal_msg.filler_after_s = filler_after_s;
   }
 
   RCLCPP_INFO(
@@ -156,6 +174,7 @@ BT::NodeStatus ExecuteDialog::onRunning()
   if (elapsed > timeout_) {
     RCLCPP_ERROR(node_->get_logger(), "ExecuteDialog: timeout exceeded (%.0f s)", timeout_);
     setOutput("failure_reason", std::string("Dialogue timeout"));
+    setOutput("outcome", std::string(DialogTask::Result::OUTCOME_ERROR));
     if (goal_handle_) {
       action_client_->async_cancel_goal(goal_handle_);
     }
@@ -166,6 +185,7 @@ BT::NodeStatus ExecuteDialog::onRunning()
   if (!goal_accepted_ && goal_completed_) {
     RCLCPP_ERROR(node_->get_logger(), "ExecuteDialog: goal rejected (another dialogue running?)");
     setOutput("failure_reason", std::string("Goal rejected by DialoStack"));
+    setOutput("outcome", std::string(DialogTask::Result::OUTCOME_ERROR));
     return BT::NodeStatus::FAILURE;
   }
 
@@ -174,16 +194,17 @@ BT::NodeStatus ExecuteDialog::onRunning()
   }
 
   setOutput("total_turns", total_turns_);
+  setOutput("final_frame_json", final_frame_json_);
+  setOutput("outcome", outcome_);
 
   if (goal_succeeded_) {
     RCLCPP_INFO(node_->get_logger(), "ExecuteDialog: completed in %d turns", total_turns_);
-    setOutput("final_frame_json", final_frame_json_);
     return BT::NodeStatus::SUCCESS;
   }
 
   RCLCPP_ERROR(
-    node_->get_logger(),
-    "ExecuteDialog: failed after %d turns - %s", total_turns_, failure_reason_.c_str());
+    node_->get_logger(), "ExecuteDialog: %s after %d turns - %s",
+    outcome_.c_str(), total_turns_, failure_reason_.c_str());
   setOutput("failure_reason", failure_reason_);
   return BT::NodeStatus::FAILURE;
 }
@@ -228,20 +249,25 @@ void ExecuteDialog::result_callback(const GoalHandleDialogTask::WrappedResult & 
     case rclcpp_action::ResultCode::SUCCEEDED:
       goal_succeeded_ = result.result->success;
       final_frame_json_ = result.result->final_frame_json;
+      outcome_ = result.result->outcome;
       failure_reason_ = result.result->failure_reason;
       total_turns_ = result.result->total_turns;
       break;
     case rclcpp_action::ResultCode::ABORTED:
       goal_succeeded_ = false;
+      final_frame_json_ = result.result ? result.result->final_frame_json : "{}";
+      outcome_ = result.result ? result.result->outcome : DialogTask::Result::OUTCOME_ERROR;
       failure_reason_ = result.result ? result.result->failure_reason : "Dialogue aborted";
       total_turns_ = result.result ? result.result->total_turns : 0;
       break;
     case rclcpp_action::ResultCode::CANCELED:
       goal_succeeded_ = false;
+      outcome_ = DialogTask::Result::OUTCOME_CANCELLED;
       failure_reason_ = "Dialogue canceled";
       break;
     default:
       goal_succeeded_ = false;
+      outcome_ = DialogTask::Result::OUTCOME_ERROR;
       failure_reason_ = "Unknown result code";
       break;
   }
