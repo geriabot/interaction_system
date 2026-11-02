@@ -18,8 +18,9 @@ and it ends with an exit criterion. Nothing here is reported as a result.
 `debug/coverage.yaml` lists every branch of every strategy and every shared mechanism (silence,
 cancellation, no progress, endings, fillers, barge-in, limits, the wait for the model, the
 fallbacks when the model fails), with its expected outcome and the tests that cover it, and the
-languages each test runs in. The ids are those of the mechanism coverage audit; the matrix also
-has the model-failure scenarios of E3 (`e3_failures.yaml`), scripted.
+languages each test runs in. Each row has a short id whose prefix names its mechanism or strategy
+(e.g. S silence, C cancellation, SF slot filling). The matrix also has the model-failure scenarios
+of E3 (`e3_failures.yaml`), scripted.
 
 The tests run with the scripted LLM (`simulation/interaction_sim/interaction_sim/scripted_llm.py`):
 a deterministic stand-in that answers every question correctly by fixed rules on the user's
@@ -37,7 +38,7 @@ Spanish:
 - `test_spanish_model_failures.py`, the unit tests of `interaction_intelligence/test/`
   (`test_model_down.py`: the noise filter, the fallback reading of a yes or no, the model known to
   be down; `test_client_reading.py`: the client reads a correct answer of the model as the program
-  needs it) and the oracle of phase A of E0a (`offline/tests/test_phase_a.py`: every expected
+  needs it) and the oracle of phase 1 of E0a (`offline/tests/test_phase_a.py`: every expected
   answer of the critical questions is read right through the production client).
 
 ```sh
@@ -50,8 +51,8 @@ cd ../../evaluation && python3 -m pytest -q offline/tests debug
 ```
 
 A failure here is an error of the program or its logic. A clear bug is fixed with a regression
-test in this layer; a fix that changes what the method does is a decision of the author, recorded
-in the plan with its reason before it is made.
+test in this layer. A fix that changes what the method does is a change of the method, not a bug
+fix, so its reason is recorded before it is made.
 
 ## Layer 2: the debugging files
 
@@ -80,10 +81,11 @@ several times larger.
 The debugging files are in their own folder: the control panel lists only `experiments/*.yaml`,
 so they are in no campaign, and their results go to `results/debug_*`, which no table reads.
 
-**Time.** Roughly 5 hours per system model on a 24 GB GPU (between about 3.5 and 8), assuming
-about 10 turns per dialogue at about 8 s per turn with the system's model and the simulated user
-on the same GPU, plus the planned silences (60 s each in the development scenarios, 15 s in E3's)
-and the injected hangs. Both models: about a working day of the GPU server.
+Layer 2 takes roughly 5 hours per system model on a 24 GB GPU (between about 3.5 and 8). This
+assumes about 10 turns per dialogue at about 8 s per turn with the system's model and the
+simulated user on the same GPU, plus the planned silences (60 s each in the development scenarios,
+15 s in E3's) and the injected hangs. Both models together take about a working day of the GPU
+server.
 
 ### Running it when the GPU server is free
 
@@ -121,13 +123,13 @@ done
 
 ## The attribution rule
 
-Every flagged dialogue is read at its **first wrong turn**, with the model calls of that turn,
+Every flagged dialogue is read at its first wrong turn, with the model calls of that turn,
 and attributed to one cause:
 
 | Class | Cause | The test | Accepted? |
 |---|---|---|---|
 | **C** | Program or logic | The tree or the code did the wrong thing although the model's answers were correct | No: fix it, add a regression test to layer 1, run the affected scenarios again |
-| **P** | Prompt or method | The model's input was wrong, incomplete, ambiguous, or asked for something unreasonable | No: fix the prompt or the method (a decision of the author), add a test where possible, run again |
+| **P** | Prompt or method | The model's input was wrong, incomplete, ambiguous, or asked for something unreasonable | No: fix the prompt or the method (a change of the method, recorded with its reason), add a test where possible, run again |
 | **S** | Simulator | The simulated user broke its goal (said something the goal did not plan) | Excluded, as the adherence rule excludes it in the experiments |
 | **M** | Model | Clear and correct input, wrong answer | Yes: this is what E0a and the experiments measure |
 
@@ -194,15 +196,16 @@ replay.
 
 ## Exit, then freeze
 
-The exit criterion: a full pass of the five files with **no C and no P**, first with Qwen 3 8B,
+The exit criterion is a full pass of the five files with no C and no P, first with Qwen 3 8B,
 then with Llama 3.1 8B (another family, so that the prompts are not tailored to Qwen):
-`triage.py summary` says `HOLDS` for the model in every results folder. Then one pass with a
-third family that was not used to fix anything, Mistral NeMo 12B (held out: decided by the
-author, 2026-10-31; not Gemma, which is the simulated user and would talk to itself; not Mistral
-7B, older and weaker, whose failures would mostly be its own): a failure it shares with the other
-two points to the prompt or the program and is fixed; a failure of Mistral NeMo alone is the
-model's (M) and changes no prompt, so that the check stays independent. The simulated user stays
-Gemma 3 12B for all three: changing it as well would change two things at once. Every C or P fix gets a
-regression test in layer 1, and the affected scenarios are run again (delete their records and
-resume). Then the freeze commit, the review of the traps of phase A, and E0a. When E0a chooses the
+`triage.py summary` says `HOLDS` for the model in every results folder. Then comes one pass with a
+third family that was not used to fix anything and is held out for this check, Mistral NeMo 12B.
+Gemma is not used, because it is the simulated user and would talk to itself, nor Mistral 7B,
+which is older and weaker and whose failures would mostly be its own. A failure that Mistral NeMo
+shares with the other two points to the prompt or the program and is fixed; a failure of Mistral
+NeMo alone is the model's (M) and changes no prompt, so that the check stays independent. The
+simulated user stays Gemma 3 12B for all three, since changing it as well would change two things
+at once. Every C or P fix gets a regression test in layer 1, and the affected scenarios are run
+again (delete their records and resume). Then come the freeze commit, the review of the trap
+cases of phase 1, and E0a. When E0a chooses the
 final model, the validation and this debugging are repeated with it, before E0b.

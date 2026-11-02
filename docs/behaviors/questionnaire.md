@@ -1,6 +1,6 @@
 # Standardized questionnaire (`questionnaire`)
 
-The robot administers a questionnaire or a rating scale **as it was validated**: every item read
+The robot administers a questionnaire or a rating scale as it was validated: every item read
 word for word, in order, with its answer options; the user's free answer mapped to one of the
 options without ever choosing for the user; the score computed by code with the instrument's rule.
 Typical uses: a satisfaction survey, a pain rating, a short validated scale. Tree
@@ -10,14 +10,14 @@ Typical uses: a satisfaction survey, a pain rating, a short validated scale. Tre
 ## Why it is built this way
 
 The validity of a standardized instrument depends on how it is administered: the same wording, the
-same order, the same options, and no suggestion of an answer. A language model left to administer
-it tends to paraphrase the items, suggest answers or miscount the score. So the robot reads the
-items and the options with no language model at all, the model only maps the answer to an option,
-and the score is arithmetic.
+same order, the same options, and no suggestion of an answer. An LLM left to administer it tends
+to paraphrase the items, suggest answers or miscount the score. The robot therefore reads the items
+and the options without the LLM, the LLM only maps the answer to an option, and the score is
+arithmetic.
 
 ## What it needs and returns
 
-- **Needs:** the **instrument**: the first resource that is a JSON object with a list `items`:
+- **Needs:** the instrument, the first resource that is a JSON object with a list `items`:
 
   ```json
   {"name": "Visitor satisfaction",
@@ -35,7 +35,7 @@ and the score is arithmetic.
   request fails before the robot speaks.
 - **Returns:** `{instrument, answers, answered, score, scoring}`; each answer with the item, its
   status (`answered`, `refused` or `unanswered`), the option chosen, its value and what the user
-  said. The robot **never says the score**.
+  said. The robot never says the score.
 - **Outcome:** `completed` when every item was answered; `partial` when an item was declined or
   left without an answer (the reason lists them).
 
@@ -63,24 +63,22 @@ and the score is arithmetic.
 
 ![The tree of the questionnaire](../../media/bt/questionnaire.svg)
 
-## Eventualities
+## Edge cases
 
 | Situation | What happens |
 |---|---|
 | Silence | [Silence](silence.md) (the 2nd prompt repeats the item) |
 | "Stop" | [Spoken cancellation](cancellation.md): the answers so far are returned |
 | `max_stalled` turns in a row without progress | [Breakdown](no_progress.md) |
-| The LLM fails mapping an answer | `other`: nothing is recorded for the user; the item is asked again |
+| The LLM fails to map an answer | `other`: nothing is recorded for the user; the item is asked again |
 | No instrument in the request | `error` before the robot speaks |
 | Turn limit, failure of the system | [Endings](endings.md) |
 
 ## Parameters
 
 `max_attempts` is the number of answers between options, per item, before the item is left without
-an answer. The limits are parameters of the orchestrator
-([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); `max_turns`, `max_silence` and
-`max_stalled` can also be set per request
-([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). The fixed phrases are
+an answer. The shared limits are described in
+[What every behavior shares](README.md#what-every-behavior-shares). The fixed phrases are
 `phrases.questionnaire_intro`, `phrases.questionnaire_item`, `phrases.questionnaire_options`,
 `phrases.questionnaire_or` and `phrases.questionnaire_end`
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)).

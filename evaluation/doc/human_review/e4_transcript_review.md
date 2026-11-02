@@ -1,10 +1,10 @@
 # E4: reviewing the transcripts of the real sessions
 
-[All the hand tasks](../../HUMAN_REVIEW.md) · Who: **one member of the team** · When: **after each
-session, and always before the judge reads the sessions** · How long: every stored conversation
+[All the hand tasks](../../HUMAN_REVIEW.md) · Who: one member of the team · When: after each
+session, and always before the judge reads the sessions · How long: every stored conversation
 (64 in E4: 16 participants × 4), a few minutes each.
 
-**Not done in the review panel.** This review runs in the terminal, with
+This review is not done in the review panel: it runs in the terminal, with
 `real/real_sessions.py review`.
 
 ## What and why
@@ -68,7 +68,7 @@ reviewed with no replacement. The terminal confirms
 ## Rules
 
 - Replace only real personal data that is not on the card. The fictitious data of the cards stay.
-- **Write the whole text to replace**, as it appears (a full name, a whole number). The
+- Write the whole text to replace, as it appears (a full name, a whole number). The
   replacement ignores capitals and runs over the whole record, its technical fields included, and
   over the logs: a short text (a first name of three letters, a common word) would also be
   replaced inside other words. Never replace a common word.
@@ -87,15 +87,21 @@ reviewed with no replacement. The terminal confirms
 
 ## For the coordinator
 
-**Prepare.** Nothing to generate: the trials are stored by `real_sessions.py trial`. Review each
+### Prepare
+
+There is nothing to generate: the trials are stored by `real_sessions.py trial`. Review each
 participant after their session (or all of them at the end), and always before
 `analysis/judge_runs.py` runs on the campaign's folder, `~/.ros/interaction_real/<campaign>`.
 
-**Check that everything is reviewed.** `judge_runs.py` stops and lists the records not reviewed
+### Check that everything is reviewed
+
+`judge_runs.py` stops and lists the records not reviewed
 yet; the field `reviewed` (`by`, `time`, `replacements`) of each record says who reviewed it.
-After the review, run the judge on the sessions and, once it has labelled them, its confirmation by
+After the review, run the judge on the sessions and, once it has labeled them, its confirmation by
 two annotators ([judge_confirmation.md](judge_confirmation.md)).
 
-**Where the files go.** The reviewed records and logs replace the originals in
-`~/.ros/interaction_real/<campaign>/<participant>/` (outside the repository, never published). Nothing else is
-written.
+### Where the files go
+
+The reviewed records and logs replace the originals in
+`~/.ros/interaction_real/<campaign>/<participant>/` (outside the repository, never published).
+Nothing else is written.

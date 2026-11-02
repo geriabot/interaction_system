@@ -2,17 +2,17 @@
 
 A [BehaviorTree.CPP](https://www.behaviortree.dev) leaf node that runs a conversation of the
 interaction system from inside a robot's Behavior Tree, plus a generic runner and an example. It is
-how a behavior of the robot's architecture asks for a conversation
+how a behavior of the robot's architecture requests a conversation
 ([INTEGRATING.md](../docs/INTEGRATING.md#from-a-behavior-tree-of-the-robot)).
 
 ## What it provides
 
-- **`ExecuteDialog`**: a `StatefulActionNode` that sends a goal to the `/dialog/execute_task`
+- `ExecuteDialog`: a `StatefulActionNode` that sends a goal to the `/dialog/execute_task`
   action and returns `RUNNING` until the conversation ends, then `SUCCESS` (outcome `completed`)
   or `FAILURE`. Halting it cancels the goal.
-- **`bt_runner`**: an executable that loads a tree XML, puts an `rclcpp::Node` on the blackboard
+- `bt_runner`: an executable that loads a tree XML, puts an `rclcpp::Node` on the blackboard
   (the node needs it), and ticks the tree until it finishes.
-- **`config/example.xml`** and **`launch/example.launch.py`**: a runnable example.
+- `config/example.xml` and `launch/example.launch.py`: a runnable example.
 
 ## Ports
 
@@ -23,7 +23,7 @@ result.
 | Port | Direction | Default | Meaning |
 |------|-----------|---------|---------|
 | `task_description` | in | — | Required |
-| `dialog_mode`, `domain`, `frame_schema_json`, `initial_frame_json`, `resources_json` | in | `""` | As in the goal (empty `dialog_mode`: the system chooses the strategy) |
+| `dialog_mode`, `domain`, `frame_schema_json`, `initial_frame_json`, `resources_json` | in | `""` | As in the goal (empty `dialog_mode`: the system chooses the dialogue behavior) |
 | `skip_intro` | in | `false` | |
 | `max_turns`, `max_stalled` | in | `-1` | `USE_DEFAULT` |
 | `max_silence`, `filler_after_s` | in | `-1.0` | `USE_DEFAULT_SECONDS` |

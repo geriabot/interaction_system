@@ -1,19 +1,19 @@
-# Making a tea
+# Making tea
 
 *English translation for readers; the participants read the Spanish card ([es/pr_tea.md](../es/pr_tea.md)).*
 
 What the participant reads:
 
 ```text
-MAKING A TEA
+MAKING TEA
 
-The robot will guide you to make a tea (pretend you are making it).
+The robot will guide you to make tea (pretend you are making it).
 • Do each step and tell it when you have done it.
 • When it tells you to let the tea steep, stay silent, without saying anything, until the robot speaks to you again; then tell it you are done.
 • You do not take your tea with milk or sugar: at the last step, tell it you want to skip it.
 
 Also:
-At some point, ask the robot what its favourite food is.
+At some point, ask the robot what its favorite food is.
 
 Use the made-up data on this card: do not say any real personal data (your name, your address, your phone number...).
 Speak naturally, as you would with a person.

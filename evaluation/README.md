@@ -11,36 +11,37 @@ shared mechanism and repeat the method with real participants. The experiments, 
 and their decision rules are in [doc/EXPERIMENTS.md](doc/EXPERIMENTS.md). This page is the index of
 `evaluation/` and describes its tools, not results.
 
-**Reviewing or annotating?** Start with [HUMAN_REVIEW.md](HUMAN_REVIEW.md): every hand task of the
-evaluation, who does it, when, how long, and the exact instructions.
+Reviewers and annotators start with [HUMAN_REVIEW.md](HUMAN_REVIEW.md), which lists every hand
+task of the evaluation with who does it, when, how long it takes and the exact instructions.
 
 ## Reproduce in 9 steps
 
-1. **Read the design** of each experiment: [doc/EXPERIMENTS.md](doc/EXPERIMENTS.md); the measures:
-   [doc/METRICS.md](doc/METRICS.md).
-2. **Install and build** the workspace with pixi ([docs/INSTALL_PIXI.md](../docs/INSTALL_PIXI.md));
+1. Read the design of each experiment in [doc/EXPERIMENTS.md](doc/EXPERIMENTS.md) and the
+   measures in [doc/METRICS.md](doc/METRICS.md).
+2. Install and build the workspace with pixi ([docs/INSTALL_PIXI.md](../docs/INSTALL_PIXI.md));
    `pixi run build` also builds `interaction_sim` and `interaction_ablations`.
-3. **Check the system without hardware**: the system tests and the
+3. Check the system without hardware with the system tests and the
    [quick checks](#quick-checks-without-hardware).
-4. **Prepare the models**: the Ollama server with the local models, the API keys of the cloud
+4. Prepare the models: the Ollama server with the local models, the API keys of the cloud
    providers, and the dated version of every cloud model in the experiment files
    ([doc/REPRODUCING.md](doc/REPRODUCING.md#before-anything)).
-5. **Debug before E0a**: every strategy and mechanism with the scripted LLM in English and
-   Spanish (layer 1), then with real local models on the GPU server, attributing every failure
-   (layer 2): [doc/DEBUGGING.md](doc/DEBUGGING.md). The exit (no program or prompt failure) comes
-   before the pilot.
-6. **Pilot every experiment** (`scripts/run_pilot.py`): a few dialogues of each experiment file
-   through its whole chain, with free local stand-ins of the cloud models, and its exit criteria
-   (`scripts/pilot_check.py`): [doc/PILOT.md](doc/PILOT.md). Then the freeze commit.
-7. **Choose the local model** of each language (E0a, `scripts/run_e0a.py`) and **validate the
-   judge** (E0b, `scripts/run_e0b.py`) before any other experiment:
-   [doc/REPRODUCING.md](doc/REPRODUCING.md#e0a-the-local-model),
+5. Debug before E0a. Every strategy and mechanism runs first with the scripted LLM in English and
+   Spanish (layer 1), then with real local models on the GPU server, with every failure
+   attributed (layer 2); see [doc/DEBUGGING.md](doc/DEBUGGING.md). The pilot starts only when no
+   program or prompt failure remains.
+6. Pilot every experiment with `scripts/run_pilot.py`: a few dialogues of each experiment file
+   run through its whole chain, with free local stand-ins of the cloud models, and are checked
+   against its exit criteria (`scripts/pilot_check.py`); see [doc/PILOT.md](doc/PILOT.md). The
+   freeze commit follows.
+7. Before any other experiment, choose the local model of each language (E0a,
+   `scripts/run_e0a.py`) and validate the judge (E0b, `scripts/run_e0b.py`); see
+   [doc/REPRODUCING.md](doc/REPRODUCING.md#e0a-the-local-model) and
    [doc/JUDGE_VALIDATION.md](doc/JUDGE_VALIDATION.md#running-e0b).
-8. **Run, score and judge** each experiment in order
+8. Run, score and judge each experiment in order
    ([doc/REPRODUCING.md](doc/REPRODUCING.md#the-order)); the campaigns can also be run from the
    [control panel](doc/CONTROL_PANEL.md).
-9. **Run the sessions with real participants** (E4) and compare them with their simulated twin:
-   [doc/REAL_SESSIONS.md](doc/REAL_SESSIONS.md).
+9. Run the sessions with real participants (E4) and compare them with their simulated twin
+   ([doc/REAL_SESSIONS.md](doc/REAL_SESSIONS.md)).
 
 ## Layout
 
@@ -65,7 +66,7 @@ evaluation/
 │   ├── scenarios/               dialogues.yaml (English), dialogues_es.yaml (Spanish: the source of E4,
 │   │                            not run by E1), e4_es.yaml (E4), e3.yaml (E3; e3_es.yaml, Spanish,
 │   │                            for the test panel), e3_failures.yaml, e0a_dev.yaml, e0a_dev_es.yaml
-│   │                            (E0a phase B: development only)
+│   │                            (E0a phase 2: development only)
 │   ├── pilot/                   one pilot file per experiment file, derived from it (doc/PILOT.md)
 │   └── hardware/                the hardware profiles: where each model runs, which lanes run at once
 ├── scripts/
@@ -108,12 +109,13 @@ Every command on this page runs from `evaluation/` in a prepared terminal
 
 `offline/` measures, without ROS, the narrow questions the system asks the LLM against annotated
 datasets: the earlier ones (slot extraction, the answer to a confirmation, the choice of the dialogue
-behavior, quiz grading) and the eleven critical questions of phase A of E0a, in English and Spanish,
-with its safety gate (the trap cases of phase A are reviewed by a person before running, with
-`panels/review_panel.py dataset`). It imports the production modules of
+behavior, quiz grading) and the eleven critical questions of phase 1 of E0a, in English and
+Spanish, with its safety gate. A person reviews the trap cases of phase 1 before it runs, with
+`panels/review_panel.py dataset`. It imports the production modules of
 `interaction_intelligence` and its prompts, so it measures exactly what the system asks. The
-benchmarks, the dataset formats and the configuration: [offline/README.md](offline/README.md); the
-measures: [doc/METRICS.md](doc/METRICS.md#the-questions-to-the-llm-offline).
+benchmarks, the dataset formats and the configuration are described in
+[offline/README.md](offline/README.md), and the measures in
+[doc/METRICS.md](doc/METRICS.md#the-questions-to-the-llm-offline).
 
 ```sh
 python3 offline/run_eval.py --config offline/config_ollama.yaml --benchmark all [--model <model>] [--save]
@@ -125,44 +127,85 @@ python3 offline/run_models.py --config offline/config_ollama.yaml --models <m1>,
 
 `simulation/interaction_sim` stands for the speech capability and the user, so that the real
 system (orchestrator, trees, intelligence, LLM gateway) holds whole conversations without
-microphones:
+microphones. Its modules:
 
-| Module | What it is |
-|---|---|
-| `harness.py` | `DialogueHarness`: one node that serves simple_hri's actions (`/tts_action`, `/stt_action`, publishing `/listened_text`) and plays the user: after each robot utterance it asks a user policy what to say, stays silent, or barges in through `/user_speaking`. It sends the `DialogTask` goal and records the transcript, the feedback, the result, the barge-ins and the skill trace. A conversational filler (announced on `/robot_filler`) is recorded as a robot line with `"filler": true`, in order and with its time, but it is not passed to the user policy, which only answers the reply ([fillers](../docs/behaviors/fillers.md)). `ScriptedUser` replays fixed lines; `HarnessRunner` spins the node in a thread |
-| `scripted_llm.py` | A deterministic stand-in for the LLM (the methods of `LLMDialogClient` answered by fixed rules on the user's words), loaded by the intelligence with `llm_client_factory: interaction_sim.scripted_llm:make`; the robot's lines are tags, so a test checks the path the tree took. `slow N` in the user's words (or in the task, for the opening of slot filling) makes it take N seconds, to test the fillers |
-| `llm_user.py` | `LlmUser`: a simulated user driven by an LLM, with a persona and a goal (the ground truth of the scenario). It only sees what the robot says, answers one short spoken line, and receives the events the scenario plans (silence, a cancel request, a fixed line, a barge-in). It only speaks: what each line states is marked after the dialogue by a local annotator (`analysis/annotate_turns.py`; decided 2026-10-31) |
-| `goal_items.py` | The goal items of a scenario (`goal_items`: `{id, value[, then]}`), their validation, the robust reading of the simulated user's answer (`parse_line`), and of the `revealed` declarations of runs before 2026-10-31 (no ROS) |
-| `cloud_llm.py` | One JSON answer from an LLM through its HTTP API: Ollama, Gemini or OpenAI (used by the simulated user and the judge). Cloud calls are refused unless allowed explicitly |
-| `asr_noise.py` | `AsrNoise`: speech recognition errors injected on the user's text at a target word error rate (substitutions by sound-alike or frequent words, deletions, insertions, cut sentences) |
-| `llm_faults.py` | The injector of model failures (E3): `FaultPlan` arms, user turn by user turn, the failures a scenario plans (`faults`: `error`, `invalid`, `hang`, `crash`, `freeze`, on some or every question to the model; and `answer`, not a failure: the model's answer pinned, for the oracle replay of the debugging) in a small switch file that the intelligence reads at every call, and returns the calls that failed. On the intelligence side the failures replace the call to the model, so that the client's own parsing, retries and fallbacks run; with the scripted LLM, `llm_client_factory: interaction_sim.llm_faults:make_scripted` returns the real client's fallback for a failed question |
-| `call_log.py`, `call_recording.py` | The recorder of every call of the system's model (the debugging: [doc/DEBUGGING.md](doc/DEBUGGING.md)): `CallLog` marks the user turn from the harness side and returns the calls of the dialogue; the skill module `interaction_sim.call_recording` wraps `LLMDialogClient`'s call to the gateway and the skills, like the injector. `run_experiment.py` loads it, last, for a file with `record_model_calls: true` |
-| `fault_injection.py` | The injector inside the interaction intelligence with the real model: a skill module (`skill_modules`, no skill registered) whose import wraps `LLMDialogClient` with the switch of `$INTERACTION_SIM_FAULTS`. `run_experiment.py` adds it where a scenario plans failures; the method's code is not modified |
+- `harness.py`: `DialogueHarness`, one node that serves simple_hri's actions (`/tts_action`,
+  `/stt_action`, publishing `/listened_text`) and plays the user. After each robot utterance it
+  asks a user policy what to say, stays silent, or barges in through `/user_speaking`. It sends
+  the `DialogTask` goal and records the transcript, the feedback, the result, the barge-ins and
+  the skill trace. A conversational filler (announced on `/robot_filler`) is recorded as a robot
+  line with `"filler": true`, in order and with its time, but it is not passed to the user policy,
+  which only answers the reply ([fillers](../docs/behaviors/fillers.md)). `ScriptedUser` replays
+  fixed lines; `HarnessRunner` spins the node in a thread.
+- `scripted_llm.py`: a deterministic stand-in for the LLM, which answers the methods of
+  `LLMDialogClient` by fixed rules on the user's words. The intelligence loads it with
+  `llm_client_factory: interaction_sim.scripted_llm:make`. The robot's lines are tags, so a test
+  checks the path the tree took. `slow N` in the user's words (or in the task, for the opening of
+  slot filling) makes it take N seconds, to test the fillers.
+- `llm_user.py`: `LlmUser`, a simulated user driven by an LLM, with a persona and a goal (the
+  ground truth of the scenario). It only sees what the robot says, answers one short spoken line,
+  and receives the events the scenario plans (silence, a cancel request, a fixed line, a
+  barge-in). It only speaks: a local annotator (`analysis/annotate_turns.py`) marks what each line
+  states after the dialogue. Annotating while playing the user would add to the simulator's load,
+  and an annotation made afterwards cannot influence the dialogue and can be redone without
+  rerunning it.
+- `goal_items.py`: the goal items of a scenario (`goal_items`: `{id, value[, then]}`), their
+  validation, and the robust reading of the simulated user's answer (`parse_line`) and of the
+  `revealed` declarations of earlier runs, in which the simulator declared them itself (no ROS).
+- `cloud_llm.py`: one JSON answer from an LLM through its HTTP API (Ollama, Gemini or OpenAI),
+  used by the simulated user and the judge. Cloud calls are refused unless allowed explicitly.
+- `asr_noise.py`: `AsrNoise`, speech recognition errors injected on the user's text at a target
+  word error rate (substitutions by sound-alike or frequent words, deletions, insertions, cut
+  sentences).
+- `llm_faults.py`: the injector of model failures (E3), described below.
+- `call_log.py`, `call_recording.py`: the recorder of every call of the system's model, for the
+  debugging ([doc/DEBUGGING.md](doc/DEBUGGING.md)). `CallLog` marks the user turn from the harness
+  side and returns the calls of the dialogue; the skill module `interaction_sim.call_recording`
+  wraps `LLMDialogClient`'s call to the gateway and the skills, like the injector.
+  `run_experiment.py` loads it last for a file with `record_model_calls: true`.
+- `fault_injection.py`: the injector inside the interaction intelligence with the real model. It
+  is a skill module (`skill_modules`, no skill registered) whose import wraps `LLMDialogClient`
+  with the switch of `$INTERACTION_SIM_FAULTS`. `run_experiment.py` adds it where a scenario plans
+  failures; the method's code is not modified.
+
+In `llm_faults.py`, `FaultPlan` arms, user turn by user turn, the failures a scenario plans in a
+small switch file that the intelligence reads at every call, and returns the calls that failed.
+The planned `faults` are `error`, `invalid`, `hang`, `crash` and `freeze`, on some or every
+question to the model, and `answer`, which is not a failure: it pins the model's answer for the
+oracle replay of the debugging. On the intelligence side the failures replace the call to the
+model, so that the client's own parsing, retries and fallbacks run. With the scripted LLM,
+`llm_client_factory: interaction_sim.llm_faults:make_scripted` returns the real client's fallback
+for a failed question.
 
 The system tests run whole conversations through every branch of every tree with the scripted LLM
-(no model, no audio): the method's trees (`test_dialogues.py`, also the conversational fillers),
-the error endings a request cannot reach otherwise, on a system with a reduced catalog and a broken
-tree (`test_errors.py`: no behavior fits, a runner that cannot be activated, the orchestrator
-deactivated during a dialogue), the conversations while the model fails, through the injector of
-model failures (`test_model_failures.py`: no cancellation when the detection fails, the
-cancellation withdrawn when the reading of the confirmation fails and the answer is not exactly a
-yes or no word (an exact one is read by the fallback), an exact stop command with the model down
-ending the conversation without the question, the error closing when a skill
-fails or the intelligence does not answer within `intelligence_timeout`, a hung model answered
-with the fallback within the reply's time budget, a sustained failure ended as a breakdown (also
-in a role play), a role play whose evaluation fails ended as partial, the quiz's and grounded
-question answering's fallbacks), the same in Spanish for what depends on the language
-(`test_spanish_model_failures.py`: the Spanish fixed phrases, an exact Spanish stop command that
-cancels while the model is down, a stop word inside an utterance that does not), the shared
-mechanisms in every strategy and each strategy's fixed phrases (`test_bilingual.py`, with
-`scripted_llm.LocalizedScriptedLLM`, which says the real phrases of the language file), and the LLM-led
-conversation of E1, the monolithic ablation (`test_llm_led.py`). `test_dialogues.py`,
-`test_model_failures.py` and `test_bilingual.py` run every test twice, with the system in English
-and in Spanish. `test_llm_faults.py` and `test_call_log.py` test the injector and the recorder
-without a running system. Which test covers each branch and mechanism, by language:
-`debug/coverage.yaml` ([doc/DEBUGGING.md](doc/DEBUGGING.md)). They start the interaction system themselves, once per
-file; two runs in the same `ROS_DOMAIN_ID` answer each other's speech requests, so give each run
-its own:
+(no model, no audio):
+
+- `test_dialogues.py`: the method's trees, including the conversational fillers.
+- `test_errors.py`: the error endings that a request cannot reach otherwise, on a system with a
+  reduced catalog and a broken tree (no behavior fits, a runner that cannot be activated, the
+  orchestrator deactivated during a dialogue).
+- `test_model_failures.py`: the conversations while the model fails, through the injector of model
+  failures. It covers no cancellation when the detection fails; the cancellation withdrawn when
+  the reading of the confirmation fails and the answer is not exactly a yes or no word (an exact
+  one is read by the fallback); an exact stop command with the model down, which ends the
+  conversation without the question; the error closing when a skill fails or the intelligence
+  does not answer within `intelligence_timeout`; a hung model answered with the fallback within
+  the reply's time budget; a sustained failure ended as a breakdown (also in a role play); a role
+  play whose evaluation fails, ended as partial; and the fallbacks of the quiz and of grounded
+  question answering.
+- `test_spanish_model_failures.py`: the same in Spanish for what depends on the language (the
+  Spanish fixed phrases, an exact Spanish stop command that cancels while the model is down, a
+  stop word inside an utterance that does not).
+- `test_bilingual.py`: the shared mechanisms in every strategy and each strategy's fixed phrases,
+  with `scripted_llm.LocalizedScriptedLLM`, which says the real phrases of the language file.
+- `test_llm_led.py`: the LLM-led conversation of E1, the monolithic ablation.
+
+`test_dialogues.py`, `test_model_failures.py` and `test_bilingual.py` run every test twice, with
+the system in English and in Spanish. `test_llm_faults.py` and `test_call_log.py` test the
+injector and the recorder without a running system. `debug/coverage.yaml` lists which test covers
+each branch and mechanism, by language ([doc/DEBUGGING.md](doc/DEBUGGING.md)). The tests start the
+interaction system themselves, once per file. Two runs in the same `ROS_DOMAIN_ID` answer each
+other's speech requests, so give each run its own:
 
 ```sh
 ROS_DOMAIN_ID=<free id> python3 -m pytest simulation/interaction_sim/test
@@ -181,10 +224,17 @@ skills of the same system; the method's code is not modified:
 
 | Ablation | What changes |
 |---|---|
-| `monolithic` | The LLM-led conversation: the LLM runs the whole strategy. It gets the task, the strategy's rules (those the method's trees follow), the scope rules (stay within the task, state only facts of the material), the method's rule on how a spoken line addresses the user (directly, in the informal second person), the material and the conversation, writes every reply and decides when the conversation ends and its result. Silences, the turn limit and the conversational fillers while a reply is prepared are the method's |
+| `monolithic` | The LLM-led conversation: the LLM runs the whole strategy (see below) |
 | `no_confirmation` | Slot filling closes as soon as the frame is complete, without reading it back |
 | `no_cancel_confirmation` | A spoken cancel request ends the conversation at once |
 | `llm_only_cancel`, `keywords_only_cancel` | The cancel request detected by the LLM alone, or by keywords alone |
+
+In the `monolithic` ablation the LLM gets the task, the strategy's rules (those the method's trees
+follow), the scope rules (stay within the task, state only facts of the material), the method's
+rule on how a spoken line addresses the user (directly, in the informal second person), the
+material and the conversation. It writes every reply and decides when the conversation ends and
+with what result. Silences, the turn limit and the conversational fillers while a reply is
+prepared remain the method's.
 
 `ablations/interaction_ablations/make_ablations.py` generates each ablation's trees from the
 method's, so that they differ only in the decision removed, and its runtime configuration. Run it
@@ -211,58 +261,104 @@ ros2 launch interaction_ablations llm_led.launch.py speech:=none params_file:=<p
 launches the whole system (`main.launch.py speech:=none`, the harness being the speech capability)
 in its own process group, pulls and loads the model on the server, runs every scenario × persona ×
 repetition with a simulated user, saves each dialogue, and stops the system. Saved dialogues are
-skipped, so a run can be resumed. The experiment files of the repository and what each runs:
-[doc/REPRODUCING.md](doc/REPRODUCING.md#the-order).
+skipped, so a run can be resumed. The experiment files of the repository, and what each runs, are
+listed in [doc/REPRODUCING.md](doc/REPRODUCING.md#the-order).
 
 ```sh
 python3 scripts/run_experiment.py experiments/<file>.yaml --dry-run   # the dialogues and paid calls it would make, and the wait for the model
 python3 scripts/run_experiment.py experiments/<file>.yaml [--only-model M] [--only-condition C] [--allow-cloud] [--out DIR]
 python3 scripts/run_experiment.py experiments/<file>.yaml --only-model M --only-condition C \
     --only-scenario S --only-persona P --only-rep 1 --out <dir> --show   # one dialogue, printed as it goes
-python3 scripts/run_experiment.py experiments/<file>.yaml --models M1,M2 [...]   # other system models than the file's
+python3 scripts/run_experiment.py experiments/<file>.yaml --models M1,M2 [...]   # system models other than the file's
 ```
 
-`--models` (also in `run_parallel.py`) replaces the system models of the file; the files of
-phase B of E0a (`e0a_dialogues.yaml`, `e0a_dialogues_es.yaml`) list a placeholder and need it,
-since their models are the finalists of phase A. A model written with a placeholder (`<pin>`,
+`--models` (also in `run_parallel.py`) replaces the system models of the file. The files of
+phase 2 of E0a (`e0a_dialogues.yaml`, `e0a_dialogues_es.yaml`) list a placeholder and need it,
+since their models are the finalists of phase 1. A model written with a placeholder (`<pin>`,
 `<...>`) is refused when running.
 
 | Key of an experiment file | What it is |
 |---|---|
 | `name` | The name of the experiment: its results go to `results/<name>/` unless `--out` says otherwise |
-| `scenarios`, `scenario_ids`, `scenarios_per_strategy` | The scenario file (relative to `experiments/`) and, optionally, the ids to run (the role swap of E1 and the noise of E3 list theirs), or the first N scenarios of each strategy in the order of the file (all by default) |
+| `scenarios`, `scenario_ids`, `scenarios_per_strategy` | The scenario file (relative to `experiments/`) and, optionally, the ids to run (the role swap of E1 and the noise of E3 list theirs), or the first N scenarios of each strategy (all by default) |
 | `personas_file`, `personas` | The personas file and the personas to run |
 | `repetitions`, `language` | Repetitions of each scenario × persona; the language of the conversations (`English`, `Spanish`) |
 | `models` | The system models: Ollama models, or cloud ones written `provider/model` |
-| `conditions` | Each condition by name. `{}` is the method; `ablation` (the ablation's `config_file`), `skill_modules` (the intelligence's), `params` (overrides of `app_params.yaml`), `model_params` (overrides for one system model only, `{<model>: {...}}`; the experiments set none: one local model, no `routes`) and `models` (only these system models) change it; `scenario_ids` (only these scenarios: an ablation run on the scenarios of its mechanism, as in E3) and `asr_noise` (the noise of this condition's simulated users: one level per condition, as in the noise file of E3) limit or change what it runs |
-| `simulator` | The simulated user: `provider` (`ollama` by default, `gemini`, `openai`), `model` (or `hardware`: the profile's `open_simulator`), `host` (its Ollama server; by default the system's), `temperature` (`null` for models that accept only their default), `max_turns` (the simulated user's own limit, 30), `on_gpu` (`false`: an Ollama simulator on the server's CPU) |
+| `conditions` | Each condition by name; `{}` is the method (keys below) |
+| `simulator` | The simulated user (keys below) |
 | `ollama` | The system's Ollama server and timeout (`host`, `port`, `timeout`) |
 | `limits`, `max_turns`, `dialogue_timeout` | Parameters of the orchestrator (e.g. `wait_timeout`, `max_silence`, `max_stalled`), the turn limit of every dialogue and the longest dialogue (s) |
-| `model_wait` | Optional: the wait for the model opened for every condition of the experiment, `{reply_budget, opening_budget, llm_timeout, reasoning_timeout, intelligence_timeout, reasoning_intelligence_timeout}` in seconds (all but the two hard limits: 0 = no limit of its own; `intelligence_timeout` and `reasoning_intelligence_timeout` > 0); each goes to the node that reads it (the orchestrator, or the intelligence for `llm_timeout` and `reasoning_timeout`). Absent: the method's defaults ([docs/behaviors/endings.md](../docs/behaviors/endings.md#the-wait-for-the-model)). Checked before the run (known keys, numbers ≥ 0; not in `limits`), shown by `--dry-run`, kept in `experiment.yaml`, the `params.yaml` of each condition and every dialogue's record. Only E1 sets it: it does not measure the bound, and some of its cloud models reason for many seconds before answering ([doc/EXPERIMENTS.md](doc/EXPERIMENTS.md)) |
-| `pilot_of`, `pairs`, `standins` | A pilot file only (`experiments/pilot/`): the experiment file it is derived from (everything not changed below is read from it when it is loaded), the dialogues as `[scenario, persona]` pairs instead of every scenario with every persona, `models` as `{<local>: M, <openai>: openai/M, <gemini>: gemini/M}`, `simulator_model` (fills a placeholder only), and the base URLs of the local stand-ins of the cloud providers (`gemini_base_url`, `openai_base_url`, on this computer only; refused in an experiment file): [doc/PILOT.md](doc/PILOT.md) |
-| `record_model_calls` | Optional, `true` in the debugging files only (`experiments/debug/`): every call of the system's model is stored in its dialogue's record (`model_calls`: turn, skill, question, prompt, schema, answer or error, latency), by a recorder loaded like the injector of model failures (`interaction_sim/call_log.py`); off by default, since the prompts make the records several times larger ([doc/DEBUGGING.md](doc/DEBUGGING.md)) |
+| `model_wait` | Optional: the wait for the model, opened for every condition of the experiment (below) |
+| `pilot_of`, `pairs`, `standins` | A pilot file only (`experiments/pilot/`): see below and [doc/PILOT.md](doc/PILOT.md) |
+| `record_model_calls` | Optional, `true` in the debugging files only (`experiments/debug/`): every call of the system's model is stored in its dialogue's record (below) |
 | `asr_noise` | Optional: speech recognition errors injected on the user's lines (`AsrNoise`); a condition or a scenario can set its own (the scenario's wins) |
 
-A scenario (in `experiments/scenarios/*.yaml`) has its `id`, `strategy`, `goal` (the `DialogTask`
-fields; its own limits too: `max_turns`, `max_silence`, `max_stalled`, `filler_after_s`,
-`skip_intro`), `user_goal` (what the simulated user wants), `expect` (the ground truth) and,
-optionally, `events` (user turns fixed by code: `turn`, `kind` `silence`, `cancel`, `text`,
-`detour` or `barge_in`, and `text`; a `detour` also has `detour`: `off_task`, `decline` or
-`not_allowed`), `faults` (failures of the system's model by user turn, applied by code:
-`turn`, 0 for the opening; `kind` `error`, `invalid`, `hang` or `crash`; `questions`, the
-methods of `LLMDialogClient` that fail, every one when empty; `turns`, consecutive turns, 0 until
-the end; `hang_s`; see `simulation/interaction_sim/interaction_sim/llm_faults.py`), `asr_noise`
-and, in `e4_es.yaml`, `mechanism`. The keys of `expect` are listed at the top
-of `dialogues.yaml`. The personas are in `experiments/personas.yaml`
+`scenarios_per_strategy` takes the first N scenarios of each strategy in the order of the file.
+
+A condition changes the method with `ablation` (the ablation's `config_file`), `skill_modules`
+(the intelligence's), `params` (overrides of `app_params.yaml`), `model_params` (overrides for one
+system model only, `{<model>: {...}}`) and `models` (only these system models). The experiments
+set no `model_params`, since each uses one local model and no `routes`. Two more keys limit or
+change what a condition runs: `scenario_ids` (only these scenarios, e.g. an ablation run on the
+scenarios of its mechanism, as in E3) and `asr_noise` (the noise of this condition's simulated
+users, one level per condition, as in the noise file of E3).
+
+The keys of `simulator` are `provider` (`ollama` by default, `gemini`, `openai`), `model` (or
+`hardware`: the profile's `open_simulator`), `host` (its Ollama server; by default the system's),
+`temperature` (`null` for models that accept only their default), `max_turns` (the simulated
+user's own limit, 30) and `on_gpu` (`false`: an Ollama simulator on the server's CPU).
+
+`model_wait` is `{reply_budget, opening_budget, llm_timeout, reasoning_timeout,
+intelligence_timeout, reasoning_intelligence_timeout}`, in seconds. In all but the two hard
+limits, 0 means no limit of its own; `intelligence_timeout` and `reasoning_intelligence_timeout`
+must be greater than 0. Each value goes to the node that reads it: the intelligence for
+`llm_timeout` and `reasoning_timeout`, the orchestrator for the rest. Without `model_wait` the
+method's defaults apply ([docs/behaviors/endings.md](../docs/behaviors/endings.md#the-wait-for-the-model)).
+It is checked before the run (known keys, numbers ≥ 0, not inside `limits`), shown by
+`--dry-run`, and kept in `experiment.yaml`, in the `params.yaml` of each condition and in every
+dialogue's record. Only E1 sets it, because E1 does not measure the bound and some of its cloud
+models reason for many seconds before answering ([doc/EXPERIMENTS.md](doc/EXPERIMENTS.md)).
+
+A pilot file names in `pilot_of` the experiment file it is derived from; everything it does not
+change is read from that file when it is loaded. `pairs` gives the dialogues as
+`[scenario, persona]` pairs instead of every scenario with every persona. A pilot file also gives
+`models` as `{<local>: M, <openai>: openai/M, <gemini>: gemini/M}`, `simulator_model` (which fills
+a placeholder only) and, in `standins`, the base URLs of the local stand-ins of the cloud
+providers (`gemini_base_url`, `openai_base_url`, on this computer only; refused in an experiment
+file).
+
+With `record_model_calls`, each call is stored in `model_calls` (turn, skill, question, prompt,
+schema, answer or error, latency) by a recorder loaded like the injector of model failures
+(`interaction_sim/call_log.py`). It is off by default, since the prompts make the records several
+times larger ([doc/DEBUGGING.md](doc/DEBUGGING.md)).
+
+A scenario (in `experiments/scenarios/*.yaml`) has these keys:
+
+- `id` and `strategy`;
+- `goal`, the `DialogTask` fields, including the scenario's own limits (`max_turns`,
+  `max_silence`, `max_stalled`, `filler_after_s`, `skip_intro`);
+- `user_goal`, what the simulated user wants;
+- `expect`, the ground truth (its keys are listed at the top of `dialogues.yaml`);
+- optionally, `events`: user turns fixed by code, each with `turn`, `kind` (`silence`, `cancel`,
+  `text`, `detour` or `barge_in`) and `text`. A `detour` also has `detour`: `off_task`,
+  `decline` or `not_allowed`;
+- optionally, `faults`: failures of the system's model by user turn, applied by code. Each has
+  `turn` (0 for the opening), `kind` (`error`, `invalid`, `hang` or `crash`), `questions` (the
+  methods of `LLMDialogClient` that fail; every one when empty), `turns` (consecutive turns; 0
+  until the end) and `hang_s` (see `simulation/interaction_sim/interaction_sim/llm_faults.py`);
+- optionally, `asr_noise`, and in `e4_es.yaml`, `mechanism`.
+
+The personas are in `experiments/personas.yaml`
 ([doc/EXPERIMENTS.md](doc/EXPERIMENTS.md#scenarios-and-personas)).
 
-Each dialogue is saved as `results/<name>/runs/<model>/<condition>/<scenario>__<persona>__r<k>.json`
-(`:` and `/` of the model become `_`): the scenario, model, condition and persona; the result
-(`status`, `success`, `outcome`, `failure_reason`, `data`, `total_turns`, `duration_s`); `expect`
-and `goal`; the time-stamped `transcript`; the `feedback`; the skill trace (`skills`); the
-`barge_ins`; the simulated user's log (`user_log`, with the model version and tokens of each call)
-and its totals (`simulator`); the model failures planned (`faults`) and the calls that failed
-(`faults_applied`: the planned failure, the turn, the question, the kind). A summary line per dialogue goes to `results/<name>/runs.jsonl`.
+Each dialogue is saved as `results/<name>/runs/<model>/<condition>/<scenario>__<persona>__r<k>.json`,
+where `:` and `/` of the model become `_`. The record holds the scenario, model, condition and
+persona; the result (`status`, `success`, `outcome`, `failure_reason`, `data`, `total_turns`,
+`duration_s`); `expect` and `goal`; the time-stamped `transcript`; the `feedback`; the skill trace
+(`skills`); the `barge_ins`; the simulated user's log (`user_log`, with the model version and
+tokens of each call) and its totals (`simulator`); and the model failures planned (`faults`) and
+the calls that failed (`faults_applied`: the planned failure, the turn, the question, the kind).
+A summary line per dialogue goes to `results/<name>/runs.jsonl`.
 
 ### Hardware profiles and parallel runs
 
@@ -270,10 +366,10 @@ Where an experiment runs is not part of it: the same experiment runs on one GPU 
 server and this computer, or on two GPU servers, by choosing a hardware profile
 (`experiments/hardware/*.yaml`). A profile names the Ollama servers (as this computer reaches
 them, e.g. through an SSH tunnel), the open simulated user that fits them (`open_simulator`, used
-by the experiments with `simulator.model: hardware`), and the **lanes**: the parts of an
-experiment that run at the same time, each with its own `ROS_DOMAIN_ID`, its system models
-(`local`, `cloud`, `all`, a list, and optionally a `shard` [i, n] to spread several local models
-over servers) and the server of its open simulated user. The runner and the ROS system always run
+by the experiments with `simulator.model: hardware`), and the lanes. A lane is a part of an
+experiment that runs at the same time as the others, with its own `ROS_DOMAIN_ID`, its system
+models and the server of its open simulated user. Its models are `local`, `cloud`, `all` or a
+list, optionally with a `shard` [i, n] to spread several local models over servers. The runner and the ROS system always run
 on this computer; only the LLMs run on the servers.
 
 | Profile | Servers | What runs where |
@@ -283,8 +379,8 @@ on this computer; only the LLMs run on the servers.
 | `two_gpus.yaml` | GPU server and a second GPU server | The system on the first; a larger open simulator on the second |
 | `two_gpus_split.yaml` | Two GPU servers | Half of the local system models on each, each with its own simulator |
 
-The open simulator a profile can hold, by the memory it has (of another family than the system's
-Qwen models; sizes approximate, check with `ollama show`):
+The open simulator a profile can hold, by the memory it has, is of a family other than that of
+the system's Qwen models (sizes are approximate; check them with `ollama show`):
 
 | Memory for the simulator | Open simulator |
 |---|---|
@@ -309,13 +405,13 @@ Ctrl-C stops them all). Before running, each lane checks that its servers are fr
 loaded that are not of this experiment and, when the profile gives the server's `ssh` (read from
 an environment variable, `GPU_SERVER_SSH=<user>@<host>`), no other processes on its GPU.
 `--check-servers` runs only the check (exit status 3 when a server is not free); `--force-busy`
-skips it (`--force`, its old name, still works with a warning). A model of the previous run that is
+skips it (`--force` is accepted as an alias, with a warning). A model of the previous run that is
 still unloading is waited for (up to a minute) before the check gives up. `--force-provenance`
 resumes a results folder begun with other code (the change is recorded in its provenance.json).
 The system model is unloaded when its dialogues end; `--keep-loaded` leaves it loaded, for runs one
 after the other on a shared GPU, so that a job waiting for free GPU memory does not take the gap
-between them (unload it yourself at the end). Lanes that use the same server for their models slow each other down, so their latencies are
-not comparable (the runner warns). Each lane writes what it ran, with its servers and models, to
+between them (unload it yourself at the end). Lanes that use the same server for their models
+slow each other down, so their latencies are not comparable (the runner warns). Each lane writes what it ran, with its servers and models, to
 `results/<name>/experiment_<lane>.yaml`.
 
 ### Cloud models
@@ -342,20 +438,26 @@ support; its labels are used only after the judge is validated in E0b with
 participants. `score_runs.py` also checks the simulated user's adherence to the goal items of its
 scenario (`analysis/adherence.py`) and marks the simulator failures by a rule fixed before running
 (`--adherence-rule`); they stay in `scores.csv`, and the summary gives the success rate with and
-without them ([doc/EXPERIMENTS.md](doc/EXPERIMENTS.md#the-simulated-users-and-their-check)). It
-prints the latency per model and condition (median, 95th percentile and worst turn, the share of
-turns over two seconds, fillers, calls cut by the wait for the model), descriptive only
-([doc/METRICS.md](doc/METRICS.md#the-summary)). It also
-counts what each shared mechanism did (`analysis/mechanisms.py`: confirmation questions, silent
-waits, events applied, closing line, error closing, failed skills, model failures provoked) and what each strategy's own mechanisms did
-(`analysis/strategy_checks.py`: teach-back with planted wrong points, an out-of-range value, the
-slots left unanswered, a contradicted step check, a repeat in a role play, the rubric kept out of
-the role play's introduction), and compares them with `expect.mechanisms` when the scenario lists
-it (E3); the questionnaire score computed by code against `expect.score` (`score_ok`); and it counts
-apart the cancellations that no scenario planned, asked for by the user and honoured after
-confirming (`honoured_cancel`, right endings). `judge_runs.py --summary` also gives the response to
-each planned detour (the twin of E4). Every measure they compute: [doc/METRICS.md](doc/METRICS.md); the validation:
-[doc/JUDGE_VALIDATION.md](doc/JUDGE_VALIDATION.md).
+without them ([doc/EXPERIMENTS.md](doc/EXPERIMENTS.md#the-simulated-users-and-their-check)).
+Besides the success rate, `score_runs.py` reports:
+
+- the latency per model and condition (median, 95th percentile and worst turn, the share of turns
+  over two seconds, fillers, calls cut by the wait for the model), descriptive only
+  ([doc/METRICS.md](doc/METRICS.md#the-summary));
+- what each shared mechanism did (`analysis/mechanisms.py`: confirmation questions, silent waits,
+  events applied, closing line, error closing, failed skills, model failures provoked);
+- what each strategy's own mechanisms did (`analysis/strategy_checks.py`: teach-back with planted
+  wrong points, an out-of-range value, the slots left unanswered, a contradicted step check, a
+  repeat in a role play, the rubric kept out of the role play's introduction);
+- for both kinds of mechanism, the comparison with `expect.mechanisms` when the scenario lists it
+  (E3);
+- the questionnaire score computed by code against `expect.score` (`score_ok`);
+- separately, the cancellations that no scenario planned, asked for by the user and honored after
+  confirming (`honoured_cancel`, right endings).
+
+`judge_runs.py --summary` also gives the response to each planned detour (the twin of E4). Every
+measure they compute is defined in [doc/METRICS.md](doc/METRICS.md), and the validation of the
+judge in [doc/JUDGE_VALIDATION.md](doc/JUDGE_VALIDATION.md).
 
 ```sh
 python3 analysis/score_runs.py results/<name> [--csv <file>] [--adherence-rule <rule>] [--exclude-sim-failures]
@@ -386,22 +488,22 @@ keeps the logs of any check; a failed check keeps them anyway.
 
 Two web pages, served on this computer only:
 
-- `scripts/control_panel.py` (port 8095) runs the evaluation with buttons: the whole simulated
-  evaluation in order (`scripts/whole_evaluation.py`: it stops where a person must act and asks
-  for the permission of every paid step), the campaign of an
-  experiment on a hardware profile, one dialogue with its simulated user, the quick checks, the
-  sessions with real participants (campaigns of real sessions, each with a frozen configuration of
-  how the robot sounds, and the pre-session check) and the configurations themselves. It only calls
-  the scripts above, with the same options: [doc/CONTROL_PANEL.md](doc/CONTROL_PANEL.md). Its
-  Tests tab (`scripts/test_panel.py`, a page of its own on port 8097 until 2026-10-30) lets a
-  person try any scenario as the user, by voice, with nothing stored, with ready examples (one per
-  strategy, one per mechanism) and a tester card (what to do turn by turn):
-  [doc/TEST_PANEL.md](doc/TEST_PANEL.md).
-- `panels/review_panel.py` (port 8098) for the hand reviews, made for people who know nothing about
-  the system (English by default, Spanish with one click, a tutorial, every answer saved at once): the E0b annotation
-  sheets, the trap cases of phase A and their blind adjudication, and the audit of the adherence
-  checker. What it writes stays in the git-ignored `results/`: [panels/README.md](panels/README.md).
-  The instructions for the reviewers and annotators: [HUMAN_REVIEW.md](HUMAN_REVIEW.md).
+- `scripts/control_panel.py` (port 8095) runs the evaluation with buttons. It runs the whole
+  simulated evaluation in order (`scripts/whole_evaluation.py`, which stops where a person must
+  act and asks for permission before every paid step), the campaign of an experiment on a
+  hardware profile, one dialogue with its simulated user, the quick checks, and the sessions with
+  real participants (campaigns of real sessions, each with a frozen configuration of how the robot
+  sounds, and the pre-session check); it also manages those configurations. It only calls the
+  scripts above, with the same options ([doc/CONTROL_PANEL.md](doc/CONTROL_PANEL.md)). Its Tests
+  tab (`scripts/test_panel.py`) lets a person try any scenario as the user, by voice, with nothing
+  stored, with ready examples (one per strategy, one per mechanism) and a tester card that says
+  what to do turn by turn ([doc/TEST_PANEL.md](doc/TEST_PANEL.md)).
+- `panels/review_panel.py` (port 8098) serves the hand reviews: the E0b annotation sheets, the
+  trap cases of phase 1 and their blind adjudication, and the audit of the adherence checker. It
+  is made for people who know nothing about the system: English by default, Spanish with one
+  click, a tutorial, and every answer saved at once. What it writes stays in the git-ignored
+  `results/` ([panels/README.md](panels/README.md)). The instructions for the reviewers and
+  annotators are in [HUMAN_REVIEW.md](HUMAN_REVIEW.md).
 
 ## Sessions with real participants
 
@@ -410,7 +512,8 @@ conditions of `real/sessions_es.yaml` (in E4, only the method with the local mod
 conversations per participant, each in a different scenario, counterbalanced from the participant's
 number. The records have the keys of the simulated dialogues, so `score_runs.py` and
 `judge_runs.py` score them too, the judge only after each transcript is reviewed. The checks before
-a session, the procedure and what is stored: [doc/REAL_SESSIONS.md](doc/REAL_SESSIONS.md).
+a session, the procedure and what is stored are described in
+[doc/REAL_SESSIONS.md](doc/REAL_SESSIONS.md).
 
 ```sh
 python3 real/real_sessions.py plan P07                 # the plan of a participant

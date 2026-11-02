@@ -9,12 +9,12 @@ mechanism each provokes, the criteria) is in
 [control panel](CONTROL_PANEL.md#real-sessions) runs all of it with buttons.
 
 The records of the trials have the format of the simulated dialogues, so that the same scorers
-measure both. Participants are healthy adults, in Spanish, and never play another kind of person:
-the task cards give them a goal (an order, an answer, a step to skip), never a character. The logic
-without ROS (plans, counterbalancing, cards) runs with plain Python (`real_sessions.py plan`,
+measure both. The participants are healthy adults, the sessions are in Spanish, and the
+participants never play another kind of person: the task cards give them a goal (an order, an
+answer, a step to skip), never a character. The logic without ROS (plans, counterbalancing, cards) runs with plain Python (`real_sessions.py plan`,
 `card` and `balance`) and is tested by `python3 -m pytest real/test_sessions_common.py`.
 
-**The words used here.** A *session* is one participant's visit. A *trial* is one conversation
+In this page, a *session* is one participant's visit. A *trial* is one conversation
 of the participant with the robot, in one *condition* and one *scenario*. A condition is a
 control of the conversation (*bounded*, the method; *LLM-led*, the `monolithic` ablation) with a
 system model. A scenario is one of
@@ -72,15 +72,23 @@ the wording of every card; the cards are adjusted after the pilot and then froze
 
 | Key | What it is |
 |---|---|
-| `name`, `scenarios_file`, `language` | The name of the sessions, the scenario file (`../experiments/scenarios/e4_es.yaml`: the request, the ground truth, the planned ending and the mechanism of each card) and the language of the conversations (`Spanish`) |
+| `name`, `scenarios_file`, `language` | The name of the sessions, the scenario file (`../experiments/scenarios/e4_es.yaml`) and the language of the conversations (`Spanish`) |
 | `barge_in`, `camera_topic` | Whether the robot stops talking when the participant starts speaking (`false` by default; [Barge-in](#barge-in)) and the camera image of the lip activity detector |
-| `model_params` | Parameter overrides for one system model, e.g. the `routes` of the local model's questions to a second model (both must be on the Ollama server; the checks and trials verify and load them); a cloud model does not use them |
-| `conditions` | Each with its `control` (`bounded` or `llm_led`) and its `model`: an Ollama model, or a cloud one written `provider/model` with its dated version (`openai/<model>-<date>`; the scripts refuse `<pin>`). `enabled: false` leaves a condition out of the plans |
+| `model_params` | Parameter overrides for one system model, e.g. the `routes` of the local model's questions to a second model; a cloud model does not use them |
+| `conditions` | Each with its `control` (`bounded` or `llm_led`) and its `model`; `enabled: false` leaves a condition out of the plans |
 | `trials_per_condition` | Scenarios per condition and participant (4: the four conversations of each participant, all with the method) |
-| `launch` | The speech capability: `speech: simple_hri`, `language: es`, `stt`, `tts` (as `main.launch.py`). How the robot sounds and the speech hardware (the voice, its settings, the filler delay, the microphone, the speech-recognition model) are not here: they are the [configuration](#campaigns-and-configurations) of the campaign |
+| `launch` | The speech capability: `speech: simple_hri`, `language: es`, `stt`, `tts` (as `main.launch.py`) |
 | `ollama`, `limits`, `max_turns`, `dialogue_timeout` | The LLM server, the orchestrator's parameters, the turn limit and the longest conversation, as in the experiments |
 | `scenarios` | The pool: `id` (of `e4_es.yaml`), `title`, `card` (the lines the participant reads) and `detour` (`kind`, `text`) |
 | `card_footer`, `detour_label`, `check_phrase` | The lines under every card, the label before the detour, and the phrase of the Speak check and of the pre-session check |
+
+The scenario file gives the request, the ground truth, the planned ending and the mechanism of
+each card. Both models of a route must be on the Ollama server; the checks and trials verify and
+load them. The model of a condition is an Ollama model, or a cloud one written `provider/model`
+with its dated version (`openai/<model>-<date>`); the scripts refuse `<pin>`. How the robot sounds
+and the speech hardware (the voice, its settings, the filler delay, the microphone, the
+speech-recognition model) are not in the sessions file: they are the
+[configuration](#campaigns-and-configurations) of the campaign.
 
 Every card, exactly as the participant reads it, is in [evaluation/real/cards](../real/cards/README.md):
 `es/`, in Spanish, what the participant reads, and `en/`, an English translation (from
@@ -108,40 +116,44 @@ What the participants hear is a condition of the study, the same for all of them
 kept in the repository and frozen before the first participant hears it
 ([`real/campaigns.py`](../real/campaigns.py)).
 
-**A configuration** (`real/configs/<name>.yaml`) is how the robot sounds and the hardware of its
+A *configuration* (`real/configs/<name>.yaml`) is how the robot sounds and the hardware of its
 speech:
 
 | Key | What it is |
 |---|---|
-| `voice` | The Piper voice (`NAME`, or `NAME:SPEAKER` for a voice with several speakers); always named, so that the participants' voice never depends on a default ([TEST_PANEL.md](TEST_PANEL.md#voice-and-filler-delay) lists the voices offered) |
+| `voice` | The Piper voice (`NAME`, or `NAME:SPEAKER` for a voice with several speakers); always named, so that the participants' voice never depends on a default |
 | `length_scale`, `noise_scale`, `noise_w_scale` | Speed, expressiveness and rhythm variation of the voice (empty: the voice's own) |
 | `filler_after_s` | The seconds the robot may take to answer before a conversational filler ("Mmm…"); `0`: none; empty: the scenario's, else the system's. A number goes over the scenario's own `filler_after_s` |
-| `input_device` | The microphone (a sounddevice name, not an index); `default` goes through the system's sound server, which converts the sample rate (PortAudio's own default can be a raw ALSA device that does not record at 16 kHz) |
+| `input_device` | The microphone (a sounddevice name, not an index); `default` goes through the system's sound server |
 | `whisper_model` | The speech-recognition model of faster-whisper (`small`, `medium`...) |
 | `note`, `created`, `duplicated_from` | What it is for, and where it comes from |
+
+[TEST_PANEL.md](TEST_PANEL.md#voice-and-filler-delay) lists the voices offered. The `default`
+microphone goes through the system's sound server because the server converts the sample rate,
+while PortAudio's own default can be a raw ALSA device that does not record at 16 kHz.
 
 `real/configs/default.yaml` is the starting configuration: what the sessions used before
 campaigns existed (simple_hri's Spanish voice `es_ES-sharvard-medium` with its own settings, the
 system's filler delay, `default`, `small`). A check or a test without a configuration uses the same
 microphone and model.
 
-**A campaign** (`real/campaigns/<name>.yaml`, created by the control panel or by
+A *campaign* (`real/campaigns/<name>.yaml`, created by the control panel or by
 `campaigns.py new-campaign`) is a set of real sessions: its name, its sessions file (the study
 design: conditions, scenarios, cards, which stay in it), one configuration, the hash of that
 configuration's file taken when it was associated, and the dates. Its participants are stored in
 their own folder, `~/.ros/interaction_real/<campaign>/<P07>/`, so that a pilot (a campaign like any
 other) never mixes with the study. The `campaigns/` folder appears with the first campaign.
 
-**The rules.** Every state is derived from the files; nothing else is kept:
+Every state is derived from the files, and nothing else is kept. The rules are:
 
-- A configuration that no campaign references is a **draft**: it is edited, renamed and tried
-  freely. Once a campaign references it, it is **frozen**: it is never edited in place (the panel
-  and `campaigns.py set` refuse); **duplicate and edit** makes a new draft with everything copied
+- A configuration that no campaign references is a *draft*: it is edited, renamed and tried
+  freely. Once a campaign references it, it is *frozen*: it is never edited in place (the panel
+  and `campaigns.py set` refuse); **Duplicate and edit** makes a new draft with everything copied
   (`<name>-2`, or a name of your choice).
-- A campaign **with no stored trial** may switch to another configuration (the hash is taken
+- A campaign with no stored trial may switch to another configuration (the hash is taken
   again; the configuration it leaves becomes a draft again if no other campaign uses it). After
   its first stored trial (a trial replaced by a later run also counts), it cannot.
-- **Integrity.** Every stored record keeps the name and the hash of its configuration
+- Every stored record keeps the name and the hash of its configuration
   (`configuration`, `configuration_hash`, and its values, `configuration_values`). If the
   configuration file of a campaign changed after it was associated (edited by hand), is missing, or
   a stored trial ran with another configuration, `real_sessions.py` refuses every trial and check of
@@ -151,7 +163,7 @@ other) never mixes with the study. The `campaigns/` folder appears with the firs
 Freezing at association, and allowing a switch until the first stored trial, lets the pre-session
 check find a bad voice or microphone without breaking the rule.
 
-**How a trial uses it.** A trial, its test (`--try`), the checks and the rehearsal of a campaign
+A trial, its test (`--try`), the checks and the rehearsal of a campaign
 run with its configuration: the stack starts without its speech nodes (`speech:=none`) and
 `real_sessions.py` starts simple_hri with the configuration's voice and settings, microphone and
 speech-recognition model; its filler delay goes into the request. Barge-in is not part of a
@@ -175,18 +187,18 @@ already holds participants).
 From the participant's number (P07 is 7), with n enabled conditions, m scenarios in the pool and
 t trials per condition (`real/sessions_common.py`):
 
-1. **The order of the conditions** is a row of a balanced Latin square (Williams design): every
+1. The order of the conditions is a row of a balanced Latin square (Williams design): every
    condition is in every position, and follows every other condition, equally often. With two
    conditions the rows are AB and BA; with three, six orders. Every group of consecutive
    participants that takes all the rows (2, or 6) is balanced.
-2. **The scenarios.** Condition c (its place in the file, from 0) gets the scenarios
+2. For the scenarios, condition c (its place in the file, from 0) gets the scenarios
    (p − 1 + (c·t + j)·d) mod m, j = 0…t−1, with d = m // (n·t): over m consecutive
    participants, every condition goes through every scenario once, and a participant never gets
    the same scenario twice.
-3. **The position of each scenario.** Within each group, the rows go in the order that, over a
+3. For the position of each scenario, the rows within each group go in the order that, over a
    block of lcm(m, rows) participants (or twice that), also puts every scenario in every position
-   equally often (found by a short search; when there is none, the rows go in their order,
-   shifted by one every block).
+   equally often. That order is found by a short search; when there is none, the rows go in their
+   order, shifted by one every block.
 
 With the sessions file (one condition, eight scenarios, four trials) every block of 8 participants
 is fully balanced: each scenario four times, once in each position. `real_sessions.py balance N`
@@ -210,7 +222,7 @@ python3 real/real_sessions.py --campaign pilot card P07 1     # the card of its 
 
 ## What you need
 
-**For every session**
+Every session needs:
 
 | What | Why |
 |---|---|
@@ -234,9 +246,9 @@ either, with the defaults. In the control panel they are the **Pre-session check
 **Before the session: the other checks** of Real sessions, each with its result (OK, FAILED or
 SKIPPED, with why) and its time. In a terminal: `real_sessions.py --campaign <C> check <what>`.
 
-**The pre-session check** (`check presession`), on every day of sessions before the first
-participant: the loudspeaker (the configuration's voice says `check_phrase`; you confirm you heard
-it), the microphone (one transcription with the configuration's microphone and model; you confirm
+The pre-session check (`check presession`) runs on every day of sessions before the first
+participant. It checks the loudspeaker (the configuration's voice says `check_phrase`; you confirm
+you heard it), the microphone (one transcription with the configuration's microphone and model; you confirm
 the words) and the model of every enabled condition, in sequence, each with its verdict.
 simple_hri is started for it with the configuration (it refuses to run while another simple_hri
 serves the speech actions, whose voice and microphone are not known). With `--campaign`, the
@@ -246,13 +258,18 @@ not passed that day: the runner prints a warning, and the control panel asks for
 
 | # | Check | What it does | OK when |
 |---|---|---|---|
-| 1 | `speak` | Starts simple_hri (unless a stack already runs it) and says `check_phrase` (or the phrase of `--phrase`; the test panel has a field for it) through `/tts_action`. With `--voice` (a Piper voice, `NAME` or `NAME:SPEAKER`) or its settings (`--length-scale`, `--noise-scale`, `--noise-w-scale`) only the voice is started, with them, to compare voices and configurations ([TEST_PANEL.md](TEST_PANEL.md#voice-and-filler-delay)) | You heard the phrase (you confirm it) |
+| 1 | `speak` | Starts simple_hri (unless a stack already runs it) and says `check_phrase`, or the phrase of `--phrase`, through `/tts_action` | You heard the phrase (you confirm it) |
 | 2 | `listen` | One `/stt_action` goal: someone says a sentence in Spanish in front of the microphone; shows the transcription, and the cleaned utterance (`/interaction/user_utterance`) if the intelligence runs | Something was transcribed and the operator confirms that the words and the language are right (Enter; `q`: wrong, FAILED) |
 | 3 | `llm` | The model of every enabled condition answers a call of one token: the Ollama server answers and has the model (`/api/tags`); a cloud model only with `--allow-cloud` | Every model answers; shows the latency |
 | 4 | `system` | The whole stack starts in every enabled condition, with its control and model, and serves `/dialog/execute_task` and the speech actions; then it is stopped | Every condition starts (in up to 180 s) |
-| 5 | `perception` | Only with barge-in on (`--barge-in on`, the panel's checkbox): starts the lip activity detector of `interaction_perception` (emotion off) and watches `/user_speaking`, which turns true while someone talks in front of the camera | It is published and turns true; SKIPPED with barge-in off |
+| 5 | `perception` | Only with barge-in on (`--barge-in on`, the panel's checkbox): starts the lip activity detector of `interaction_perception` (emotion off) and watches `/user_speaking` | It is published and turns true while someone talks in front of the camera; SKIPPED with barge-in off |
 | 6 | `rehearsal` | A whole conversation with a member of the team, in a scenario and condition (`--scenario`, `--condition`; `sf_coffee` and `bounded` by default): a trial run as `--try`, before any participant exists | The conversation ran; read its transcript |
 | | `presession` | Speak, listen and llm in sequence, with the configuration (above) | Every part OK |
+
+The test panel has a field for the phrase of `speak`. With `--voice` (a Piper voice, `NAME` or
+`NAME:SPEAKER`) or its settings (`--length-scale`, `--noise-scale`, `--noise-w-scale`), `speak`
+starts only the voice, with them, to compare voices and configurations
+([TEST_PANEL.md](TEST_PANEL.md#voice-and-filler-delay)).
 
 ```sh
 python3 real/real_sessions.py --campaign pilot check presession   # the pre-session check of pilot
@@ -272,11 +289,11 @@ The runner of the checks needs the prepared terminal of a trial ([Running a tria
 
 Once, in the technical test with the microphone and the robot (step 2 of the procedure of E4,
 [EXPERIMENTS.md](EXPERIMENTS.md#e4-validation-with-real-users)), not before every session: what the
-system does when the speech capability fails ([endings](../../docs/behaviors/endings.md#eventualities),
+system does when the speech capability fails ([endings](../../docs/behaviors/endings.md#edge-cases),
 [SPEECH.md](../../docs/SPEECH.md#how-the-trees-use-it)). It is a check of the setup, not an
 experiment and not a measure of the study: the simulation serves the speech actions itself, so no
-simulated experiment can provoke these failures, and they are not provoked with participants
-(decided 2026-10-30, item O13 of the mechanism coverage audit). Each case runs as a rehearsal
+simulated experiment can provoke these failures, and they are not provoked with participants.
+Each case runs as a rehearsal
 (check 6) with a member of the team; the transcript and the logs of the trial are read.
 
 | Case | How | Expected |
@@ -290,8 +307,9 @@ a defect, fixed before the sessions.
 
 ## Barge-in
 
-Optional, decided after the pilot: with barge-in on, the robot stops talking as soon as the
-participant starts speaking, and what the participant says is the next turn. It comes from the
+Barge-in is optional, and the pilot decides whether E4 uses it. With barge-in on, the robot stops
+talking as soon as the participant starts speaking, and what the participant says is the next
+turn. It comes from the
 lip activity detector of `interaction_perception` on a camera facing the participant (live and
 local: no image is stored or sent anywhere; the emotion detector is never started, and the state
 of the user is never used in the sessions). With barge-in off no camera is used and the robot
@@ -300,46 +318,47 @@ finishes its utterance before listening. Set it with `barge_in` in `sessions_es.
 and the same for every trial of a participant (the runner refuses a trial with the other setting);
 each stored record says how it ran (`barge_in`).
 
-**Status: future work, off.** Barge-in cannot run yet with the pixi environment: nothing publishes
-the camera image on a computer (the system starts no camera driver: it expects the robot's), and
-the lip activity detector's dependencies (MediaPipe, OpenCV, `cv_bridge`) are not in the
-environment. So `barge_in` is `false` and the checkboxes of the control panel and the test panel
-are disabled (decided 2026-10-30, to avoid a setting that does nothing). The steps to enable it:
+Barge-in is left for future work and is off. It cannot run yet with the pixi environment: nothing
+publishes the camera image on a computer (the system starts no camera driver, since it expects the
+robot's), and the lip activity detector's dependencies (MediaPipe, OpenCV, `cv_bridge`) are not in
+the environment. So `barge_in` is `false` and the checkboxes of the control panel and the test
+panel are disabled, so that the panels do not offer a setting that does nothing. The steps to
+enable it:
 
-1. **The perception's dependencies.** An optional pixi environment (a `perception` feature, so
+1. Add the perception's dependencies in an optional pixi environment (a `perception` feature, so
    that the default environment does not grow by several GB) with `ros-<distro>-cv-bridge` and a
    camera driver (`ros-<distro>-v4l2-camera` or `ros-<distro>-usb-cam`) from RoboStack, and
    `opencv-python` and `mediapipe` from PyPI at the versions of
    `interaction_perception/interaction_perception/requirements.txt`. Check first that MediaPipe
    has wheels for the Python of each distribution (Jazzy: 3.12; Lyrical: its own).
-2. **The camera.** On the robot, set `camera_topic` of `sessions_es.yaml` to the topic of its
+2. Set up the camera. On the robot, set `camera_topic` of `sessions_es.yaml` to the topic of its
    camera (the detector subscribes to it; it is a setting, nothing detects it). On a computer, add
    a `camera_command` to `sessions_es.yaml` (e.g. `ros2 run v4l2_camera v4l2_camera_node` with its
    image remapped to `camera_topic`) that `real_sessions.py` starts and stops with the perception;
-   empty on the robot.
-3. **The face landmarker model.** It downloads to `/tmp` on first use (lost on reboot); keep it in
-   a persistent folder, as upstream DialoStack does (commit 953c62d).
-4. **The panels.** Enable the checkboxes again and add a "Check: perception" button to the test
+   leave it empty on the robot.
+3. Keep the face landmarker model in a persistent folder, as upstream DialoStack does (commit
+   953c62d); by default it downloads to `/tmp` on first use and is lost on reboot.
+4. Enable the checkboxes of the panels again and add a "Check: perception" button to the test
    panel (the control panel has check 5).
-5. **Validation before the pilot.** Check 5 (`/user_speaking` turns true when someone talks in
-   front of the camera and stays false otherwise); the time from the start of the speech to the
-   cut; cuts with nobody speaking (other people in view, background noise). Then the pilot decides
+5. Validate it before the pilot: check 5 (`/user_speaking` turns true when someone talks in front
+   of the camera and stays false otherwise), the time from the start of the speech to the cut, and
+   cuts with nobody speaking (other people in view, background noise). Then the pilot decides
    whether E4 uses it; if these steps are not done before the pilot, E4 runs without barge-in.
 
 ## The procedure of a session
 
-1. **Before the participant arrives:** set the room (the robot, the microphone and speaker, the
+1. Before the participant arrives, set the room (the robot, the microphone and speaker, the
    card screen); start the LLM server and, if needed, the SSH tunnel to it; start the control
    panel (or prepare a terminal). Choose the campaign. Set the robot's network on the page. Run the
    pre-session check (every day of sessions), the checks 4 and 5, and 6 (a rehearsal) at least on
    the first day and after any change.
-2. **Welcome:** the information sheet and the consent form, signed before anything is recorded.
-   Give the participant their code (P01, P02...) in order of arrival: the code decides the plan.
-   The list that links codes and names is kept apart from the data, as the data protection plan
-   says.
-3. **The plan:** type the code in Participant and press **Create / open the plan**. The plan lists
-   the trials in the order to run them.
-4. **For each trial, in order:**
+2. Welcome the participant with the information sheet and the consent form, signed before
+   anything is recorded. Give the participant their code (P01, P02...) in order of arrival: the
+   code decides the plan. The list that links codes and names is kept separately from the data, as
+   the data protection plan says.
+3. Type the code in Participant and press **Create / open the plan**. The plan lists the trials in
+   the order to run them.
+4. Run each trial, in order:
    1. Show the card (**Card**, full screen) and let the participant read it; answer questions
       about the task, not about the robot. Remind them to use the invented data of the card and
       never their own (name, address, phone). Leave the card in view if the participant wants it.
@@ -349,20 +368,20 @@ are disabled (decided 2026-10-30, to avoid a setting that does nothing). The ste
       the conversation. Do not intervene: the conversation ends when the robot ends it (or at the
       turn limit, or after `dialogue_timeout`).
    4. END says how it ended. The record is stored and the stack stopped.
-5. **At the end:** the questionnaires, thanks, and check in the panel that every trial of the
-   participant is stored (Participants: 4/4).
+5. At the end, give the questionnaires, thank the participant, and check in the panel that every
+   trial of the participant is stored (Participants: 4/4).
 
 If something goes wrong in a trial (the participant was interrupted, a device failed), press
-**Stop**: the conversation is cancelled, the stack stopped, nothing of it stored, and `trials.csv`
+**Stop**: the conversation is canceled, the stack stopped, nothing of it stored, and `trials.csv`
 notes it. Whether that trial is run again (the participant already knows its task) is the
 researchers' decision, written in the session notes.
 
 ## Running a trial
 
-**From the control panel:** [CONTROL_PANEL.md](CONTROL_PANEL.md#real-sessions).
+From the control panel, see [CONTROL_PANEL.md](CONTROL_PANEL.md#real-sessions).
 
-**In a terminal**, prepared as for any run of the system, from the workspace (for ROS 2
-Lyrical: `pixi shell -e lyrical` and `install_lyrical/setup.bash`):
+In a terminal, prepared as for any run of the system, from the workspace (for ROS 2 Lyrical:
+`pixi shell -e lyrical` and `install_lyrical/setup.bash`):
 
 ```sh
 pixi shell
@@ -390,16 +409,19 @@ configuration and the folder of its participants; `--sessions` is then ignored).
 Running a stored trial again replaces it; the old record and its logs are moved to
 `<campaign>/<P>/replaced/<time>/`.
 
-`try-scenario` (any scenario, a test that stores nothing; the test panel runs it,
-[TEST_PANEL.md](TEST_PANEL.md)) takes `--model`, `--control`, `--allow-cloud`, `--force`, `--keep`
-and `--barge-in` as above, and options of a test only, never of a trial: `--config` (any
-configuration, drafts included; the options below go over it), `--voice` (another
-Piper voice, `NAME` or `NAME:SPEAKER`) and its settings `--length-scale` (speed),
-`--noise-scale` (expressiveness) and `--noise-w-scale` (rhythm variation), with which the stack
-starts with `speech:=none` and simple_hri is started with that voice and settings; and
-`--filler-after` (`filler_after_s` of the request: the seconds before a conversational filler;
-`0`: none). Without them the defaults apply (those of the starting configuration;
-[TEST_PANEL.md](TEST_PANEL.md#voice-and-filler-delay)).
+`try-scenario` runs any scenario as a test that stores nothing (the test panel runs it,
+[TEST_PANEL.md](TEST_PANEL.md)). It takes `--model`, `--control`, `--allow-cloud`, `--force`,
+`--keep` and `--barge-in` as above, and some options of a test only, never of a trial:
+
+- `--config`: any configuration, drafts included; the options below go over it;
+- `--voice`: another Piper voice, `NAME` or `NAME:SPEAKER`, with its settings `--length-scale`
+  (speed), `--noise-scale` (expressiveness) and `--noise-w-scale` (rhythm variation); with them,
+  the stack starts with `speech:=none` and simple_hri is started with that voice and settings;
+- `--filler-after`: `filler_after_s` of the request, the seconds before a conversational filler
+  (`0`: none).
+
+Without them the defaults apply, those of the starting configuration
+([TEST_PANEL.md](TEST_PANEL.md#voice-and-filler-delay)).
 
 ## During a trial
 
@@ -430,7 +452,7 @@ In `~/.ros/interaction_real/<campaign>/` (or `<out>/<campaign>/`; the paths belo
 | `<P>/plan.yaml` | The plan: the order of the conditions (and its row of the Latin square), each trial's scenario and condition, the sessions file and its hash, when it was created |
 | `<P>/trial_<k>_<scenario>_<condition>.json` | The record of the trial (below) |
 | `<P>/trial_<k>_<scenario>_<condition>/` | The logs of the stack (`system.log`), its parameter file, and the intelligence's transcript log |
-| `trials.csv` | One row per trial run or cancelled: `time`, `participant`, `trial`, `scenario`, `condition`, `model`, `status`, `success`, `outcome`, `turns`, `duration_s`, `stored`, `barge_in`, `configuration`, `notes` |
+| `trials.csv` | One row per trial run or canceled: `time`, `participant`, `trial`, `scenario`, `condition`, `model`, `status`, `success`, `outcome`, `turns`, `duration_s`, `stored`, `barge_in`, `configuration`, `notes` |
 
 The record has the keys of the simulated experiments' (`run_experiment.py`): `scenario`,
 `strategy`, `condition`, `model`, `status`, `success`, `outcome` (how it ended:
@@ -449,7 +471,7 @@ and `started`.
 
 No audio is recorded by these scripts.
 
-**The participant's code stays out of the system.** The stack of a trial runs in a temporary
+The participant's code stays out of the system. The stack of a trial runs in a temporary
 folder whose name says nothing of the participant (its parameter file, its logs, the transcript
 log of the intelligence), the request sent to the robot is the scenario's, and the dialogue is
 identified by the random id of the request. So the code never reaches the interaction system,
@@ -459,9 +481,10 @@ When the trial ends, that folder is moved next to the record.
 ## Scoring the sessions
 
 The scorers of the simulated experiments read the folder of a campaign as they read the results
-of an experiment (one campaign at a time: a pilot is never scored with the study). `score_runs.py` runs on this computer, with no model, and can run after every
-session. The judge runs once, at the end, on all the sessions, and only after **the review of the
-transcripts**: a member of the team reads each stored trial and replaces any real personal data
+of an experiment (one campaign at a time: a pilot is never scored with the study).
+`score_runs.py` runs on this computer, with no model, and can run after every session. The judge
+runs once, at the end, on all the sessions, and only after the review of the transcripts: a member
+of the team reads each stored trial and replaces any real personal data
 the participant said by mistake (a name, an address, a phone that is not on the card), as the
 ethics protocol says. The replacement runs over the whole record and the logs of the trial, what
 was replaced is not kept, and the record is marked as reviewed (by whom, when); `judge_runs.py`
@@ -508,7 +531,7 @@ records store it.
 - Participants can stop at any time, without giving a reason; their data are then handled as the
   consent form says.
 - The data are pseudonymous: the records carry only the participant's code. The list that links
-  codes and identities is kept apart, with restricted access, and the data are stored and deleted
+  codes and identities is kept separately, with restricted access, and the data are stored and deleted
   as the data protection plan says.
 - The cards use fictitious names and addresses, and ask the participants to use them and never
   their own data; the participant's code never reaches the interaction system nor a cloud
@@ -524,6 +547,6 @@ records store it.
 | `Write the dated version of the model` | The cloud model is still `<pin>` in `sessions_es.yaml` |
 | The robot does not hear the participant | Run the Listen check; check the microphone level and the distance |
 | The Speak check plays nothing | Check the output device and its volume; `play_sound` of the TTS node |
-| `Campaign ... refuses its trials and checks: ...` | Its configuration file changed after it was associated (or is missing, or a stored trial ran with another): restore the file (e.g. from git); before the first stored trial, the campaign can also switch to another configuration ([Campaigns and configurations](#campaigns-and-configurations)) |
+| `Campaign ... refuses its trials and checks: ...` | Its configuration file changed after it was associated, is missing, or a stored trial ran with another: restore the file (e.g. from git), or switch the campaign before its first stored trial ([Campaigns and configurations](#campaigns-and-configurations)) |
 | `A participant belongs to a campaign` | Give `--campaign <name>` (`real/campaigns.py list`), or create one |
 | `The sessions file now gives this participant another plan` | The conditions or the pool changed after the plan was made. Keep the plan, or `plan --replace` before the first trial |

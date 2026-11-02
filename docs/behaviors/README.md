@@ -1,11 +1,11 @@
 # The dialogue behaviors and their shared mechanisms
 
-One page per dialogue behavior (strategy) and per mechanism shared by all of them. Each page says
-what the behavior or mechanism does, what it needs, its Behavior Tree, how it understands each
-user turn, what it does in every eventuality (silence, a request to repeat, a turn not
-understood, a cancellation, a failure of the LLM or of speech, a limit reached) and what it
-returns. The questions to the LLM are in [PROMPTS.md](../PROMPTS.md), and adding a behavior in
-[ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md).
+This folder has one page per dialogue behavior (strategy) and one per mechanism shared by all of
+them. Each page describes what the behavior or mechanism does, what it needs and returns, its
+Behavior Tree, how it understands each user turn, and how it handles the edge cases: silence, a
+request to repeat, a turn not understood, a cancellation, a failure of the LLM or of speech, and a
+limit reached. The questions to the LLM are described in [PROMPTS.md](../PROMPTS.md), and how to
+add a behavior in [ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md).
 
 | Strategies | Shared mechanisms |
 |---|---|
@@ -23,14 +23,21 @@ Every behavior follows the same skeleton of turns
 ([ARCHITECTURE.md](../ARCHITECTURE.md#the-action-layer-the-dialogue-behaviors)): the tree of the
 strategy decides what follows each turn, the LLM only answers narrow questions (understand an
 utterance, phrase a reply), and every limit is a counter in the tree. Every conversation ends with
-a closing line and an **outcome** with its reason, returned in the `DialogTask` result
+a closing line and an outcome with its reason, returned in the `DialogTask` result
+([Endings and outcome](endings.md)).
+
+The limits of a conversation are parameters of the orchestrator
+([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)), and a request can set its own
+`max_turns`, `max_silence` and `max_stalled`
+([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). Reaching the turn limit and a failure
+of the system end the conversation in the same way in every behavior
 ([Endings and outcome](endings.md)).
 
 ## How to read the figures
 
 The figures are drawn from the XML of the trees (`interaction_system_behaviors/behavior_tree_xml`)
 by `interaction_system_behaviors/scripts/bt_diagrams.py`, with Graphviz. Run it after changing a
-tree, so that the figures stay in sync with the trees:
+tree to keep the figures in sync:
 
 ```bash
 python3 interaction_system_behaviors/scripts/bt_diagrams.py   # writes media/bt/*.svg
@@ -38,12 +45,16 @@ python3 interaction_system_behaviors/scripts/bt_diagrams.py   # writes media/bt/
 
 | Shape | Node |
 |---|---|
-| Grey, rounded | Control: `→` Sequence (runs its children in order, fails at the first that fails), `?` Fallback (tries its children in order until one succeeds), `↻` Repeat (until a child fails), if / then / else, and switch (the branch whose value matches the variable; *otherwise* when none does) |
+| Grey, rounded | Control: `→` Sequence, `?` Fallback, `↻` Repeat, if / then / else, and switch |
 | Blue, rounded | A question to the interaction intelligence (`AskIntelligence`), named by its skill; it updates the state of the dialogue and writes the reply to say and a label |
 | Purple, rounded | Speech: `Speak` (with barge-in), `Listen`, and `WithFillers` (says the conversational fillers while its child prepares the reply) |
 | Yellow | A condition on the blackboard (`if ...`), or `fail` |
 | White | A blackboard update (`Script`): counters, `done` |
-| Green, bold | A subtree: those of the behavior's own file are expanded below it (with their parameters); the shared ones of `common.xml` are a single box, `shared: ...`, drawn in the mechanism's document |
+| Green, bold | A subtree. Those of the behavior's own file are expanded below it, with their parameters; those of `common.xml` are a single box, `shared: ...`, drawn on the mechanism's page |
+
+A Sequence runs its children in order and fails at the first child that fails; a Fallback tries
+its children in order until one succeeds; a Repeat runs its child until it fails; a switch runs the
+branch whose value matches the variable, or the *otherwise* branch when none does.
 
 All the shared subtrees side by side:
 

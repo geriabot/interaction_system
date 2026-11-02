@@ -1,14 +1,14 @@
-# E0a, phase A: blind adjudication of the disputed cases
+# E0a, phase 1: blind adjudication of the disputed cases
 
-[All the hand tasks](../../HUMAN_REVIEW.md) · Who: **one author, blind** · When: **after phase A
-of E0a has run (both passes), before phase B** · How long: the number of cases is known only
-after phase A; about 40 s per case.
+[All the hand tasks](../../HUMAN_REVIEW.md) · Who: one author, blind · When: after phase 1 of E0a
+has run (both passes), before phase 2 · How long: about 40 s per case; the number of cases is
+known only after phase 1.
 
 ## What and why
 
-After the candidate models have answered the phase A test cases, a case that half or more of the
+After the candidate models have answered the phase 1 test cases, a case that half or more of the
 models got critically wrong may be a case whose expected answer is wrong, not a case the models
-fail. The rule, fixed before running, is that only those cases are looked at again, and **blind**:
+fail. The rule, fixed before running, is that only those cases are looked at again, and blind:
 you never see which models failed a case, nor how many, only the case and its current expected
 answer. A wrong expected answer is corrected for every model, and the safety gate is recomputed
 from the answers already saved, without running any model again. No other case is touched after
@@ -16,10 +16,10 @@ the results.
 
 ## Before you start
 
-- Phase A has finished: `evaluation/results/e0a_phase_a/gate.json` exists (written by
+- Phase 1 has finished: `evaluation/results/e0a_phase_a/gate.json` exists (written by
   `scripts/run_e0a.py phase-a`). Without it the panel uses the saved runs of that folder; with
   neither it says "There are no phase A results to review yet".
-- Do not open `gate.json`, `report.md` or the runs of phase A before adjudicating: they say which
+- Do not open `gate.json`, `report.md` or the runs of phase 1 before adjudicating: they say which
   models failed each case.
 - You need the workspace installed with pixi (see [Before any task](../../HUMAN_REVIEW.md#before-any-task)).
 
@@ -67,16 +67,20 @@ screen lists the files written. Nothing has to be sent.
 
 | What you see | What to do |
 |---|---|
-| "There are no phase A results to review yet" | Phase A has not run, or its folder is elsewhere: tell the coordinator (`--gate <file>` points to another `gate.json`) |
+| "There are no phase A results to review yet" | Phase 1 has not run, or its folder is elsewhere: tell the coordinator (`--gate <file>` points to another `gate.json`) |
 | The number of cases is 0 | No critical case was failed by half or more of the models: there is nothing to adjudicate |
 | Another port, "This panel was opened for another task or person", "The session was closed", the browser closed | As in the [trap review](e0a_trap_review.md#troubleshooting) |
 
 ## For the coordinator
 
-**Prepare.** Nothing to generate: run phase A (`scripts/run_e0a.py phase-a`); the panel makes the
+### Prepare
+
+There is nothing to generate: run phase 1 (`scripts/run_e0a.py phase-a`), and the panel makes the
 list from its `gate.json`.
 
-**Collect, apply and recompute the gate.** From the workspace root:
+### Collect, apply and recompute the gate
+
+From the workspace root:
 
 ```sh
 pixi run python src/interaction_system/evaluation/panels/review_panel.py dataset report --adjudicate --reviewer "Your Name"
@@ -89,10 +93,12 @@ pixi run bash -c "cd src/interaction_system/evaluation/offline && python3 run_mo
 reviewed blind", keeps a backup and runs the dataset checks. `--gate-only` scores the saved answers
 of every model again against the corrected datasets (no model is run, no server is needed) and
 rewrites `gate.json`, `report.md` and the finalists of each language (`finalists_en.txt`,
-`finalists_es.txt`), which phase B takes. Then phase B can run (`scripts/run_e0a.py phase-b`).
+`finalists_es.txt`), which phase 2 takes. Then phase 2 can run (`scripts/run_e0a.py phase-b`).
 Commit the corrected datasets and `CHANGELOG.jsonl`.
 
-**Where the files go** (private, git-ignored): `results/reviews/adjudication/selection.json` (the
-frozen list) and `<dataset>.<reviewer>.json` (the decisions); the backups and private changelog as
-in the [trap review](e0a_trap_review.md#for-the-coordinator); the recomputed gate in
-`results/e0a_phase_a/`. Public: the corrected datasets and `CHANGELOG.jsonl`.
+### Where the files go
+
+The private, git-ignored files are `results/reviews/adjudication/selection.json` (the frozen
+list) and `<dataset>.<reviewer>.json` (the decisions). The backups and the private changelog are
+as in the [trap review](e0a_trap_review.md#for-the-coordinator), and the recomputed gate is in
+`results/e0a_phase_a/`. The public files are the corrected datasets and `CHANGELOG.jsonl`.

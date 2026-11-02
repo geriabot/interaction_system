@@ -80,7 +80,7 @@ optional, so they express "greater than", "less than" and "between":
 {"name": "guests",      "type": "int",   "exclusive_minimum": 0}
 ```
 
-At runtime, a value outside the range is **not stored**:
+At runtime, a value outside the range is not stored:
 
 - **Gathering:** the value is rejected and counts as a failed attempt on the
   slot. The robot tells the user the allowed range and asks again
@@ -122,8 +122,8 @@ Runtime behavior:
 - When the parent changes so that the condition stops holding, the child's
   value is cleared (e.g. age 70 to 30 clears `pension`). Changes that keep the
   condition true (70 to 80) preserve it.
-- If the user gives a value for a child whose **equality** condition is not met
-  yet, the parent is set to the required value automatically. **Range**
+- If the user gives a value for a child whose equality condition is not met
+  yet, the parent is set to the required value automatically. Range
   conditions have no single parent value, so the parent is asked first.
 
 ## Validation errors

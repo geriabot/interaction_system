@@ -1,9 +1,9 @@
 # Choosing the models
 
-Which model answers each question of the interaction system, how to change it, and how the answer
-is kept to the expected format. The text of the questions is in [PROMPTS.md](PROMPTS.md), every
-parameter in [CONFIGURATION.md](CONFIGURATION.md), and serving the models from a shared GPU server
-in [GPU_SERVER.md](GPU_SERVER.md).
+This page explains which model answers each question of the interaction system, how to change
+it, and how each answer is kept to the expected format. The text of the questions is in
+[PROMPTS.md](PROMPTS.md), every parameter in [CONFIGURATION.md](CONFIGURATION.md), and how to
+serve the models from a shared GPU server in [GPU_SERVER.md](GPU_SERVER.md).
 
 ## The models of the system
 
@@ -65,7 +65,7 @@ computer, open an SSH tunnel so that it answers at `localhost:11434`
 
 ## One model per question: routes
 
-`routes` of `interaction_intelligence` sends some questions to another model than `llm_model`,
+`routes` of `interaction_intelligence` sends some questions to a model other than `llm_model`,
 for example the understanding questions to a stronger model and the phrasing to a faster one.
 Each entry is `question=model`, where the question is the name of the method of
 `LLMDialogClient` (`interaction_intelligence/llm_client.py`) that asks the LLM:
@@ -103,9 +103,10 @@ Both models then stay loaded if they fit together in the GPU memory and the serv
 loaded models (`OLLAMA_MAX_LOADED_MODELS`); otherwise Ollama swaps them at every change of model,
 which works but adds the load time to the latency ([GPU_SERVER.md](GPU_SERVER.md)).
 
-The experiments do not use routes: they run one local model for every question, chosen in E0a
+The experiments of the evaluation do not use routes: they run one local model for every
+question, chosen by the model-choice experiment
 ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#e0a-choosing-the-local-model)),
-because the LLM-led condition they compare against cannot route its single prompt.
+because the LLM-led condition they compare against has a single prompt and cannot route it.
 
 ## Cloud providers
 

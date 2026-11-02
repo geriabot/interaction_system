@@ -1,29 +1,42 @@
 # Launch files and their arguments
 
-Every launch file of the system, what it starts and its arguments, with their defaults. Which
-command to run for each case is in the [README](../README.md#running-the-system), and the
-parameters of the nodes are in [CONFIGURATION.md](CONFIGURATION.md).
+This page lists every launch file of the system, what it starts, and its arguments with their
+defaults. The [README](../README.md#running-the-system) shows which command to run for each case,
+and [CONFIGURATION.md](CONFIGURATION.md) lists the parameters of the nodes.
 
 ## The interaction system
 
 ### The whole stack: `interaction_system main.launch.py`
 
-Starts the speech capability, the LLM gateway (`llm_manager_node`) and the interaction system
-(`interaction_system.launch.py`), all with the same parameter file. This is what the GUI starts
-(with `speech:=simple_hri` and the `stt`, `tts` and `whisper_model` of its Configuration page, or
-`speech:=none`).
+This launch file starts the speech capability, the LLM gateway (`llm_manager_node`) and the
+interaction system (`interaction_system.launch.py`), all with the same parameter file. The GUI
+starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `tts` and
+`whisper_model` of its Configuration page.
 
 | Argument | Default value | Description |
 |---|---|---|
-| `speech` | `simple_hri` | The speech capability: `simple_hri` (starts its speech-to-text node as `stt_service_node` and its text-to-speech node as `tts_service_node`) or `none` (no speech nodes: another node provides the capability, e.g. the simulation of `interaction_sim` or your robot) |
+| `speech` | `simple_hri` | The speech capability: `simple_hri` or `none` (no speech nodes; see below) |
 | `stt` | `faster_whisper` | simple_hri's speech-to-text: `faster_whisper` (`stt_faster_whisper`: faster-whisper with Silero VAD) or `whisper` (`stt_whisper`: Whisper with WebRTC VAD) |
 | `tts` | `piper` | simple_hri's text-to-speech: `piper` (`tts_piper`: the Piper voice of the language) or `mms` (`tts_mms`: MMS-TTS) |
 | `whisper_model` | `small` | Whisper model of simple_hri: `tiny`, `base`, `small`, `medium`, `large-v3` |
-| `input_device` | `''` | The microphone of `stt_faster_whisper` (its `input_device`: a sounddevice device name; empty: PortAudio's default). `default` goes through the system's sound server, which converts the sample rate: use it when the default device is a raw ALSA device that does not record at 16 kHz ("Invalid sample rate" in the speech-to-text's log). `stt_whisper` ignores it |
-| `language` | `''` | The language of the conversation: a language file, by code or name (`en`, `es`, `English`, `Spanish`; empty: the intelligence's `language` of the parameter files, English if none; a language without a file stops the launch). Sets the intelligence's `language` (the file's name: `English`, `Spanish`), the language of the speech-to-text and the voice, from the file's `speech` settings ([CONFIGURATION.md](CONFIGURATION.md#simple_hris-speech-nodes), [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md)) |
+| `input_device` | `''` | The microphone of `stt_faster_whisper` (its `input_device`): a sounddevice device name; empty: PortAudio's default. `stt_whisper` ignores it |
+| `language` | `''` | The language of the conversation: a language file, by code or name (`en`, `es`, `English`, `Spanish`). Empty: the intelligence's `language` of the parameter files, or English if none |
 | `params_file` | `''` (`config/app_params.yaml` of `interaction_system`) | The parameters of the LLM gateway, the intelligence and the orchestrator |
 | `config_file` | `''` (`config/interaction_behaviors_config.yaml`) | The behavior_architecture runtime: the orchestrator and the runners (e.g. the trees of an ablation) |
 | `catalog_file` | `''` (`config/interaction_orchestrator_params.yaml`) | The catalog of dialogue behaviors and the default limits |
+
+With `speech:=simple_hri`, the launch file starts simple_hri's speech-to-text node as
+`stt_service_node` and its text-to-speech node as `tts_service_node`. With `speech:=none`, another
+node provides the capability, e.g. the simulation of `interaction_sim` or your robot.
+
+`input_device:=default` goes through the system's sound server, which converts the sample rate.
+Use it when the default device is a raw ALSA device that does not record at 16 kHz ("Invalid
+sample rate" in the speech-to-text's log).
+
+`language` sets the intelligence's `language` (the file's name: `English`, `Spanish`), the
+language of the speech-to-text and the voice, from the file's `speech` settings
+([CONFIGURATION.md](CONFIGURATION.md#simple_hris-speech-nodes),
+[ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md)). A language without a file stops the launch.
 
 When the environment variable `DIALOSTACK_GUI_PARAMS` points to a YAML file (the GUI writes one
 from its Configuration page), it is applied after `params_file`, so its values take precedence;
@@ -32,8 +45,9 @@ sets the intelligence's `language` whatever the files say.
 
 ### Only the interaction system: `interaction_system interaction_system.launch.py`
 
-Starts `mission_executor` (the orchestrator and the runners of the behaviors, in one process) and
-`/interaction_intelligence`. The speech capability and the LLM gateway are started apart.
+This launch file starts `mission_executor` (the orchestrator and the runners of the dialogue
+behaviors, in one process) and `/interaction_intelligence`. The speech capability and the LLM
+gateway are started separately.
 
 | Argument | Default value | Description |
 |---|---|---|
@@ -56,23 +70,26 @@ Its `params.yaml` ships the same values as the `llm_manager_node` section of `ap
 
 ### `interaction_perception interaction_perception.launch.py`
 
-Starts `/user_state_server` and, optionally, the two detectors.
+This launch file starts `/user_state_server` and, optionally, the two detectors.
 
 | Argument | Default value | Description |
 |---|---|---|
 | `image_topic` | `/camera/image_raw` | The camera image the detectors read |
-| `emotion` | `true` | Run the facial emotion detector (preliminary, not validated: [interaction_perception](../interaction_perception/interaction_perception/README.md)). Its estimate reaches the conversation only if the intelligence's `user_state_service` is set (empty by default) |
+| `emotion` | `true` | Run the facial emotion detector (preliminary, not validated: [interaction_perception](../interaction_perception/interaction_perception/README.md)) |
 | `lips` | `true` | Run the lip activity detector (visual barge-in, experimental) |
 | `visualization` | `false` | Show the detectors' debug windows (sets `show_visualization` and `show_debug`) |
 
+The emotion estimate reaches the conversation only if the intelligence's `user_state_service`
+is set (it is empty by default).
+
 `emotion_detector.launch.py` and `lip_detector.launch.py` start one detector each with its
-parameter file (no arguments; the shipped files open the debug windows).
+parameter file. They take no arguments, and the shipped files open the debug windows.
 
 ## simple_hri
 
 `main.launch.py` starts simple_hri's nodes itself. To use its other backends and options (cloud
-services, another Piper voice, the audio forwarding to the robot's speakers), start it with its own
-launch file and the interaction system with `main.launch.py speech:=none`:
+services, another Piper voice, the audio forwarding to the robot's speakers), start simple_hri
+with its own launch file and the interaction system with `main.launch.py speech:=none`:
 
 | Launch file | Arguments | Nodes |
 |---|---|---|
@@ -94,10 +111,10 @@ launch file and the interaction system with `main.launch.py speech:=none`:
 
 ## The evaluation: `interaction_ablations llm_led.launch.py`
 
-The whole stack with the LLM-led conversation (the `monolithic` ablation of
-[evaluation/README.md](../evaluation/README.md#ablations)): it includes `main.launch.py` with the
-arguments below, the ablation's `config_file`, and a copy of the parameter file with the
-ablation's skills module (`interaction_ablations.skills`) added to the intelligence's
+This launch file starts the whole stack with the LLM-led conversation, the `monolithic` ablation
+of [evaluation/README.md](../evaluation/README.md#ablations). It includes `main.launch.py` with
+the arguments below, the ablation's `config_file`, and a copy of the parameter file in which the
+ablation's skills module (`interaction_ablations.skills`) is added to the intelligence's
 `skill_modules`.
 
 | Argument | Default value | Description |

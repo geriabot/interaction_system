@@ -22,10 +22,13 @@ Contents: [Who plays each role](#who-plays-each-role) · [The phases](#the-phase
 
 | Role | Who | Where |
 |---|---|---|
-| The robot | The system with the local model of each language chosen in E0a, in the two ways of holding the conversation of E1: bounded (the method) and LLM-led | The GPU server |
+| The robot | The system with the local model of each language chosen in E0a, bounded (the method) and LLM-led, the two ways of holding the conversation of E1 | The GPU server |
 | The user | The simulated user of E1 (Gemini 2.5 Flash-Lite), with a persona and a goal | Cloud |
 | The judge | The candidate judges of the ladder | The GPU server (every utterance) and the cloud (only the utterances of the annotation sheets) |
-| The people | Two members of the research group not involved in this work (independent of its design and hypotheses), each alone, who label a sample of robot utterances; they do not talk with the system. A third one, if available, for the alternative annotator test (Calderon et al. 2025, which asks for at least three) | — |
+| The people | Two members of the research group not involved in this work, each labeling a sample of robot utterances alone; a third one, if available | — |
+
+The annotators are independent of the design and hypotheses of this work. A third annotator
+allows the alternative annotator test (Calderon et al. 2025), which asks for at least three.
 
 No person talks with the robot in E0b. The judge only labels robot utterances, and in E1 and E3
 those come from exactly this kind of dialogue. The utterances of the large cloud model of E1 and
@@ -35,17 +38,45 @@ those of the real sessions of E4 are checked in the [confirmations](#confirmatio
 
 | Phase | What happens | Output |
 |---|---|---|
-| 1. Dialogues | The system talks with the simulated user with three personas: `cooperative` (utterances within the task), `boundary_testing` (utterances out of the frame and unsupported claims) and `mild_cognitive_impairment` (silences, misunderstandings, requests to repeat: the utterances of the shared mechanisms). English: 2 scenarios per strategy. Spanish: the 8 scenarios of E4, each provoking one mechanism with its events | 84 dialogues in English, 48 in Spanish (about 1450 robot utterances) |
-| 2. The judge | The dialogues of each language are split into a development half and a validation half. The judge's instructions are adjusted on the development half only, then frozen (instructions and model version). Each candidate judge labels the robot's utterances; the conversational fillers (a fixed phrase the robot says while its reply takes long, marked in the records) are not labelled, as they are not generated, but they stay in the conversation the judge reads | One labels file per judge |
-| 3. The people | Two annotators label the same sample of utterances from the validation half, each alone, with the [guide](#the-annotation-guide), without seeing the judge's labels, the condition or the other's sheet. The sample is stratified by persona × condition with equal allocation, and **no judge takes part in choosing it** (decided 2026-11-02): the human labels are then a reference for any judge, those of the ladder and any later one. Since out-of-frame and unsupported utterances are infrequent, and with an infrequent label agreement can be low while accuracy is high, the **size** follows a rule fixed beforehand: 150 utterances per language, raised by 50 at a time up to 300 until the expected number of positives of each label reaches 30 (`MIN_POSITIVES`); the expected number is the allocation of each stratum times the prevalence of the label in that stratum's development utterances, as labelled by the local judges (their mean). The judges thus only size the sample, from the development half, which nobody annotates. The inclusion probability of every utterance is recorded with the sample. Fillers never enter the sheets. They annotate once: every candidate judge is compared with the same labels | Two filled sheets per language |
-| 4. Comparison | Per judge, label, language and annotator: the prevalence of the label in the sample, the judge's sensitivity and specificity (the annotator as reference), Cohen's unweighted kappa with a 95% interval from a bootstrap over dialogues (the utterances of one dialogue are not independent), and the kappa weighted by the inverse inclusion probabilities (the equal allocation of the strata undone; reported, not used to decide); the kappa between the annotators; the [decision rule](#the-decision-rule) and the [ladder](#the-ladder-of-judges), applied across both languages | One judge used in the experiments, in both languages |
+| 1. Dialogues | The system talks with the simulated user with three personas, in English (2 scenarios per strategy) and in Spanish (the 8 scenarios of E4) | 84 dialogues in English, 48 in Spanish (about 1450 robot utterances) |
+| 2. The judge | The dialogues of each language are split into a development half and a validation half; the judge's instructions are adjusted on the development half only, then frozen; each candidate judge labels the robot's utterances | One labels file per judge |
+| 3. The people | Two annotators label the same stratified sample of the validation half, each alone, with the [guide](#the-annotation-guide) | Two filled sheets per language |
+| 4. Comparison | The agreement of each judge with each annotator, per label and language; the agreement between the annotators; the [decision rule](#the-decision-rule) and the [ladder](#the-ladder-of-judges), applied across both languages | One judge used in the experiments, in both languages |
+
+In phase 1 the personas are `cooperative` (utterances within the task), `boundary_testing`
+(utterances out of the frame and unsupported claims) and `mild_cognitive_impairment` (silences,
+misunderstandings and requests to repeat, which bring out the utterances of the shared
+mechanisms). Each Spanish scenario provokes one mechanism with its events.
+
+In phase 2 the freeze covers the instructions and the model version. The conversational fillers (a
+fixed phrase the robot says while its reply takes long, marked in the records) are not labeled,
+as they are not generated, but they stay in the conversation the judge reads.
+
+In phase 3 the annotators see neither the judge's labels, nor the condition, nor each other's
+sheet. The sample is stratified by persona × condition with equal allocation, and no judge takes
+part in choosing it, so that the human labels are a reference for any judge, those of the ladder
+and any later one. Out-of-frame and unsupported utterances are infrequent, and with an infrequent
+label agreement can be low while accuracy is high; the size of the sample therefore follows a rule
+fixed beforehand. It starts at 150 utterances per language and grows by 50 at a time, up to 300,
+until the expected number of positives of each label reaches 30 (`MIN_POSITIVES`). The expected
+number is the allocation of each stratum times the prevalence of the label in that stratum's
+development utterances, as labeled by the local judges (their mean). The judges thus only size the
+sample, from the development half, which nobody annotates. The inclusion probability of every
+utterance is recorded with the sample. Fillers never enter the sheets. The annotators annotate
+once: every candidate judge is compared with the same labels.
+
+In phase 4 the agreement of each judge with each annotator is given as the prevalence of the label
+in the sample, the judge's sensitivity and specificity (the annotator as reference), Cohen's
+unweighted kappa with a 95% interval from a bootstrap over dialogues (the utterances of one
+dialogue are not independent), and the kappa weighted by the inverse inclusion probabilities. The
+weighted kappa undoes the equal allocation of the strata; it is reported, not used to decide.
 
 ## Running E0b
 
 From `src/interaction_system/evaluation`, in a prepared terminal
 ([REPRODUCING.md](REPRODUCING.md#before-anything)).
 
-**In stages, both languages at once** (`scripts/run_e0b.py`; results in `results/e0b/en` and
+In stages, both languages at once, with `scripts/run_e0b.py` (results in `results/e0b/en` and
 `results/e0b/es`; every stage resumes where it stopped):
 
 ```sh
@@ -64,34 +95,33 @@ python3 scripts/run_e0b.py report --a-en A_en.csv --b-en B_en.csv --a-es A_es.cs
 
 `dialogues` runs each language with the model E0a decided for it, read from E0a's decision
 (`results/e0a/decision.json`), whatever it is (the provisional `qwen3:8b` included). It is refused
-while E0a has not decided, and while an experiment file names another local model than the
-decision (`run_e0a.py apply` not run, or the file edited by hand): the message says which file and
-which model, so that the files, the provenance and what runs always agree. The dialogues are not
-scored: E0b must not show results like E1's before E1.
+while E0a has not decided, and while an experiment file names a local model other than the
+decision's (`run_e0a.py apply` not run, or the file edited by hand). The message says which file
+and which model, so that the files, the provenance and what runs always agree. The dialogues are
+not scored, since E0b must not show results like E1's before E1.
 
-**Free judges first.** `label` is free: the local judges label everything and the sheets are
+The free judges come first. `label` is free: the local judges label everything and the sheets are
 drawn (the local judges' labels of the development half only size the sample; they choose no
-utterance). The people annotate once.
-`report` applies the [decision rule](#the-decision-rule) in the order of the ladder; if a local
-judge passes in both languages, it is the judge and E0b ends with no cloud call at all. Only when
-none does (the report says so, and records whether the cloud judges have labelled:
-`cloud_labelled` in `results/e0b/report.json`), `label-cloud` makes one tiny call to each cloud
+utterance). The people annotate once. `report` applies the [decision rule](#the-decision-rule) in
+the order of the ladder; if a local judge passes in both languages, it is the judge and E0b ends
+with no cloud call at all. Only when none does (the report says so, and records whether the cloud
+judges have labeled, as `cloud_labelled` in `results/e0b/report.json`), `label-cloud` makes one tiny call to each cloud
 judge of the ladder and has them label the utterances of the same sheets; then `report` runs again
 on the same annotations. The sample does not depend on any judge, so a cloud judge, or any judge
-tried later, is compared on the same footing as the local ones. `report` writes the report of each language
-(`results/e0b/<lang>/e0/report.json`) and then chooses **one judge for both languages**
+tried later, is compared on the same footing as the local ones. `report` writes the report of each
+language (`results/e0b/<lang>/e0/report.json`) and then chooses one judge for both languages
 (`judge_validation.py combine`, `results/e0b/report.json`); it needs the filled sheets of both
 languages. The stages that use the GPU hold a lock file (`results/.gpu_run.lock`), so that E0a and
 E0b never run at once on the same GPU server.
 
-The [ladder](#the-ladder-of-judges) is fixed in the script; the OpenAI judges run only with
-`label-cloud --openai` (when there are credits). The local judges label
-every utterance (free); the cloud judges label only the utterances of the annotation sheets. Local
-judges the script pulled are removed from the server afterwards (`--keep-models` keeps them). A
-judge of the family of E0b's system model is skipped, local or cloud (a cloud one would be paid
-for nothing); the run stops if no judge of another family is left.
+The [ladder](#the-ladder-of-judges) is fixed in the script; the OpenAI judges are optional and run
+only with `label-cloud --openai`. The local judges label every utterance (free); the cloud judges
+label only the utterances of the annotation sheets. Local judges the script pulled are removed
+from the server afterwards (`--keep-models` keeps them). A judge of the family of E0b's system
+model is skipped, local or cloud, since a cloud one would be paid for nothing; the run stops if no
+judge of another family is left.
 
-**Step by step**, the same for one folder (English; repeat for `e0b_judge_dialogues_es`):
+Step by step, the same for one folder (English; repeat for `e0b_judge_dialogues_es`):
 
 ```sh
 # 1. Dialogues (paid calls: the simulated user only)
@@ -132,7 +162,7 @@ each judge's error rate.
 While adjusting the instructions, read the judge's labels only on the development dialogues
 (listed in `e0/split.json`); never open the validation half. `judge_runs.py` keeps the labels it
 already wrote, so after changing the instructions delete the judge's labels file (or use a new
-`--tag`) before labelling again. `sheets` stores the hash of the instructions, and `report` stops
+`--tag`) before labeling again. `sheets` stores the hash of the instructions, and `report` stops
 if they changed after the sheets were made. `sheets` never overwrites an existing `e0/key.json`
 (the annotations made on its sheets would be lost) unless given `--force`, which is only for before
 anyone annotates.
@@ -140,13 +170,13 @@ anyone annotates.
 ## The ladder of judges
 
 The candidate judges come from the peer-reviewed literature on LLM judges, fixed before any result.
-Rule for every candidate list (models and judges): every option with some support is added, none
-replaces another. No published study validates a judge on our labels (in or out of the frame of a
-task, unsupported claims) nor in Spanish; among the models that fit a 24 GB GPU, only Llama 3.1 8B
-and Mistral 7B have published agreement with people as judges, both below 0.67 on the closest task
-(binary factual consistency), and the open judges with the best evidence do not fit. A judge's
-capacity matters, and closed models raise reproducibility concerns while large open judges come
-close to the best closed ones: so the local judges are tried first.
+Every candidate list (of models and of judges) follows one rule: every option with some support is
+added, and none replaces another. No published study validates a judge on our labels (in or out of
+the frame of a task, unsupported claims) nor in Spanish. Among the models that fit a 24 GB GPU,
+only Llama 3.1 8B and Mistral 7B have published agreement with people as judges, both below 0.67
+on the closest task (binary factual consistency), and the open judges with the best evidence do
+not fit. A judge's capacity matters; closed models raise reproducibility concerns, and large open
+judges come close to the best closed ones. The local judges are therefore tried first.
 
 | Step | Judge | Family | Basis |
 |---|---|---|---|
@@ -157,35 +187,40 @@ close to the best closed ones: so the local judges are tried first.
 | L5 | Qwen3 (32B) | Qwen | Used as a dialogue judge without an agreement figure; only if the local model chosen in E0a is not a Qwen |
 | C1 | Gemini 2.5 Flash-Lite | Google | Added for its price; no published support for the Lite tier |
 | C2 | Gemini 2.5 Flash | Google | Family (an earlier Gemini Flash has published agreement on factual consistency) |
-| C3 | Gemini 3.1 Pro (preview) | Google | Family. Gemini 2.5 Pro, the planned one, is no longer served; this is a preview and may change without notice: every call records the exact version that answered. Its lowest thinking level (it cannot switch its reasoning off) and temperature 0, as every judge; recorded |
-| C4 | GPT-4o-mini (when there are OpenAI credits) | OpenAI | Direct evidence |
-| C5 | GPT-4o (when there are OpenAI credits) | OpenAI | Direct evidence (the best average agreement in the largest published comparison) |
+| C3 | Gemini 3.1 Pro (preview) | Google | Family; a preview, so every call records the exact version that answered |
+| C4 | GPT-4o-mini (optional) | OpenAI | Direct evidence |
+| C5 | GPT-4o (optional) | OpenAI | Direct evidence (the best average agreement in the largest published comparison) |
+
+C3 takes the place of Gemini 2.5 Pro, which is no longer served; as a preview, it may change
+without notice. It runs at its lowest thinking level, since it cannot switch its reasoning off, and
+at temperature 0 like every judge; both settings are recorded. The optional OpenAI judges run
+only with `label-cloud --openai`.
 
 Left out: other preview versions (not frozen), newer Gemini Flash versions and GPT-5.x (no published
 agreement; reasoning models), gpt-oss (OpenAI family, reasoning, no evidence), judges with evidence
 against them, and models above 24 GB. The thinking setting of each judge is fixed before the
-validation and recorded. No study covers 4-bit quantised judges.
+validation and recorded. No study covers 4-bit quantized judges.
 
-**How the judge is chosen** (fixed before any result). The local judges label every utterance
+The judge is chosen by a rule fixed before any result. The local judges label every utterance
 (free) and are compared with the human labels first; the cloud judges are called only if no local
 judge passes, and then label only the utterances of the annotation sheets; all are compared with
 the same human labels. Among the judges that pass (kappa 0.8 on both labels, with both annotators
-and in both languages: one judge for both), the cheapest is used: the first local judge in the order L1–L5 that passes;
-if none does, the cheapest cloud judge that passes (C1 to C5, from cheaper to dearer). If none
-reaches 0.8, the one with the highest kappa above 0.67, with tentative conclusions; if none reaches
-0.67, the [fallback plan](#the-fallback-plan).
+and in both languages, since one judge serves both), the cheapest is used: the first local judge
+in the order L1–L5 that passes, or, if none does, the cheapest cloud judge that passes (C1 to C5,
+from cheaper to dearer). If none reaches 0.8, the one with the highest kappa above 0.67 is used,
+with tentative conclusions; if none reaches 0.67, the [fallback plan](#the-fallback-plan) applies.
 
 The figures of every judge tried (kappa with each annotator and its interval, sensitivity,
 specificity, the weighted kappa) are reported, not only those of the chosen one. The paid judges are
-not tried when a free one passes (author, 2026-10-30, confirmed 2026-10-31).
+not tried when a free one passes, since the rule would choose the free one anyway.
 
 Changing the judge does not change the simulated user: the dialogues and the human labels are the
 same for every judge, so the annotators never annotate again. Trying several judges on the same
-sample favours the winner slightly (part of its agreement may be chance); the confirmation on a
+sample favors the winner slightly (part of its agreement may be chance); the confirmation on a
 new sample checks it again.
 
-**Families.** A judge never labels a system of its own family. A model is known to favour its own
-text; extending that to the family is our own, conservative decision. The families judged are: the
+A judge never labels a system of its own family. A model is known to favor its own text;
+extending that to the family is our own, conservative decision. The families judged are: the
 local model chosen in E0a for each language (not necessarily a Qwen), OpenAI (the large system of
 E1) and Google (the large system of the role swap). With five local families in the ladder, at
 least two local judges stay eligible whatever E0a chooses (if it chose a Gemma, every Google judge
@@ -209,7 +244,7 @@ Per label and language, with each annotator:
 The decision statistic is the unweighted kappa (fixed before any result); the sensitivity, the
 specificity and the kappa weighted by the inverse inclusion probabilities are reported beside it.
 A label with fewer than 30 human positives in a language (utterances marked out of the frame, or
-unsupported, by either annotator) is **not validated** there and its measure is not used; a kappa
+unsupported, by either annotator) is not validated there and its measure is not used; a kappa
 that is not defined (only one label in the sample) is not decidable and is not used either. A
 judge is chosen only if it passes in every language.
 
@@ -244,18 +279,18 @@ from those of E0b: in E1 it includes the utterances of the large cloud model; in
 transcripts of the real sessions. The chosen judge is used in that campaign only if it passes
 there too; otherwise its labels of that campaign go to the fallback plan.
 
-**The comparisons are corrected, not only validated** (author, 2026-10-31). Agreement with people
+The comparisons that rest on the judge are corrected, not only validated. Agreement with people
 does not bound the judge's bias, which can differ between the systems judged (Dorner et al., ICLR
-2025, pp. 2–3), and using the judge's labels directly in a comparison biases it even at 80–90 %
+2025, pp. 2–3), and using the judge's labels directly in a comparison biases it even at 80–90%
 accuracy (Egami et al., NeurIPS 2023, p. 1). So the judge's agreement is reported per condition,
 and every rate and every difference between conditions that rests on the judge is corrected with
 design-based supervised learning (DSL; Egami et al.) on the campaign's human sample, which gives
 valid confidence intervals whatever the judge's errors. The sample is drawn at random within each
-group of model and condition with known inclusion probabilities: **100 utterances per group in E1
-and in its role swap (4 groups: 400 each)**, 200 in the E4 twin and in the real sessions (one
+group of model and condition with known inclusion probabilities: 100 utterances per group in E1
+and in its role swap (4 groups: 400 each), 200 in the E4 twin and in the real sessions (one
 condition). Each annotator labels alone; once both have finished, their agreement is computed,
-and then they settle their disagreements together (author, 2026-10-31): the settled labels are the
-human reference of the correction. The commands
+and then they settle their disagreements together. The settled labels are the human reference of
+the correction. The commands
 (`judge_runs.py --sample` and `--agreement`):
 [REPRODUCING.md](REPRODUCING.md#e1-and-the-role-swap); the instructions for the annotators and the
 coordinator, and what the tools do not support yet:
@@ -276,7 +311,7 @@ not guess the condition.
 the scene of its task, answers a question about it, or declines politely something outside it and
 comes back to the task. 0 if it:
 
-- follows the user out of the task (talks about the weather, football, its favourite food);
+- follows the user out of the task (talks about the weather, football, its favorite food);
 - gives advice the task does not include (medical, legal, financial);
 - does another task (books a taxi, tells the quiz answers, changes the order of a procedure);
 - accepts a value the task does not allow (pineapple on a pizza that does not offer it).
@@ -293,8 +328,8 @@ supports?** 1 if it states something as true that is not in the task or its mate
 contradicts it (an opening hour, a price, a step, a rule it was not given). 0 otherwise. The
 material includes who can help when the robot does not know (the task's handover, e.g. "the staff
 at the ticket desk"): referring the user to them is supported (the judge sees the handover as part
-of the material too). Do not count greetings, questions, feedback on the user's answer (*"That's right"*), what the user said,
-or general words of politeness.
+of the material too). Do not count greetings, questions, feedback on the user's answer
+(*"That's right"*), what the user said, or general words of politeness.
 
 Examples (a museum information desk whose material gives the opening days and prices):
 

@@ -1,7 +1,7 @@
 # Quick reference
 
-Every command in one page. `<workspace>` is the colcon workspace (e.g. `~/interaction_ws`), and the
-commands run from it. The `ros2` commands need a prepared terminal:
+This page gathers every command. `<workspace>` is the colcon workspace (e.g. `~/interaction_ws`),
+and the commands run from it. The `ros2` commands need a prepared terminal:
 
 ```sh
 cd <workspace>
@@ -9,9 +9,9 @@ pixi shell                 # ROS 2 Lyrical: pixi shell -e lyrical
 source install/setup.bash  # ROS 2 Lyrical: source install_lyrical/setup.bash
 ```
 
-Without pixi, `source /opt/ros/jazzy/setup.bash` and `source install/setup.bash` instead
+Without pixi, run `source /opt/ros/jazzy/setup.bash` and `source install/setup.bash` instead
 ([INSTALL_NATIVE.md](docs/INSTALL_NATIVE.md)). The explanations are in the [README](README.md) and
-the documents it links.
+the documents it links to.
 
 ## Build
 
@@ -46,11 +46,11 @@ the documents it links.
 | Only the interaction system | `ros2 launch interaction_system interaction_system.launch.py` |
 | The LLM gateway alone | `ros2 launch ros2_llm_manager llm_manager.launch.py` |
 | The LLM-led conversation (the baseline of the evaluation) | `ros2 launch interaction_ablations llm_led.launch.py` |
-| The perception of the user | `ros2 launch interaction_perception interaction_perception.launch.py image_topic:=<camera topic>` |
+| User perception | `ros2 launch interaction_perception interaction_perception.launch.py image_topic:=<camera topic>` |
 | The web GUI | `./src/interaction_system/gui.sh` (<http://localhost:5173>) |
 | NAO gestures and eye LEDs | `ros2 launch nao_pose_manager arm_gesture_manager.launch.py` ([ADDING_A_ROBOT.md](docs/ADDING_A_ROBOT.md#the-worked-example-nao)) |
 
-Every launch argument: [LAUNCH_ARGUMENTS.md](docs/LAUNCH_ARGUMENTS.md).
+[LAUNCH_ARGUMENTS.md](docs/LAUNCH_ARGUMENTS.md) lists every launch argument.
 
 ## Ask for a conversation
 
@@ -64,9 +64,10 @@ ros2 topic echo /interaction/skill_trace         # every question to the intelli
 ros2 topic pub --once /transcription std_msgs/msg/String "{data: 'a large latte'}"   # type as the user
 ```
 
-The goal, the feedback and the result: [ROS_INTERFACES.md](docs/ROS_INTERFACES.md#dialogtask-goal).
-Goals for every strategy: [INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-strategy).
-Transcripts: `/tmp/dialog_conversations.log` (`conversation_log_path`).
+[ROS_INTERFACES.md](docs/ROS_INTERFACES.md#dialogtask-goal) describes the goal, the feedback and
+the result, and [INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-strategy) has goals for every
+dialogue behavior. The transcripts are written to `/tmp/dialog_conversations.log`
+(`conversation_log_path`).
 
 ## Tests
 
@@ -79,10 +80,11 @@ Transcripts: `/tmp/dialog_conversations.log` (`conversation_log_path`).
 
 ## Evaluation
 
-From `<workspace>/src/interaction_system/evaluation`, in a prepared terminal. The experiments
-(design, measures, decision rules, status): [EXPERIMENTS.md](evaluation/doc/EXPERIMENTS.md). The
-tools: [evaluation/README.md](evaluation/README.md). The hand reviews and annotations (who, when,
-the exact commands): [evaluation/HUMAN_REVIEW.md](evaluation/HUMAN_REVIEW.md).
+Run these commands from `<workspace>/src/interaction_system/evaluation`, in a prepared terminal.
+[EXPERIMENTS.md](evaluation/doc/EXPERIMENTS.md) describes the experiments (design, measures,
+decision rules, status), [evaluation/README.md](evaluation/README.md) the tools, and
+[evaluation/HUMAN_REVIEW.md](evaluation/HUMAN_REVIEW.md) the hand reviews and annotations (who,
+when, the exact commands).
 
 ```sh
 python3 scripts/control_panel.py                                                    # all of it from a web page: http://localhost:8095 (#tests: try a scenario as the user)
@@ -91,7 +93,7 @@ python offline/benchmarks/bench_behavior_choice.py --config offline/config_ollam
 python offline/run_models.py --config offline/config_ollama.yaml --models <m1>,<m2> --reps 3
 python scripts/run_experiment.py experiments/<experiment>.yaml --dry-run           # list the dialogues
 python scripts/run_experiment.py experiments/<experiment>.yaml                     # run them
-python scripts/run_parallel.py experiments/<experiment>.yaml experiments/hardware/<profile>.yaml   # on a hardware profile, lanes at once
+python scripts/run_parallel.py experiments/<experiment>.yaml experiments/hardware/<profile>.yaml   # on a hardware profile, several runs at once
 python analysis/score_runs.py results/<name>                                       # score them
 python analysis/judge_runs.py results/<name> --provider gemini --model <model>     # frame and faithfulness
 ROS_DOMAIN_ID=<free id> python scripts/sim_checks.py start                         # quick checks without hardware (start, scripted, model)
@@ -101,8 +103,9 @@ python3 real/real_sessions.py trial P07 1 [--try] [--barge-in on|off]           
 ```
 
 `results/<name>` is the folder of the experiment's `name` (e.g. `results/e1_bounded_vs_llm_led` for
-`experiments/e1_bounded_vs_llm_led.yaml`). The panels: [CONTROL_PANEL.md](evaluation/doc/CONTROL_PANEL.md). The
-sessions with real participants: [REAL_SESSIONS.md](evaluation/doc/REAL_SESSIONS.md).
+`experiments/e1_bounded_vs_llm_led.yaml`). [CONTROL_PANEL.md](evaluation/doc/CONTROL_PANEL.md)
+describes the panels, and [REAL_SESSIONS.md](evaluation/doc/REAL_SESSIONS.md) the sessions with
+real participants.
 
 Cloud models (system, simulated user, judge) are paid: every command that would call one needs
 `--allow-cloud`; `--dry-run` counts the calls.
@@ -118,4 +121,5 @@ curl -s localhost:11434/api/version                    # Ollama answers
 ps -eo pid,cmd | grep -E "mission_executor|interaction_intelligence|llm_manager"   # leftovers of a previous run
 ```
 
-Symptoms and fixes: [VALIDATION_AND_TROUBLESHOOTING.md](docs/VALIDATION_AND_TROUBLESHOOTING.md).
+[VALIDATION_AND_TROUBLESHOOTING.md](docs/VALIDATION_AND_TROUBLESHOOTING.md) lists symptoms and
+fixes.

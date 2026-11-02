@@ -5,11 +5,11 @@ What the participant reads:
 ```text
 ENCUESTA DE SATISFACCIÓN
 
-Acabas de visitar un museo y el robot te va a hacer una encuesta de cuatro frases. Responde así:
+Acabas de visitar un museo y el robot te va a hacer una encuesta de cuatro preguntas. Responde así:
 • has disfrutado mucho de la visita,
 • la información era bastante fácil de entender,
-• en la tercera frase, pregúntale primero qué quiere decir; después di «algo entre un poco y bastante» y, cuando te repita las opciones, di «un poco»,
-• recomendarías el museo mucho.
+• en la tercera pregunta, pregúntale primero qué quiere decir; después di «algo entre un poco y bastante» y, cuando te repita las opciones, di «un poco»,
+• recomendarías mucho el museo.
 
 Además:
 En algún momento, pídele al robot que te diga qué puntuación has dado en total.

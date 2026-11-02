@@ -1,7 +1,7 @@
 # The questions to the LLM
 
-The questions the interaction system asks the LLM: the template of each, the skill that asks
-it, how its answer is handled, and how to change them. Every question is built from a template of
+This page describes the questions the interaction system asks the LLM: the template of each,
+the skill that asks it, how its answer is handled, and how to change them. Every question is built from a template of
 `interaction_system_core/interaction_intelligence/config/prompts.yaml` (parameters `prompts.*` of
 `/interaction_intelligence`) by `PromptBuilder`, and asked by `LLMDialogClient` in the
 conversation's understanding or generation session. The trees never write prompts: they ask the
@@ -22,9 +22,9 @@ question is in [MODELS.md](MODELS.md).
   [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md); editable in the GUI's Strategies page, or as
   `phrases.*` parameters).
 
-**Examples in the templates.** No example in a template comes from a scenario of the evaluation
+No example in a template comes from a scenario of the evaluation
 (`evaluation/experiments/scenarios/`), so that no scenario is answered from an example: the
-examples use situations no scenario uses. Check a new example, or a new scenario, against the
+examples use situations that no scenario uses. Check a new example, or a new scenario, against the
 other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rules-for-every-campaign)).
 
 ## The templates and the skills that ask them
@@ -35,33 +35,70 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `classify_task_mode` | Understanding | Not used by the system: the original classifier between slot filling and explanation, kept for the offline benchmark that compares it with the choice above |
 | `create_frame`, `audit_frame` | Understanding | `slot_filling.prepare`, when the request has no schema: design the slots from the task, then check their allowed values against the resources |
 | `opening`, `opening_direct`, `resume_opening` | Generation | `slot_filling.opening`, `.opening_direct` (`skip_intro`), `.resume_opening` |
-| `extract_slots` | Understanding | `slot_filling.update`: what the turn does (`act`: `values`, `question`, `skip` (the user cannot or will not give the value asked), `repeat`, `other`) and the slots it gives or corrects, with list operations |
-| `generate_response` | Generation | `slot_filling.next_question`: acknowledge (the acknowledgment phrase itself is added by code), say why a value was rejected, ask for what is missing. Only when the slot it asks for is a list (`list_str`) does the code add `list_slot_rule` (say that several values may be given, invite more items) |
+| `extract_slots` | Understanding | `slot_filling.update`: what the turn does (`act`: `values`, `question`, `skip`, `repeat`, `other`) and the slots it gives or corrects, with list operations |
+| `generate_response` | Generation | `slot_filling.next_question`: acknowledge, say why a value was rejected, ask for what is missing |
 | `ask_confirmation` | Generation | `slot_filling.confirmation_question`: read the frame back, saying which slots are left blank (unanswered) |
 | `classify_intent` | Understanding | `slot_filling.classify_confirmation`: `confirms`, `corrects` (with the corrections), `question`, `unclear` |
 | `response_to_intent`, `answer_confirmation_question` | Generation | `slot_filling.confirmed`, `.correction_reply`; `.answer_question` |
 | `extract_key_points` | Understanding | When the dialogue begins, if the request has no key points: list them from the task and the material, marking the critical ones |
 | `explanation_opening`, `explanation_opening_direct` | Generation | `explanation.open`, `.open_direct` (end before the check: the teach-back question is the fixed phrase `teach_back`) |
-| `judge_teach_back` | Understanding | `explanation.check`: what the reply is (`restates`, `question`, `declines`, `not_understood`, `other`) and the status of every key point in it (`correct`, `incomplete` with the part said: handled as missing, never as wrong, `wrong` with what was said, `missing`): one entry per key point, required by the schema (a shorter list was renumbered by small models) |
-| `repair_explanation`, `rephrase_explanation` | Generation | `explanation.repair`: only the points missing, incomplete (the part said is confirmed, never corrected) or wrong, in other words, speaking to the person (`points`), or the whole topic in another way (`all`); both end before the check (`teach_back_again`) |
+| `judge_teach_back` | Understanding | `explanation.check`: what the reply is and the status of every key point in it |
+| `repair_explanation`, `rephrase_explanation` | Generation | `explanation.repair`: only the points missing, incomplete or wrong (`points`), or the whole topic in another way (`all`); both end before the check (`teach_back_again`) |
 | `ask_missing_points` | Generation | `explanation.ask_missing`: after a partial teach-back with progress, confirms what was right and asks only for the critical points still missing, without giving them away |
 | `targeted_question` | Generation | `explanation.targeted`: the fallback, a direct question whose answer is the most critical point not yet verified, without giving the answer away |
 | `answer_explanation_question`, `understanding_confirmed` | Generation | `explanation.answer` (then the last check again), `.confirmed`. The closing after the last failed check (`.give_up`) uses fixed phrases and the critical points themselves |
 | `quiz_opening`, `quiz_next_question`, `quiz_rephrase_question`, `quiz_summary` | Generation | `quiz.open`, `.next_question`, `.repeat` (the question in simpler words, from the second time; never revealing the answer), `.summary` |
-| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer (`kind`: `answer`, or `repeat` when the user asks to repeat or clarify, or did not hear or understand; "I don't know" is an answer), correct or not, and short feedback (if the LLM fails every retry: right only when the reply equals the expected answer, normalised) |
-| `procedure_opening`, `procedure_step` | Generation | `procedure.open`; `procedure_step` for every presentation of a step (first, next, back), from that step only (no context); `procedure.repeat` says the step literally with fixed phrases, no LLM |
+| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer, whether it is correct, and short feedback |
+| `procedure_opening`, `procedure_step` | Generation | `procedure.open`; `procedure_step` for every presentation of a step (first, next, back), from that step only, without the context. `procedure.repeat` uses fixed phrases and no LLM |
 | `classify_step_turn` | Understanding | `procedure.classify`: `done`, `question`, `problem`, `repeat`, `back`, `skip`, `unclear` |
 | `procedure_answer_question`, `procedure_help_step`, `procedure_remind`, `procedure_summary` | Generation | `procedure.answer`, `.help`, `.remind`, `.advance` (after the last step) |
-| `roleplay_intro`, `roleplay_reply`, `roleplay_coach` | Generation | `roleplay.open`; the character's lines (`.open`, `.open_direct`, `.reply`, and `.repeat` from the second request to repeat; a line that repeats an earlier question is asked again once); `.coach` |
+| `roleplay_intro`, `roleplay_reply`, `roleplay_coach` | Generation | `roleplay.open`; the character's lines (`.open`, `.open_direct`, `.reply`, and `.repeat` from the second request to repeat); `.coach` |
 | `classify_roleplay_turn` | Understanding | `roleplay.classify`: `continue`, `repeat`, `coach`, `end`, `scene_end` (no valid answer: `unclear`, a request to repeat) |
 | `evaluate_roleplay`, `roleplay_feedback` | Understanding | `roleplay.finish`: one question per criterion (score 1 to 5, the numbers of the user's lines as evidence), then the closing, the highlight and the advice |
 | `qa_opening` | Generation | `grounded_qa.open`: the greeting and the invitation to ask, with no facts |
-| `answer_from_material` | Understanding | `grounded_qa.answer`: first what the person does (`act`: `asks`, `finished` or `reacts`; only `asks` can be answered, enforced by the code: `finished` is `done`, `reacts` is `comment`), then what a request is (`answerable`, `not_in_material`, `off_task`, `repeat`, `other`) and, if answerable, the answer with only facts of the material and the sentences that support it |
-| `verify_finished` | Understanding | `grounded_qa.answer`: before a closing, whether the person said they want nothing more (provisional, 2026-11-01) |
-| `verify_answer` | Understanding | `grounded_qa.answer`: whether every claim of the drafted answer is supported by the material; an immediate inference (17:00 is in the afternoon) and an answer with only the part asked for are supported (an answer that is not is replaced by the abstention) |
+| `answer_from_material` | Understanding | `grounded_qa.answer`: what the person does, what a request is and, if it is answerable, the answer and the sentences that support it |
+| `verify_finished` | Understanding | `grounded_qa.answer`: before a closing, whether the person said they want nothing more |
+| `verify_answer` | Understanding | `grounded_qa.answer`: whether every claim of the drafted answer is supported by the material; an answer that is not is replaced by the abstention |
 | `map_scale_answer` | Understanding | `questionnaire.record`: the option the answer clearly chooses, or `ambiguous`, `meaning`, `refuses`, `repeat`, `other`. The items, the options, the clarifications and the closing are read without the LLM |
-| `detect_cancel_intent`, `classify_cancel_reply` | Understanding | `cancel_check`: the cancel request, for every utterance that is not exactly a stop command of the conversation's language (`cancel_commands` of its language file); the model first says what the words are about (`conversation` or `task`: words about the task, such as "cancel my card", are never a cancel request, enforced by the code), then chooses `cancel`, `finished` (nothing more to ask or add: the normal end, not a cancel request) or `none`; it is given the task description; the answer to the confirmation (`yes`, `no`, `finished`: a normal end where the strategy lets the user end it, or `other`: it does not answer whether to stop; only `yes` stops, `no` and `other` resume alike) |
-| `ask_cancel_confirmation`, `cancel_confirmed_response` | Generation | `cancel_check`: a short yes/no question whether the user wants to stop ("yes" means stopping, as `classify_cancel_reply` reads it; the question does not explain how to answer it); after a `no`, the robot says the fixed phrase `cancel_no` and repeats its last line (without the `cancel_no` of an earlier denial) |
+| `detect_cancel_intent`, `classify_cancel_reply` | Understanding | `cancel_check`: the cancel request, and the answer to the confirmation |
+| `ask_cancel_confirmation`, `cancel_confirmed_response` | Generation | `cancel_check`: a short yes/no question whether the user wants to stop, and the closing after a confirmed cancellation |
+
+Notes on some of the templates:
+
+- `extract_slots`: the act `skip` means that the user cannot or will not give the value asked.
+- `generate_response`: the acknowledgment phrase itself is added by the code. Only when the slot
+  it asks for is a list (`list_str`) does the code add `list_slot_rule`, which says that several
+  values may be given and invites more items.
+- `judge_teach_back`: the reply is `restates`, `question`, `declines`, `not_understood` or
+  `other`. Each key point is `correct`, `incomplete` (with the part said; handled as missing,
+  never as wrong), `wrong` (with what was said) or `missing`. The schema requires one entry per
+  key point, because small models renumbered a shorter list.
+- `repair_explanation`: the points are reworded and address the person; the part of an
+  incomplete point that was said is confirmed, never corrected.
+- `evaluate_quiz_answer`: `kind` is `answer`, or `repeat` when the user asks to repeat or
+  clarify, or did not hear or understand the question; "I don't know" is an answer. If the LLM
+  fails every retry, the reply is right only when it equals the expected answer, after
+  normalization.
+- `roleplay_reply`: a line that repeats an earlier question is asked again once.
+- `answer_from_material`: the LLM first says what the person does (`act`: `asks`, `finished` or
+  `reacts`). Only `asks` can be answered, and the code enforces it: `finished` becomes `done` and
+  `reacts` becomes `comment`. It then says what a request is (`answerable`, `not_in_material`,
+  `off_task`, `repeat`, `other`) and, if it is answerable, gives the answer with only facts of the
+  material.
+- `verify_answer`: an immediate inference (17:00 is in the afternoon) and an answer with only the
+  part asked for count as supported.
+- `detect_cancel_intent` is asked for every utterance that is not exactly a stop command of the
+  conversation's language (`cancel_commands` of its language file), and is given the task
+  description. The LLM first says what the words are about (`conversation` or `task`); words
+  about the task, such as "cancel my card", are never a cancel request, and the code enforces it.
+  It then chooses `cancel`, `finished` (nothing more to ask or add: the normal end, not a cancel
+  request) or `none`.
+- `classify_cancel_reply` reads the answer to the confirmation: `yes`, `no`, `finished` (a normal
+  end, where the strategy lets the user end it) or `other` (the answer does not say whether to
+  stop). Only `yes` stops; `no` and `other` both resume.
+- `ask_cancel_confirmation`: "yes" means stopping, as `classify_cancel_reply` reads it, and the
+  question does not explain how to answer it. After a `no`, the robot says the fixed phrase
+  `cancel_no` and repeats its last line, without the `cancel_no` of an earlier denial.
 
 The skills `begin`, `silence`, `closing`, `result`, `quiz.repeat` (the first time: the question
 itself), `quiz.unanswered` and `finish`, and every operation on the frame, ask no question: the
@@ -78,11 +115,11 @@ brace must be doubled (`{{`, `}}`). `{language}` (the parameter `language`) is a
 template, and so is `{address}`. The node validates every template at startup and refuses to start
 with a malformed one.
 
-**Shared rules.** Two entries of `prompts.yaml` are not questions but rules that `PromptBuilder`
-inserts into them, so that what does not depend on the model is decided by the code:
+Two entries of `prompts.yaml` are not questions but shared rules that `PromptBuilder` inserts
+into the questions, so that what does not depend on the LLM is decided by the code:
 
 - `address_rule` fills `{address}`: how every spoken line addresses the user. The person the robot
-  talks to IS the user of the task (the customer, the patient, the student...), so the line speaks
+  talks to is the user of the task (the customer, the patient, the student...), so the line speaks
   to them directly ("what is your name?", never "the customer's name") and in the informal second
   person ("tú" in Spanish, never "usted"; the wording names the register, so English is
   unaffected). Every template that writes a line the user hears has it among its rules (the
@@ -90,15 +127,13 @@ inserts into them, so that what does not depend on the model is decided by the c
   the explanation, the grounded answers, the role play, the cancellation question and its
   closing). It is the same text in every turn, so it is part of the cached prefix. The LLM-led
   baseline of the ablations gets the same rule.
-- `list_slot_rule` is appended to `generate_response` only when the slot asked for is a list.
-  Until 2026-10-30 the list instruction was always in the template, and small models applied it
-  to single-value slots too ("you can tell me several options" when asking for a name).
+- `list_slot_rule` is appended to `generate_response` only when the slot asked for is a list,
+  because small models applied a list instruction to single-value slots too ("you can tell me
+  several options" when asking for a name).
 
-These were fixed after a live Spanish voice test (2026-10-30), which also heard the slot name
-echoed in the third person ("what is the customer's name?") and a cancellation question that mixed
-registers and ended with "yes to confirm" (the template asked to "make clear that a positive answer
-confirms cancellation"; that rule was removed). The offline benchmark `wording` measures these
-forms of the spoken lines ([evaluation/offline/README.md](../evaluation/offline/README.md)).
+The offline benchmark `wording` measures these properties of the spoken lines, such as the slot
+name echoed in the third person ("what is the customer's name?") or a mixed register
+([evaluation/offline/README.md](../evaluation/offline/README.md)).
 
 Templates that use the context get the `[CONTEXT]` block after their fixed instructions: the
 domain, the resources that are not hidden (a role play's scene is hidden), and the user's emotion
@@ -110,21 +145,22 @@ new templates in that order.
 
 ## Changing the questions
 
-- **Edit `prompts.yaml`** and restart the intelligence (no rebuild with `--symlink-install`), or
+- Edit `prompts.yaml` and restart the intelligence (no rebuild with `--symlink-install`), or
   pass another file: `interaction_system.launch.py prompts_file:=/path/to/prompts.yaml`.
-- **Override some templates** with `prompts.<name>` parameters under `interaction_intelligence`
-  in your copy of `app_params.yaml` (launch argument `params_file`, applied after `prompts_file`):
+- Override some templates with `prompts.<name>` parameters under `interaction_intelligence` in
+  your copy of `app_params.yaml` (launch argument `params_file`, applied after `prompts_file`):
   only those change.
-- **From the GUI**, the Prompts page shows the defaults (read from the installed `prompts.yaml`) and
+- In the GUI, the Prompts page shows the defaults (read from the installed `prompts.yaml`) and
   sends only the valid, changed templates as parameters when it starts the stack (the shared rules
-  are listed apart, under "Shared rules").
-- **The language** of the conversation is the parameter `language` (or `main.launch.py
+  are listed separately, under "Shared rules").
+- The language of the conversation is the parameter `language` (or `main.launch.py
   language:=es`): the templates ask for replies in that language, and the fixed phrases follow it.
   The templates are written in English for every language: `{language}` is the name of the
   language file (`English`, `Spanish`), and the shared address rule gives Spanish examples of the
   informal register ("tú", never "usted") and of gender-neutral wording. A language with another
-  system of formality may need its example there; that is a change of the prompts, which re-runs
-  phase A of the evaluation ([ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md#4-the-prompts)).
+  system of formality may need its own example there. That is a change of the prompts, after
+  which phase 1 of the model choice is run again
+  ([ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md#4-the-prompts)).
 
 The prompts and the raw answers are not stored. The skills asked, their labels and their times are
 published on `/interaction/skill_trace`, and the conversation's transcript is written to

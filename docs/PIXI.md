@@ -2,17 +2,18 @@
 
 [pixi](https://pixi.sh) creates a self-contained ROS 2 Jazzy environment, from
 [RoboStack](https://robostack.github.io) and conda-forge, with every dependency of the system.
-This page explains why the project uses it and how it is configured. Installing and building
-with it: [INSTALL_PIXI.md](INSTALL_PIXI.md).
+This page explains why the project uses it and how it is configured;
+[INSTALL_PIXI.md](INSTALL_PIXI.md) explains how to install and build with it.
 
 ## Why pixi
 
-- **The same software for everyone.** `pixi.lock` pins every package: ROS 2, BehaviorTree.CPP,
-  the speech models' Python packages (PyTorch, faster-whisper, Whisper, Piper, MMS-TTS's
-  transformers), the LLM providers' SDKs and the GUI's Node.js.
-- **Independent of the system.** It needs no system ROS, no particular Ubuntu release and no
-  `sudo`. It also runs Jazzy on a computer whose system has another ROS distribution.
-- **Isolated Python.** The machine-learning packages do not touch the system Python.
+- Everyone runs the same software, because `pixi.lock` pins every package: ROS 2,
+  BehaviorTree.CPP, the speech models' Python packages (PyTorch, faster-whisper, Whisper, Piper,
+  MMS-TTS's transformers), the LLM providers' SDKs and the GUI's Node.js.
+- The environment is independent of the system. It needs no system ROS, no particular Ubuntu
+  release and no `sudo`, and it runs Jazzy even on a computer whose system has another ROS
+  distribution.
+- Python is isolated: the machine-learning packages do not touch the system Python.
 
 ## Where it lives
 
@@ -44,25 +45,28 @@ environment created by mistake can be removed with `rm -rf src/interaction_syste
   PyPI (`[pypi-dependencies]`);
 - `PYTHONNOUSERSITE=1` in the activation, so that packages installed in the user's site-packages
   (`pip install --user`) never leak into the environment;
-- the SDKs of the LLM gateway's cloud providers: `openai` (also used by simple_hri's Extract and
-  Yes/No services, not by the interaction system) and `google-genai`; Claude's, `anthropic`, is
-  not included: add it (`pixi add --pypi anthropic`) to use Claude
-  ([MODELS.md](MODELS.md#cloud-providers));
+- the SDKs of the LLM gateway's cloud providers, `openai` and `google-genai` (simple_hri's
+  Extract and Yes/No services also use `openai`, but the interaction system does not use them).
+  Claude's SDK, `anthropic`, is not included; to use Claude, add it with
+  `pixi add --pypi anthropic` ([MODELS.md](MODELS.md#cloud-providers));
 - the tasks:
 
 | Task | What it does |
 |---|---|
-| `build` | `colcon build --symlink-install --packages-up-to` the interaction system, its capabilities, the perception, the BT client and the evaluation packages, from the root of the workspace, into `build/` and `install/` (ROS 2 Jazzy, the `default` environment). Extra arguments go to colcon (`--packages-select ...`) |
+| `build` | `colcon build --symlink-install --packages-up-to` the interaction system, its capabilities, the perception, the BT client and the evaluation packages, into `build/` and `install/` (ROS 2 Jazzy, the `default` environment) |
 | `build-lyrical` | The same in the `lyrical` environment, into `build_lyrical/` and `install_lyrical/` |
 | `test` | The unit tests of the interaction intelligence (no ROS), with pytest |
+
+`build` runs from the root of the workspace, and extra arguments go to colcon
+(`--packages-select ...`).
 
 pixi regenerates `pixi.lock` when `pixi.toml` changes. To add a package, run
 `pixi add <package>` from `<workspace>` (with `--pypi` for a package of PyPI); it updates both
 files.
 
-The perception of the user is built, but its dependencies are not in the environment
-(MediaPipe, OpenCV and `cv_bridge`, needed only by it):
-[INSTALL_PIXI.md](INSTALL_PIXI.md#the-perception-of-the-user-optional).
+User perception is built, but its dependencies (MediaPipe, OpenCV and `cv_bridge`, which only it
+needs) are not in the environment
+([INSTALL_PIXI.md](INSTALL_PIXI.md#the-perception-of-the-user-optional)).
 
 ## ROS 2 Lyrical
 

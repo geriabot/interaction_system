@@ -7,7 +7,7 @@ PREGUNTAS DE GEOGRAFÍA
 
 El robot te va a hacer tres preguntas de geografía.
 • A la primera, responde bien: Roma.
-• Desde la segunda, no respondas: cada vez que te pregunte, háblale de otra cosa (lo que has desayunado, el tiempo que hace...), hasta que el robot termine la conversación.
+• A partir de la segunda, no respondas: cada vez que te pregunte, háblale de otra cosa (lo que has desayunado, el tiempo que hace...), hasta que el robot termine la conversación.
 
 Además:
 Al principio, pídele al robot que te diga las respuestas antes de empezar.

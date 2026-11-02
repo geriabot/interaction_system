@@ -1,35 +1,35 @@
-# E0a, phase A: reviewing the trap cases
+# E0a, phase 1: reviewing the trap cases
 
-[All the hand tasks](../../HUMAN_REVIEW.md) · Who: **one author** · When: **before phase A of
-E0a runs** · How long: about 330 cases at roughly 12 s each (1 to 1.5 hours, more when cases need
-correcting), in as many sittings as you like.
+[All the hand tasks](../../HUMAN_REVIEW.md) · Who: one author · When: before phase 1 of E0a runs ·
+How long: 357 cases at roughly 12 s each (1 to 1.5 hours, more when cases need correcting), in as
+many sittings as you like; about 30–40 minutes with the pre-review.
 
-## The assistant's pre-review (decided by the author, 2026-11-01)
+## The assistant's pre-review
 
 Before you start, an AI assistant has reviewed every trap case and left a verdict: "right", or
 "doubtful" with the reason. You answer every case yourself, blind, before seeing the case's answer
-or the pre-review (below); the pre-review is shown after your answer and only tells you where to
-look harder, so that the review takes about 30–40
-minutes instead of 1–1.5 hours. The verdicts are in `results/reviews/prereview_phase_a.json`; the
-blind adjudication after phase A never shows them. The paper declares that the trap review was
-done by an author with this pre-review.
+or the pre-review (below). The pre-review is shown only after your answer, so that it cannot steer
+it; it only tells you where to look harder, which brings the review down to about 30–40 minutes
+from 1–1.5 hours. The verdicts are in `results/reviews/prereview_phase_a.json`; the blind
+adjudication after phase 1 never shows them. The publication of the results states that an author
+did the trap review with this pre-review.
 
 ## What and why
 
 E0a chooses the local model by asking every candidate model the same narrow questions the system
 asks during a conversation (is this a confirmation or a correction? did the person ask to stop?
 is this quiz answer right?), on annotated test cases with a known expected answer. The cases were
-drafted with the help of language models. The **trap cases**, built to provoke the errors that
+drafted with the help of language models. The trap cases, built to provoke the errors that
 matter most, are checked by a person before any model is run, so that no model is failed (or
 passed) because of a wrong expected answer. You read each case in plain words and say whether its
 expected answer is right; if not, you give the right one.
 
 ## Before you start
 
-- The phase A datasets are in the repository (`evaluation/offline/datasets/phase_a/`): nothing has
+- The phase 1 datasets are in the repository (`evaluation/offline/datasets/phase_a/`): nothing has
   to be run before this review.
-- Phase A must **not** have started yet. A correction changes the datasets, and the datasets are
-  part of the code fingerprint of a results folder: a phase A run interrupted and resumed after a
+- Phase 1 must not have started yet. A correction changes the datasets, and the datasets are part
+  of the code fingerprint of a results folder, so a phase 1 run interrupted and resumed after a
   correction would be refused.
 - You need the workspace installed with pixi (see [Before any task](../../HUMAN_REVIEW.md#before-any-task)).
 
@@ -56,42 +56,44 @@ button at the top right switches it to Spanish.
 
 ## The screens
 
-1. **Check that everything is right.** Your name, the task ("Review test cases (phase A)"), the
+1. Check that everything is right: your name, the task ("Review test cases (phase A)"), the
    cases (traps only), the language of the cases, the number of items, how many are already done,
    the estimated time and the folder where your reviews are saved. If it is wrong, press "No, go
    back" and check the command.
-2. **How to use it** (one minute) and a **practice** of two worked examples (not saved). The
-   practice appears only the first time; "How to use" at the top shows the keys again.
-3. **One case at a time.** At the top, the question put to the model in plain words (for
+2. "How to use it" (one minute) and a practice of two worked examples (not saved). The practice
+   appears only the first time; "How to use" at the top shows the keys again.
+3. One case at a time. At the top, the question put to the model in plain words (for
    example "Does the person ask to abandon the whole conversation?"); it changes from one block of
    cases to the next. Below: the inputs of the question as the model gets them (the details
    collected, the conversation before, the material...); inputs the model does not get are marked
    "for the reviewer only"; and what the person says. "See the exact text the model gets" (key
    `P`) shows the prompt, built by the benchmark's own code.
-4. **Answer the question yourself, blind** (decided by the author, 2026-11-01: saying "yes, it is
-   right" to a proposed "no" was too error-prone). You do not see the case's answer yet: choose
-   yours with the buttons or `1`, `2`, `3`…
+4. Answer the question yourself, blind. You do not see the case's answer yet, because saying
+   "yes, it is right" to a proposed "no" is too error-prone. Choose your answer with the buttons
+   or `1`, `2`, `3`…
 
    | What happens | Keys |
    |---|---|
    | Your answer matches the case's and the case has nothing else: the case is kept and the panel goes to the next | — |
-   | It matches, and the case also gives details (the corrected details of a confirmation, the values given, the key points of a teach-back, the option chosen): they are shown with the assistant's pre-review; are they right? | `Y` or `S` yes, `N` a form to correct them, `D` not sure |
+   | It matches, and the case also gives details (see below): they are shown with the assistant's pre-review. Are they right? | `Y` or `S` yes, `N` a form to correct them, `D` not sure |
    | It does not match: the panel shows "You: ... The case: ..." with the assistant's pre-review. Which one is right? | `1` yours (saved as a correction; with details, a form opens to check them), `2` the case's, `D` not sure, "Answer again" if you pressed the wrong key |
    | Write a doubt or comment (saved on `Enter`) | `/` |
    | Next / previous case | `→` / `←` |
 
-   Your blind answer is saved with your verdict. A case you already reviewed shows the case's
-   answer with Yes / No / Not sure, as before. The correction is checked against the rules of the
+   The details of a case are, for example, the corrected details of a confirmation, the values
+   given, the key points of a teach-back or the option chosen. Your blind answer is saved with
+   your verdict. A case you already reviewed shows the case's answer with Yes / No / Not sure. The
+   correction is checked against the rules of the
    dataset before it is saved; if it breaks one, the panel says why ("The correction is not valid:
    ...").
    A case can also show "The case changed after your review: review it again" (it was edited after
    you reviewed it) or "Your correction is already applied to the data".
-5. **Review and finish** (top right): the cases not answered and those marked doubtful or with a
+5. "Review and finish" (top right): the cases not answered and those marked doubtful or with a
    comment, each with a link to go back to it. "Finish" is enabled when nothing is unanswered.
-6. **Done. Thank you!** The final screen lists the files where your reviews are saved. Nothing has
+6. "Done. Thank you!": the final screen lists the files where your reviews are saved. Nothing has
    to be sent: you are working on the coordinator's computer (or are the coordinator).
 
-**Stopping and resuming.** Every answer is saved as you give it. Close the window or press
+Every answer is saved as you give it, so you can stop and resume. Close the window or press
 `Ctrl+C` in the terminal whenever you like; the same command later continues at the first case
 not yet reviewed.
 
@@ -101,7 +103,7 @@ not yet reviewed.
   guess what any model would do.
 - When in doubt, prefer `D` (not sure) and a note to a correction you are not sure of: a doubtful
   case keeps its expected answer, and the notes are read before applying.
-- The reviewer of this task is an author: there is no second reviewer to keep apart from.
+- The reviewer of this task is an author, and there is no second reviewer to stay independent of.
 
 ## Troubleshooting
 
@@ -116,11 +118,15 @@ not yet reviewed.
 
 ## For the coordinator
 
-**Prepare.** Nothing to generate: the trap cases are those marked `trap` in
+### Prepare
+
+There is nothing to generate: the trap cases are those marked `trap` in
 `offline/datasets/phase_a/*.json`. Check that the datasets pass their checks first (from
 `src/interaction_system/evaluation/offline`: `python3 -m core.dataset_check`).
 
-**Collect and apply.** From the workspace root:
+### Collect and apply
+
+From the workspace root:
 
 ```sh
 pixi run python src/interaction_system/evaluation/panels/review_panel.py dataset report --reviewer "Your Name"
@@ -136,9 +142,11 @@ current, not yet applied) into the datasets, keeps a backup of each file it chan
 line per change to the public `offline/datasets/phase_a/CHANGELOG.jsonl` (source "phase A review",
 "reviewed by an author", no names) and runs the dataset checks. Commit the corrected datasets and
 the changelog before the freeze commit of E0a ([EXPERIMENTS.md](../EXPERIMENTS.md#e0a-choosing-the-local-model),
-"Freeze"); then phase A can run (`scripts/run_e0a.py phase-a`).
+"Freeze"); then phase 1 can run (`scripts/run_e0a.py phase-a`).
 
-**Where the files go** (private, git-ignored):
+### Where the files go
+
+These files are private and git-ignored:
 
 | File | Content |
 |---|---|

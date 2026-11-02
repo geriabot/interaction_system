@@ -22,15 +22,14 @@ registering a visitor. Tree `behavior_tree_xml/slot_filling.xml`, skills
    if the frame is already complete, asks for confirmation.
 2. **Gathering.** Each turn is understood in one question to the LLM (`extract_slots`): the
    values it gives or corrects, and what the turn does. The frame applies the values
-   (deterministic: types, allowed values, ranges, conditional slots, list operations). A
-   conditional slot that does not apply yet is also offered to the LLM, marked with its condition,
+   deterministically, checking types, allowed values, ranges, conditional slots and list
+   operations. A conditional slot that does not apply yet is also offered to the LLM, marked with its condition,
    so that it can come in the same turn as the value that makes it apply ("a latte with oat
    milk"); the frame keeps it only if its condition holds once the whole turn is applied ("an
-   espresso with oat milk" keeps no milk). The robot
-   acknowledges what was applied (a fixed phrase, never the LLM's, so it never acknowledges what
-   it did not get) and asks for what is missing. Only a question for a list slot says that several
-   values may be given: the code adds that instruction to the prompt when the slot asked is a list
-   (`list_str`), never for a single-value slot. Every question speaks to the user directly ("what
+   espresso with oat milk" keeps no milk). The robot acknowledges what was applied with a fixed
+   phrase, never a generated one, so that it never acknowledges a value it did not get, and asks
+   for what is missing. Only a question for a list slot (`list_str`) says that several values may
+   be given: the code adds that instruction to the prompt for list slots only. Every question speaks to the user directly ("what
    is your name?", not "the customer's name") and informally ([PROMPTS.md](../PROMPTS.md#placeholders-context-and-caching)).
 3. **Confirming.** When no slot is missing, the robot reads the frame back, saying which slots
    were left blank, and asks for a yes or no.
@@ -53,47 +52,45 @@ stateDiagram-v2
 | Gathering | Gives or corrects values | Acknowledges, asks for the next slot (or confirms if complete) | Yes |
 | Gathering | A value out of range | Says it was not recorded and why, asks again | Yes |
 | Gathering | Asks something (options, prices, what was collected) | Answers from the resources only, or says it does not know; asks for the slot | Yes |
-| Gathering | "I don't know", "I'd rather not say", "skip it" | Leaves the slot **unanswered** ("Alright, we'll leave that one blank.") and goes on | Yes |
+| Gathering | "I don't know", "I'd rather not say", "skip it" | Leaves the slot unanswered ("Alright, we'll leave that one blank.") and goes on | Yes |
 | Gathering | Asks to repeat, or something not understood | Asks again ([recovery](no_progress.md)) | No |
-| Confirming | Confirms | Closes, never with a question (a closing from the model that asks something is replaced by the fixed `confirmed_closing`) | Yes |
+| Confirming | Confirms | Closes, never with a question (a generated closing that asks something is replaced by the fixed `confirmed_closing`) | Yes |
 | Confirming | Asks a question | Answers it | Yes |
 | Confirming | Corrects a value | Applies it and confirms again (or gathers again if a slot became empty) | Yes |
 | Confirming | Unclear | Asks for the confirmation again | No |
 
 A slot asked `max_attempts` times without being filled is asked differently (a simpler closed
-question); after one more failed attempt it is left unanswered. A question of the user does not
+question); after one more failed attempt it is left unanswered. A question from the user does not
 count as a failed attempt. Slots conditioned on an unanswered slot are not asked (their
-condition cannot hold). If the user gives an unanswered value later, it is recorded.
+condition cannot hold). If the user later gives a value for an unanswered slot, it is recorded.
 
-**Provisional changes (provisional, 2026-11-01, after the third debugging round; to be confirmed by the author).** A value of a closed slot (canonical values) is taken only
-when the user's words contain it (a word of three or more letters, or a number): the model must not
-pick a value from the list for words that say nothing of it. A correction that applied nothing (an
-unreadable one) is read again by the extraction of the gathering phase. After a correction the
-robot reads the frame back as it is recorded (an acknowledgment and the confirmation question), not
-a free sentence about the correction.
+A closed slot (one with `canonical_values`) takes a value only when the user's words contain it
+(a word of three or more letters, or a number), so that the LLM cannot pick a value from the list
+for words that do not mention it. A correction that applied nothing because it could not be read
+is read again by the extraction of the gathering phase. After a correction, the robot reads the
+frame back as it is recorded (an acknowledgment and the confirmation question), not a free
+sentence about the correction.
 
 ## Tree
 
 ![The tree of slot filling](../../media/bt/slot_filling.svg)
 
-## Eventualities
+## Edge cases
 
 | Situation | What happens |
 |---|---|
 | Silence | [Silence](silence.md) |
 | "Stop" | [Spoken cancellation](cancellation.md); while a closed-choice slot is being asked, only an explicit request to stop cancels (strict mode), not a cancel-like word inside an answer |
 | `max_stalled` turns without progress | [Breakdown](no_progress.md): closing line, outcome `breakdown`, the slots filled so far are returned |
-| The LLM fails extracting a turn | The turn is not understood (no value) |
-| The LLM fails designing the frame (no schema) | `error` before the robot speaks |
+| The LLM fails to extract a turn | The turn is not understood (no value) |
+| The LLM fails to design the frame (no schema) | `error` before the robot speaks |
 | An invalid schema | `error` before the robot speaks, with the reason |
 | Turn limit, failure of the system | [Endings](endings.md) |
 
 ## Parameters
 
-`max_attempts` is the number of failed askings of a slot before it is asked differently. The limits
-are parameters of the orchestrator
-([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); `max_turns`, `max_silence` and
-`max_stalled` can also be set per request
-([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). The acknowledgments are `ack_phrases`
+`max_attempts` is the number of failed attempts on a slot before it is asked differently. The shared
+limits are described in [What every behavior shares](README.md#what-every-behavior-shares). The
+acknowledgments are `ack_phrases`
 and `ack_enabled`, and the line for a slot left blank is `phrases.slot_skipped`
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)).

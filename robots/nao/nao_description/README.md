@@ -13,7 +13,7 @@ To install the 3d model meshes for the NAO, in this nao_description package dire
 
 ## Running
 
-To visualise the urdf robot in rviz, run
+To visualize the urdf robot in rviz, run
 
 `ros2 launch nao_description everything_launch.py`
 

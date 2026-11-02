@@ -6,7 +6,7 @@ What the participant reads:
 PREPARAR UN TÉ
 
 El robot te va a guiar para preparar un té (haz como que lo preparas).
-• Haz cada paso y dile cuándo lo has hecho.
+• Haz cada paso y avísale cuando lo hayas hecho.
 • Cuando te diga que dejes reposar el té, quédate en silencio, sin decir nada, hasta que el robot vuelva a hablarte; entonces dile que ya está.
 • Tú no tomas el té con leche ni con azúcar: en el último paso, dile que te lo quieres saltar.
 

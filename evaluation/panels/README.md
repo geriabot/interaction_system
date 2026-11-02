@@ -9,13 +9,12 @@ as doubtful before "Finish". The interface is in English by default, Spanish wit
 data is shown as it is. It makes no LLM call and needs no network. Every answer is saved to a file
 the moment it is given: a session can be closed at any time and resumed where it stopped.
 
-**The instructions for the people who do the reviews** (who does each task, when, the exact
-command, the screens, what to do if something goes wrong, and what the coordinator prepares and
-computes): [HUMAN_REVIEW.md](../HUMAN_REVIEW.md), with one page per task in
-[doc/human_review/](../doc/human_review/). The annotators' guide of E0b is
-[doc/human_review/e0b_annotation.md](../doc/human_review/e0b_annotation.md)
-([GUIA_ANOTADORES.md](GUIA_ANOTADORES.md), the earlier Spanish guide, now points there). This page
-is the tool reference.
+This page is the tool reference. The instructions for the people who do the reviews are in
+[HUMAN_REVIEW.md](../HUMAN_REVIEW.md), with one page per task in
+[doc/human_review/](../doc/human_review/): who does each task, when, the exact command, the
+screens, what to do if something goes wrong, and what the coordinator prepares and computes. The
+annotators' guide of E0b is [doc/human_review/e0b_annotation.md](../doc/human_review/e0b_annotation.md);
+[GUIA_ANOTADORES.md](GUIA_ANOTADORES.md) is a short Spanish note that points to it.
 
 ## Launching it
 
@@ -31,10 +30,14 @@ assignment, so each person can be sent one exact command:
 
 | Task | Command (after `review_panel.py`) | What is reviewed |
 |---|---|---|
-| E0b annotation | `annotate --annotator "Name" --sheet a --lang es` | The robot utterances of one annotation sheet, blind: two yes/no questions (in the frame of the task; states something unsupported), and a doubt note |
-| Phase A cases (E0a) | `dataset --reviewer "Name"` (`--all` for every case, `--language en\|es`, `--file confirmation`) | Whether the expected output of each case is right; the trap cases only by default |
+| E0b annotation | `annotate --annotator "Name" --sheet a --lang es` | The robot utterances of one annotation sheet, blind: two yes/no questions and a doubt note |
+| Phase 1 cases (E0a) | `dataset --reviewer "Name"` (`--all` for every case, `--language en\|es`, `--file confirmation`) | Whether the expected output of each case is right; the trap cases only by default |
 | Adjudication (E0a) | `dataset --adjudicate --reviewer "Name"` (`--gate <gate.json>`) | The critical cases that half or more of the evaluated models failed, blind |
-| Adherence audit | `adherence <results of an experiment> --auditor "Name"` (`--n 40 --seed 7`) | Whether the simulated user really said what was marked (by the local annotator since 2026-10-31, or declared by the simulator in earlier runs), on a seeded sample of dialogues |
+| Adherence audit | `adherence <results of an experiment> --auditor "Name"` (`--n 40 --seed 7`) | Whether the simulated user really said what was marked, on a seeded sample of dialogues |
+
+The two questions of the annotation are whether the utterance stays in the frame of the task and
+whether it states something unsupported. In the adherence audit, the lines are marked by the local
+annotator, or, in earlier runs, declared by the simulator itself.
 
 The start page also accepts its choices in the address, to prefill them (not locked):
 `http://localhost:8098/?task=annotate&sheet=a&lang=es&name=Name`.
@@ -49,7 +52,9 @@ review_panel.py adherence report <results> [--auditor "Name"]       # the checke
 
 ## The tasks
 
-**Annotation (E0b).** The sheets are those written by `analysis/judge_validation.py sheets`
+### Annotation (E0b)
+
+The sheets are those written by `analysis/judge_validation.py sheets`
 (`results/e0b/<en|es>/e0/sheet_a.csv` and `sheet_b.csv`). The page shows one robot utterance at a
 time with the task, the material and the conversation before it, and never the judge's labels, the
 condition or the model. The answers are written back into the same CSV, in the columns
@@ -60,35 +65,40 @@ is beside each utterance: the section of [JUDGE_VALIDATION.md](../doc/JUDGE_VALI
 in English, and its translation [annotation_guide_es.md](annotation_guide_es.md) in Spanish (which
 records the hash of the English section it translates; the panel warns when they differ).
 
-**Phase A cases (E0a).** Each case is shown in plain words: the situation of the question, the
-inputs as the question gets them (and the exact prompt on request, built by the benchmark's own code
-with a transport that calls no model), what the person says, and the proposed answer. "Yes" keeps it;
-"No" asks for the right answer among the labels of the benchmark, validated by
-`offline/core/dataset_check.py` before it is saved; "Not sure" keeps a doubt. A review is keyed by
-the case id and a hash of the case, so a later edit of the case invalidates it. The time left is
-estimated from the pace of the session.
+### Phase 1 cases (E0a)
 
-**Adjudication (E0a).** Pre-registered: the critical cases that half or more of the evaluated models
-failed in phase A (from `results/e0a_phase_a/gate.json`, or from the saved runs when there is no
-gate) are listed once and frozen in `results/reviews/adjudication/selection.json` (with the hash of
-its source; `--reselect` draws it again). Each case is shown blind: never which models failed it nor
-how many, only the case and its current label. After `dataset apply --adjudicate`, the gate is
+Each case is shown in plain words: the situation of the question, the inputs as the question gets
+them (and the exact prompt on request, built by the benchmark's own code with a transport that calls
+no model), what the person says, and the proposed answer. "Yes" keeps it; "No" asks for the right
+answer among the labels of the benchmark, validated by `offline/core/dataset_check.py` before it is
+saved; "Not sure" keeps a doubt. A review is keyed by the case id and a hash of the case, so a later
+edit of the case invalidates it. The time left is estimated from the pace of the session.
+
+### Adjudication (E0a)
+
+The list is pre-registered: the critical cases that half or more of the evaluated models failed in
+phase 1 (from `results/e0a_phase_a/gate.json`, or from the saved runs when there is no gate) are
+listed once and frozen in `results/reviews/adjudication/selection.json` (with the hash of its
+source; `--reselect` draws it again). Each case is shown blind: never which models failed it nor how
+many, only the case and its current label. After `dataset apply --adjudicate`, the gate is
 recomputed from the saved outputs (`offline/run_models.py --gate-only`).
 
-**Adherence audit.** A seeded random sample of the dialogues with goal items of an experiment,
-stratified by language, persona and model (largest remainder), drawn once and recorded with its
-seed and size. For each dialogue: each item the simulated user declared (does the line really say
+### Adherence audit
+
+The audit uses a seeded random sample of the dialogues with goal items of an experiment, stratified
+by language, persona and model (largest remainder), drawn once and recorded with its seed and size.
+For each dialogue the auditor checks each item the simulated user declared (does the line really say
 that value?), each goal item the checker found never revealed (was it indeed never said?), and the
 checker's verdict on the dialogue. `report` gives the checker's accuracy per item (declared, never
-revealed, all) and per dialogue verdict, overall and per language, with a 95% Wilson interval;
-"not sure" answers are left out and counted.
+revealed, all) and per dialogue verdict, overall and per language, with a 95% Wilson interval; "not
+sure" answers are left out and counted.
 
 ## Keys
 
 | Task | Answer | Move |
 |---|---|---|
 | Annotation | `S` or `Y` yes, `N` no on the highlighted question (first 1, then 2); `Tab` switches question | `→` next (once both are answered), `←` previous |
-| Phase A, adjudication | `S`/`Y` yes (and next), `N` no (then `1`, `2`, `3`… and `Enter`), `D` not sure; `P` the exact prompt | `→`, `←` |
+| Phase 1, adjudication | `S`/`Y` yes (and next), `N` no (then `1`, `2`, `3`… and `Enter`), `D` not sure; `P` the exact prompt | `→`, `←` |
 | Adherence | `S`/`Y` yes, `N` no, `D` not sure on the highlighted question; `↓` `↑` switch question | `→` next dialogue, `←` previous |
 
 In every task `/` writes a doubt or comment (saved on `Enter`), `?` shows how to use it, and
@@ -100,7 +110,7 @@ Everything that carries a person's name stays under the git-ignored `evaluation/
 
 | File | Content |
 |---|---|
-| `results/reviews/phase_a/<dataset>.<reviewer>.json` | The reviews of the phase A cases |
+| `results/reviews/phase_a/<dataset>.<reviewer>.json` | The reviews of the phase 1 cases |
 | `results/reviews/adjudication/<dataset>.<reviewer>.json`, `selection.json` | The adjudication decisions and the frozen list of cases |
 | `results/reviews/registry.json` | Who holds which sheet, the tasks started and finished, the tutorials seen |
 | `results/reviews/backups/`, `results/reviews/changelog.jsonl` | The datasets before each `apply`, and each correction with its reviewer and note |
@@ -109,9 +119,9 @@ Everything that carries a person's name stays under the git-ignored `evaluation/
 | `results/CATALOG.jsonl` | One line per `review_start`, `review_done` (with counts), `dataset_apply` (corrections, hash of the datasets before and after) and `adjudication_selection` |
 
 Every file the panel writes carries the panel version and its first and last save. The corrected
-datasets stay in `offline/datasets/phase_a/`, with a public `CHANGELOG.jsonl` that gives each case,
-its old and new values, the source (phase A review, or adjudication reviewed blind), "reviewed by an
-author" and the date, without names. `apply` runs the dataset checks afterwards.
+datasets stay in `offline/datasets/phase_a/`, with a public `CHANGELOG.jsonl` that gives each
+case, its old and new values, the source ("phase A review", or "adjudication, reviewed blind"),
+"reviewed by an author" and the date, without names. `apply` runs the dataset checks afterwards.
 
 ## Tests
 

@@ -28,9 +28,8 @@ The page only calls the scripts of the repository (`scripts/whole_evaluation.py`
 `scripts/run_experiment.py`, `scripts/sim_checks.py`, `real/real_sessions.py`), with the same
 options as in a terminal. Everything it does can also be done by hand:
 [REPRODUCING.md](REPRODUCING.md) and [REAL_SESSIONS.md](REAL_SESSIONS.md). The Tests tab is described in
-[TEST_PANEL.md](TEST_PANEL.md) (until 2026-10-30 it was a page of its own, `scripts/test_panel.py`
-on port 8097; it is now part of this one, so that one server runs one job at a time: two servers
-would each run a job, sharing the GPU, the microphone and the ROS domains).
+[TEST_PANEL.md](TEST_PANEL.md). It is part of this page so that a single server runs one job at a
+time; two servers would each run a job on the same GPU, microphone and ROS domains.
 
 ## Before you start
 
@@ -72,16 +71,15 @@ ssh -N -L 8095:localhost:8095 <user>@<computer-that-runs-the-panel>
 
 The panel runs one job at a time (a simulation test, a check or a trial): they share the GPU, the
 LLM servers and the ROS domains. It starts none while a campaign started from the page (or the
-whole evaluation) runs. An
-experiment run from a terminal is not controlled by the page, but the page notices it (a dialogue
-saved in the last 15 minutes) and says so. The output of each job is kept in
+whole evaluation) runs. An experiment run from a terminal is not controlled by the page, but the
+page notices it (a dialogue saved in the last 15 minutes) and says so. The output of each job is kept in
 `~/.ros/interaction_panel/`, with the last result of each check (`checks.json`).
 
-## The colours of the buttons
+## The colors of the buttons
 
 Each tab shows the meaning of its own buttons:
 
-| Colour | Campaign | Simulation test, Real sessions |
+| Color | Campaign | Simulation test, Real sessions |
 |---|---|---|
 | White | A look or a check: nothing is stored (dry run, servers) | A test or a check: nothing is stored |
 | Blue | Starts or resumes the campaign | Acts on the job under way (answer the runner, show the card); Tests: starts the test; Configurations: saves a draft |
@@ -105,67 +103,87 @@ STEP`, from `src/interaction_system/evaluation` in a prepared terminal). Unlike 
 experiment, not everything can run unattended: it stops where a person must act, and it never
 makes a paid cloud call without your permission for that step.
 
-- **The steps**, numbered and in order, each with its parts. A click on a step, or on one of its
+- The steps are numbered and in order, each with its parts. A click on a step, or on one of its
   parts, chooses where to start: the parts that will run are outlined, those skipped are faint,
   and the chosen one is explained below (what it does, its exact commands, what it awaits if a
   person must act, whether it pays and its permission, its run health). Each part shows its state
-  (✓ done, ✗ failed, ❚❚ paused, ■ stopped there, ● running) and marks: `person` (a person must act),
-  `$` (paid cloud calls; `$ allowed` once you allowed them; `$?` known later: the judge's steps pay
-  only if the judge chosen in E0b is a cloud model) and the run health (`health OK` or `CHECK`).
+  (✓ done, ✗ failed, ❚❚ paused, ■ stopped there, ● running) and its marks: `person` when a person
+  must act, `$` when it makes paid cloud calls (`$ allowed` once you allowed them) and `$?` when
+  that is known only later, since the judge's steps pay only if the judge chosen in E0b is a cloud
+  model; and the run health (`health OK` or `CHECK`).
 
   | Step | Parts (a person's stops in italics) | What runs |
   |---|---|---|
-  | 1. Pilot | *debugging exit*, pilot of every experiment, *pilot review*, *freeze commit* | `scripts/run_pilot.py run` (every pilot file of `experiments/pilot/`, free: the cloud calls go to local stand-ins; its check, `pilot_check.py`, at the end: [PILOT.md](PILOT.md)) |
-  | 2. E0a | *trap review*, preflight, phase A, *adjudication*, phase B, decide, *the decision*, apply, *validation again* | `scripts/run_e0a.py preflight --allow-cloud`, `phase-a`, `phase-b --allow-cloud`, `decide`, `apply` |
-  | 3. E0b | preflight, dialogues, label (development half), *tune the instructions*, label, report, cloud judges (only if no local judge passed) | `scripts/run_e0b.py preflight --allow-cloud` (the simulated user only), `dialogues --allow-cloud`, `label --development-only`, `label` (free), `report` with the four filled sheets; only when no local judge passed, `label-cloud --allow-cloud` and `report` again (`--openai` when "also the OpenAI judges" is ticked); when a local judge passed, that part runs nothing and pays nothing |
-  | 4. E1 | go/no-go gate, *gate decision*, cloud smoke check, campaign, judge, role swap smoke check, role swap, role swap judge | the gate: `run_experiment.py e1_bounded_vs_llm_led.yaml --only-model <the E0a model> --allow-cloud`; each smoke check: `cloud_smoke.py <files> [--judge <cloud judge>] --allow-cloud`; the campaign and the role swap: `run_parallel.py <file> single_gpu.yaml --check-servers`, then `--allow-cloud`, then `score_runs.py`; each judge: `judge_runs.py` with the judge of E0b (`--dry-run`, the labels, `--summary`) |
-  | 5. E2 | behavior choice | `offline/benchmarks/bench_behavior_choice.py --config <config in English> --method all --save`, with a copy of `offline/config_ollama.yaml` that it writes (the E0a model, English) |
+  | 1. Pilot | *debugging exit*, pilot of every experiment, *pilot review*, *freeze commit* | `scripts/run_pilot.py run` on every pilot file of `experiments/pilot/` ([PILOT.md](PILOT.md)) |
+  | 2. E0a | *trap review*, preflight, phase 1, *adjudication*, phase 2, decide, *the decision*, apply, *validation again* | `scripts/run_e0a.py preflight --allow-cloud`, `phase-a`, `phase-b --allow-cloud`, `decide`, `apply` |
+  | 3. E0b | preflight, dialogues, label (development half), *tune the instructions*, label, report, cloud judges (only if no local judge passed) | `scripts/run_e0b.py preflight --allow-cloud`, `dialogues --allow-cloud`, `label --development-only`, `label`, `report`; only when no local judge passed, `label-cloud --allow-cloud` and `report` again |
+  | 4. E1 | go/no-go gate, *gate decision*, cloud smoke check, campaign, judge, role swap smoke check, role swap, role swap judge | the gate (`run_experiment.py`), each smoke check (`cloud_smoke.py`), the campaign and the role swap (`run_parallel.py`, then `score_runs.py`), each judge (`judge_runs.py`) |
+  | 5. E2 | behavior choice | `offline/benchmarks/bench_behavior_choice.py --config <config in English> --method all --save` |
   | 6. E3 | cloud smoke check, mechanisms, noise, model failures, noise judge | `cloud_smoke.py` on the three files, then `run_parallel.py` on `e3_mechanisms.yaml`, `e3_noise.yaml`, `e3_failures.yaml` (as in E1), the judge on the noise |
   | 7. E4 | cloud smoke check, twin, twin judge | `cloud_smoke.py`, then `run_parallel.py` on `e4_sim_es.yaml` (as in E1), the judge |
-  | 8. Tables | tables | `score_runs.py` on every results folder with dialogues and the judge's `--summary` where it labelled, each output kept in `tables/` of the whole-evaluation folder (E0b is not scored, nor the pilot; the technical check has no script yet) |
+  | 8. Tables | tables | `score_runs.py` on every results folder with dialogues, and the judge's `--summary` where it labeled |
+
+  Details of the commands:
+
+  - The pilot is free: its cloud calls go to local stand-ins, and its check, `pilot_check.py`,
+    runs at the end.
+  - In E0b, the preflight calls only the simulated user, `label` is free, and `report` reads the
+    four filled sheets. `label-cloud` gets `--openai` when "also the OpenAI judges" is ticked; when
+    a local judge passed, that part runs nothing and pays nothing.
+  - In E1, the gate runs
+    `run_experiment.py e1_bounded_vs_llm_led.yaml --only-model <the E0a model> --allow-cloud`,
+    and each smoke check `cloud_smoke.py <files> [--judge <cloud judge>] --allow-cloud`. The campaign and the role swap run `run_parallel.py <file> single_gpu.yaml`
+    with `--check-servers`, then with `--allow-cloud`, then `score_runs.py`. Each judge part runs
+    `judge_runs.py` with the judge of E0b (`--dry-run`, the labels, `--summary`).
+  - E2 uses a copy of `offline/config_ollama.yaml` that the part writes, with the E0a model and
+    English.
+  - The tables keep each output in `tables/` of the whole-evaluation folder. E0b and the pilot are
+    not scored, and the technical check has no script yet.
 
   Every run uses the hardware profile of REPRODUCING.md, `experiments/hardware/single_gpu.yaml`.
 - **Start / resume**: runs `whole_evaluation.py run --from <the chosen part>` detached from the
   page, in its own process group: closing the page or the panel does not stop it. It runs that part
   and every one after it, and stops at the first that cannot go on. By default it starts where it
-  stopped. Starting at another part runs it and every later one again (their scripts skip what
-  they saved) and asks again the stops of a person among them; the permissions stay.
+  stopped. Starting at another part runs that part and every later one again (their scripts skip
+  what they already saved) and asks again at every stop for a person among them; permissions
+  already given remain valid.
 - **Pause**: Ctrl-C to its process group, as in a terminal: the script under way stops what it
   launched (the dialogue under way is not saved and runs again); Start resumes at that part.
-- **Where it stops**, in the box at the top, with what it awaits and the button to go on:
-  - *a person must act* (the debugging's exit, the review of the pilot's check, the freeze commit,
-    the hand reviews of E0a, the decision of E0a before apply, the validation with the chosen
-    model, the tuning of the judge's instructions, the decision of the go/no-go gate): do it, then
-    **Done: continue**;
+- The box at the top shows where it stopped, what it awaits and the button to go on:
+  - *a person must act*: do it, then **Done: continue**. These stops are the debugging's exit, the
+    review of the pilot's check, the freeze commit, the hand reviews of E0a, the decision of E0a
+    before apply, the validation with the chosen model, the tuning of the judge's instructions and
+    the decision of the go/no-go gate;
   - *your permission of its paid calls*: **Show the estimate and allow**;
-  - *waiting* for what a script needs before it runs: the finalists of phase A, the decision of E0a
-    applied to the experiment files (the provisional local model is refused), the dated version of
-    a cloud model (`<pin>`), an API key in the environment of the panel, the pilot files, the
-    four annotation sheets of E0b filled (read from the review panel's progress files),
-    the judge chosen by E0b, a judge of another family than a cloud system model, servers free:
-    fix it, then **Continue**, which checks again;
+  - *waiting* for something a script needs before it runs: fix it, then **Continue**, which checks
+    again. A part may wait for the finalists of phase 1, the decision of E0a applied to the
+    experiment files (the provisional local model is refused), the dated version of a cloud model
+    (`<pin>`), an API key in the environment of the panel, the pilot files, the four annotation
+    sheets of E0b filled (read from the review panel's progress files), the judge chosen by E0b, a
+    judge of a family other than that of a cloud system model, or free servers;
   - *failed* (a script ended with an error): read the output of the part, then **Run it again**.
-- **Paid cloud calls.** A part with paid calls never starts without your permission for that
-  part. **Show the estimate and allow** runs its dry run (no call made) and shows what it would pay
-  for: the dialogues per cloud model (and how many are saved already), the utterances a cloud judge
-  would label, or the tiny test calls of a preflight or a cloud smoke check (each smoke check has
-  its own permission, apart from its campaign's); and, when the clone has the authors' cost
-  estimate (`paper/costs_estimate.py` and `paper/COSTES.md`, not part of the public repository),
-  its lines for that part. Your confirmation is recorded with what was shown; if what the part would
-  pay for changes (another file, a new pin, other counts), it stops and asks again. You can allow a
-  part in advance from its explanation (and revoke it), so that a night's run does not stop there.
-  Only then does the page pass `--allow-cloud`.
-- **The method changed.** The code hash of `provenance.py` (the sources of the system and the
-  evaluation, prompts, experiment files and datasets included) is recorded when the evaluation
-  starts. If it changed since, the page says so before Start, lists the parts that ran with the
-  recorded method (their results come from another method than those to come), and Start asks you
-  to accept the current code as the method of the evaluation (recorded, with the earlier one).
-  Some stops change it on purpose (the corrections of phase A, apply, the judge's instructions, the
-  pilot): accept it then. A results folder begun with other code is also listed: its script refuses
-  to resume it (move it aside to run that part again). A change while the evaluation runs stops it
-  before the next part.
-- **Run health** at the end of each part, in its log and in its explanation, each measure with `OK`
-  or `CHECK` where the evaluation gives the rule, and the value only where it gives none:
+- A part with paid cloud calls never starts without your permission for that part. **Show the
+  estimate and allow** runs its dry run (no call made) and shows what it would pay for: the
+  dialogues per cloud model (and how many are saved already), the utterances a cloud judge would
+  label, or the tiny test calls of a preflight or a cloud smoke check. Each smoke check has its
+  own permission, separate from its campaign's. When the clone has the authors' private cost
+  estimate (not part of the public repository), the page also shows its lines for that part. Your
+  confirmation is recorded with what was shown; if what the part would pay for changes (another
+  file, a new pin, other counts), it stops and asks again. You can allow a part in advance from
+  its explanation (and revoke it), so that a night's run does not stop there. Only then does the
+  page pass `--allow-cloud`.
+- The code hash of `provenance.py` (the sources of the system and the evaluation, including
+  prompts, experiment files and datasets) is recorded when the evaluation starts. If it has
+  changed since, the page says so before Start and lists the parts that ran with the recorded
+  method, whose results come from a method other than that of the parts to come; Start then asks
+  you to accept the current code as the method of the evaluation (recorded, with the earlier one).
+  Some stops change it on purpose (the corrections of phase 1, apply, the judge's instructions,
+  the pilot): accept it then. A results folder begun with other code is also listed: its script
+  refuses to resume it (move it aside to run that part again). A change while the evaluation runs
+  stops it before the next part.
+- The run health is given at the end of each part, in its log and in its explanation, each
+  measure with `OK` or `CHECK` where the evaluation gives the rule, and the value only where it
+  gives none:
 
   | Measure | From | OK |
   |---|---|---|
@@ -176,14 +194,14 @@ makes a paid cloud call without your permission for that step.
   | Dialogues excluded by the simulator's rule | `sim_excluded` of those dialogues | no verdict: reported as a check |
   | Simulated user's failures | `simulator_errors.jsonl` (not saved, run again on resume) | no verdict |
 
-  Then a sentence: all as usual; or what to check before going on; or, if the part failed, what it
-  may have failed because of. The campaigns of one experiment get the same run health once they end
+  Then a sentence: all as usual; or what to check before going on; or, if the part failed, its
+  likely cause. The campaigns of one experiment get the same run health once they end
   (in the table).
-- **Things done by people that do not stop it** are named in the explanation of the part they
-  follow: the audit of the adherence checker after phase B of E0a, and the confirmations of the
+- The tasks done by people that do not stop it are named in the explanation of the part they
+  follow: the audit of the adherence checker after phase 2 of E0a, and the confirmations of the
   checker and the judge after the campaigns of E1 and the twin
   ([HUMAN_REVIEW.md](../HUMAN_REVIEW.md)).
-- **Its folder** (`--whole-root`): `state.json` (the method's code hash and its history, each
+- Its folder (`--whole-root`) holds `state.json` (the method's code hash and its history, each
   part's status, commands and run health, the stops done, the permissions with what was shown),
   `campaign.log` (one line per event), `logs/<part>.log` (the output of each part, ending with its
   run health), `runner.out`, `tables/`, and the configuration of E2. To start a new evaluation,
@@ -215,9 +233,9 @@ An experiment on a hardware profile: the same as
   Dialogues already saved are skipped, so Start also resumes.
 - **Pause**: stops the campaign as Ctrl-C would: each lane stops its system; the dialogue under
   way is not saved, and runs again on resume.
-- **Run health**: once the campaign ends (or is paused), its row shows its run health (as in the
+- Once the campaign ends (or is paused), its row shows its run health (as in the
   [whole evaluation](#whole-evaluation)), kept in `panel_campaign.json`.
-- **The table**: one row per experiment: its status (pending, partial, running, running from a
+- The table has one row per experiment, with its status (pending, partial, running, running from a
   terminal, done), the dialogues saved of those expected (`results/<experiment>/runs`), how many
   ended in success, the time of the last one and the end of the log of each lane. For the
   campaign under way (or an experiment running from a terminal), the pace and an estimate of
@@ -236,8 +254,8 @@ with the `ROS_DOMAIN_ID` of the tests. The lane checks first that its servers ar
 - **Run one dialogue**: a cloud system model or a cloud simulated user asks for a confirmation of
   the paid calls first. Running now shows the conversation as it goes.
 
-**Quick checks without hardware** (`scripts/sim_checks.py`; nothing stored; the system with the
-simulated speech, `speech:=none`):
+The same tab runs the quick checks without hardware (`scripts/sim_checks.py`; nothing stored; the
+system with the simulated speech, `speech:=none`):
 
 | Check | What it does |
 |---|---|
@@ -268,10 +286,10 @@ the procedure of a session, and the rules of the
   (`RMW_IMPLEMENTATION`) used by the checks and the trials. The first DDS option, **inherited
   (...)**, leaves the `RMW_IMPLEMENTATION` of the terminal that started the panel (shown in
   brackets; "not set" means the distribution's default).
-- **Barge-in by lip activity (camera)**: disabled, future work: the environment has no camera
-  driver nor the perception's dependencies, so the page always runs with barge-in off and check 5
-  is SKIPPED ([REAL_SESSIONS.md](REAL_SESSIONS.md#barge-in) lists the steps to enable it). Once
-  enabled: when ticked, the trials and the checks `system`, `perception` and `rehearsal` also start
+- **Barge-in by lip activity (camera)** is disabled and left for future work. The environment has
+  neither a camera driver nor the perception's dependencies, so the page always runs with barge-in
+  off and check 5 is SKIPPED ([REAL_SESSIONS.md](REAL_SESSIONS.md#barge-in) lists the steps to
+  enable it). Once it is enabled and ticked, the trials and the checks `system`, `perception` and `rehearsal` also start
   the lip activity detector, and the robot stops talking when the participant starts speaking
   (`real_sessions.py --barge-in on`); its default is `barge_in` of `real/sessions_es.yaml`, and it
   must stay the same for every trial of a participant (the runner refuses a trial with the other
@@ -299,8 +317,8 @@ the procedure of a session, and the rules of the
   The checks that touch a cloud model (LLM, System, a rehearsal in a cloud condition) ask first
   whether to include it.
 - **Participant** and **Create / open the plan**: the plan of the participant in the campaign
-  (`P01`, `P02`...; `real_sessions.py --campaign <C> plan`): the order of the conditions and the scenario of each. An existing
-  plan is opened, never changed.
+  (`P01`, `P02`...; `real_sessions.py --campaign <C> plan`), with the order of the conditions and
+  the scenario of each. An existing plan is opened, never changed.
 - **The plan**: one row per trial, in the order to run them, with its scenario, its condition
   (control and model) and what is stored of it, and three buttons:
   - **Card** (blue): the task card, full screen, in large Spanish text, for the participant to
@@ -354,7 +372,7 @@ and user, as it goes; the output of the job; and the buttons to answer it or sto
 - The blue button answers the runner when it waits for you; its label is the runner's question
   (e.g. **Start the conversation**, **I heard it**). The red button next to it is the other answer
   (e.g. **Quit without running it**).
-- **Stop** stops the job as Ctrl-C would: a conversation under way is cancelled, the stack is
+- **Stop** stops the job as Ctrl-C would: a conversation under way is canceled, the stack is
   stopped, and nothing of it is stored.
 - **Full-screen card**: the card of the trial under way (of its campaign).
 

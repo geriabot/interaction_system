@@ -7,7 +7,7 @@ What the participant reads:
 ```text
 HOW DO I GET THERE BY BUS?
 
-The robot will explain how to go by bus from the care home to the day centre.
+The robot will explain how to go by bus from the care home to the day center.
 • The first time it explains it, tell it you did not quite get at which stop you have to get off.
 • When it explains it again and asks you to tell it in your own words, do so, but say you get off at the third stop.
 • When it corrects you, tell it correctly.

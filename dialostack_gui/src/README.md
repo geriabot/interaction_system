@@ -1,20 +1,22 @@
 # DialoStack GUI architecture
 
-The internal design of the web GUI, for those who change it: a single-page
-React app (Vite + Tailwind) to configure, launch and monitor the conversations
-of the interaction system. What each page does is in
-[ARCHITECTURE.md](../../docs/ARCHITECTURE.md#the-web-gui-dialostack_gui), and how
-to start it in [INSTALLATION.md](../../docs/INSTALLATION.md#the-web-gui). It
-talks to two backends:
+This page describes the internal design of the web GUI, for those who change
+it. The GUI is a single-page React app (Vite + Tailwind) to configure, launch
+and monitor the conversations of the interaction system.
+[ARCHITECTURE.md](../../docs/ARCHITECTURE.md#the-web-gui-dialostack_gui)
+describes what each page does, and
+[INSTALLATION.md](../../docs/INSTALLATION.md#the-web-gui) how to start it. The
+app talks to two backends:
 
-- **The GUI server** (`../server.py`) over HTTP (`lib/api.js`). It generates the
+- The GUI server (`../server.py`), over HTTP (`lib/api.js`). It generates the
   ROS parameter YAML (for the LLM gateway, the interaction intelligence and the
-  orchestrator), serves engine defaults (prompts, phrases), starts and stops the
-  engine (`interaction_system main.launch.py`, with the speech choices as launch
-  arguments: `speech:=simple_hri stt:=… tts:=… whisper_model:=…`, or
-  `speech:=none` for typed text only), and exposes mic and system helpers.
-  **All YAML/param generation lives in the server, never in the frontend.**
-- **rosbridge** over WebSocket (roslib) for live ROS topics and the dialog action,
+  orchestrator), serves the engine defaults (prompts, phrases), starts and stops
+  the engine (`interaction_system main.launch.py`), and exposes microphone and
+  system helpers. The speech choices become launch arguments
+  (`speech:=simple_hri stt:=… tts:=… whisper_model:=…`, or `speech:=none` for
+  typed text only). All the YAML and parameter generation lives in the server,
+  never in the frontend.
+- rosbridge, over WebSocket (roslib) for live ROS topics and the dialog action,
   via the hooks in `hooks/`.
 
 ```
@@ -45,54 +47,63 @@ src/
 │   └── timeline/reducer.js  Pure Monitor state machine (no React/ROS, fully tested)
 └── pages/              One folder per route
     ├── Monitor/        Chat timeline, launch drawer, composer, frame sidebar
-    ├── FrameBuilder/   Build a frame per strategy (slots / quiz / resources)
+    ├── FrameBuilder/   Build a frame per dialogue behavior (slots / quiz / resources)
     ├── PromptsEditor/  Override the LLM prompt templates
-    ├── StrategiesEditor/  Edit each strategy's canned phrases (per language)
+    ├── StrategiesEditor/  Edit each dialogue behavior's fixed phrases (per language)
     └── ConfigEditor/   Parameter tabs (LLM, Dialogue, STT, TTS) + engine panel
 ```
 
 ## Data flow
 
-**Config → engine.** Editors write into `config.<section>` via
+### From the configuration to the engine
+
+Editors write into `config.<section>` via
 `updateSection` (ConfigContext, persisted to localStorage). On engine start,
 `EngineContext` POSTs the whole config. `server.py` turns it into a ROS params
 file plus the speech launch arguments and launches the engine. The frontend
 never builds YAML.
 
-**Speech.** The speech capability is simple_hri, started by `main.launch.py` on
-the engine machine: it listens when the dialogue asks and plays on that
-machine's speaker, so the page carries no audio. The STT tab chooses simple_hri
-or none (typed text only) plus the STT engine (faster-whisper or Whisper) and
-the Whisper model; the TTS tab the TTS engine (Piper or MMS-TTS). The STT
+### Speech
+
+The speech capability is simple_hri, started by `main.launch.py` on the engine
+machine. It listens when the dialogue asks and plays on that machine's speaker,
+so the page carries no audio. The STT tab chooses simple_hri or none (typed text
+only), the STT engine (faster-whisper or Whisper) and the Whisper model; the TTS
+tab chooses the TTS engine (Piper or MMS-TTS). The STT
 language and the TTS voice follow the dialogue language (English or Spanish,
 the ones `main.launch.py` knows). The Monitor's composer publishes typed text on
 `/transcription`, and `/say <text>` speaks through simple_hri's `/tts_action`.
 `ConfigContext.mergeConfig` drops the fields that older versions of the GUI
 saved, so old configurations and profiles still load.
 
-**ROS → screen.** `useDialogTimeline` subscribes to the dialog topics/feedback
+### From ROS to the screen
+
+`useDialogTimeline` subscribes to the dialog topics/feedback
 and dispatches actions into the pure `timeline/reducer.js`. The Monitor renders
 the resulting `events`. Time and parsing enter only through actions, so the
 reducer is testable without React or ROS.
 
-**Editable engine resources (prompts, phrases)** follow one pattern: defaults
+### Editable engine resources
+
+The editable engine resources (prompts, phrases) follow one pattern: defaults
 come from the engine (`/api/{prompts,phrases}`), the user edits *overrides*
 stored in `config.{prompts,phrases}`, and on start the server injects only the
 valid, changed ones as node parameters (defaults always win otherwise).
 
 ## How to…
 
-- **Add a config parameter:** default it in `ConfigContext` `DEFAULT_CONFIG`,
+- To add a config parameter, default it in `ConfigContext` `DEFAULT_CONFIG`,
   add a field in the matching `ConfigEditor/<Tab>.jsx` calling
   `update({ key: value })`, and map it to a ROS param in `server.py`'s
   `build_params` (or to a `main.launch.py` argument in `launch_args`).
-- **Add a page:** create `pages/<Name>/index.jsx`, route it in `App.jsx`, and
+- To add a page, create `pages/<Name>/index.jsx`, route it in `App.jsx`, and
   add it to `PAGES` in `components/Sidebar.jsx`.
-- **Add a ROS topic:** add it to `TOPICS` in `lib/ros.js`, then
+- To add a ROS topic, add it to `TOPICS` in `lib/ros.js`, then
   `useTopic(name, type, cb)` (or `usePublisher`) where needed.
-- **Add an editable phrase/prompt:** add it to the engine's defaults
-  (`interaction_intelligence`), expose via the existing `/api/{prompts,phrases}`
-  endpoints, and it shows up in the corresponding editor automatically.
+- To add an editable phrase or prompt, add it to the engine's defaults
+  (`interaction_intelligence`) and expose it through the existing
+  `/api/{prompts,phrases}` endpoints; it then shows up in the corresponding
+  editor automatically.
 
 ## Conventions
 

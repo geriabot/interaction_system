@@ -1,6 +1,7 @@
 # Adding a dialogue behavior
 
-How to add a dialogue behavior (a strategy of conversation) without changing the existing code.
+This page explains how to add a dialogue behavior (a conversation strategy) without changing the
+existing code.
 A dialogue behavior is a Behavior Tree that holds the control (its phases, counters and limits),
 the skills of the interaction intelligence that it asks (the narrow questions to the LLM and the
 operations on its data), and an entry in the catalog. The skills are loaded from your own Python
@@ -82,7 +83,7 @@ def record(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
 
 The contract of a skill: `skill(env, state, inp) -> SkillResult`.
 
-- `state` is the state of the conversation (a JSON-serialisable dict). Modify it in place: it
+- `state` is the state of the conversation (a JSON-serializable dict). Modify it in place: it
   goes back to the tree's blackboard. `begin` fills it with `task`, `mode`, `domain`, `resources`,
   `skip_intro`, `max_turns`, `wait_timeout` and the flags `completed`, `user_cancelled`,
   `awaiting_cancel`, then calls your mode's `init`.
@@ -106,9 +107,12 @@ The `DialogueMode` tells the system:
 | `init` | Prepare the state from the request (called by `begin`) |
 | `phase`, `data` | The phase and the data of the conversation (the feedback and the result) |
 | `succeeded` | Whether it succeeded (used when there is no `outcome`) |
-| `outcome` | `(outcome, reason)` when the conversation ended by the strategy itself: `completed`, `partial` (an element left unfinished; the reason says which) or `failed`. The shared endings (`cancelled`, `user_silent`, `breakdown`, `turn_limit`, `error`) are decided by the shared subtrees ([endings](behaviors/endings.md)) |
+| `outcome` | `(outcome, reason)` when the strategy itself ended the conversation: `completed`, `partial` (an element left unfinished; the reason says which) or `failed` |
 | `strict_cancel` | Whether a cancel request must be explicit (e.g. while the user answers a closed-choice question) |
 | `silence_grace` | Seconds the user may stay silent on the current element without being prompted (e.g. a procedure step that takes time; 0 by default) ([silence](behaviors/silence.md)) |
+
+The shared endings (`cancelled`, `user_silent`, `breakdown`, `turn_limit`, `error`) are decided by
+the shared subtrees, not by `outcome` ([Endings and outcome](behaviors/endings.md)).
 
 Load the module in the intelligence with the parameter `skill_modules` (in your copy of
 `app_params.yaml`, given with the launch argument `params_file`):

@@ -1,13 +1,13 @@
 # Integrating the interaction system in your robot
 
-How the software of a robot uses the interaction system: what to launch, how a behavior asks for
-a conversation, and how it acts on the result. To the robot's architecture, the interaction system
-is one more subsystem, like navigation, with the
+This page explains how a robot's software uses the interaction system: what to launch, how a
+behavior asks for a conversation, and how it acts on the result. To the robot's architecture, the
+interaction system is one more subsystem, like navigation, with the
 [same contract](ARCHITECTURE.md#interaction-as-a-capability-with-the-robots-layers-inside).
 
-Before this page: a built workspace ([INSTALLATION.md](INSTALLATION.md)), a model served by Ollama
-([MODELS.md](MODELS.md)), and the speech, and optionally the embodiment and the perception of the
-user, that the robot provides ([ADDING_A_ROBOT.md](ADDING_A_ROBOT.md)).
+Before reading this page, you need a built workspace ([INSTALLATION.md](INSTALLATION.md)), an LLM
+served by Ollama ([MODELS.md](MODELS.md)), and the speech capability that the robot provides,
+optionally with embodiment and user perception ([ADDING_A_ROBOT.md](ADDING_A_ROBOT.md)).
 
 ## 1. Launch
 
@@ -23,7 +23,7 @@ the stack without speech nodes (`main.launch.py speech:=none`,
 
 ## 2. Ask for a conversation
 
-From a behavior of the robot, send a goal to the action `/dialog/execute_task`
+From a robot behavior, send a goal to the action `/dialog/execute_task`
 (`ros2_dialog_interfaces/action/DialogTask`; every field in
 [ROS_INTERFACES.md](ROS_INTERFACES.md#dialogtask-goal)):
 
@@ -62,7 +62,7 @@ In practice:
 
 - One conversation runs at a time. A goal sent while another runs is rejected; cancel the running
   one first (e.g. when the phase of the mission changes).
-- Cancelling the goal stops the robot's voice and its listening at once and returns `canceled`.
+- Canceling the goal stops the robot's voice and its listening at once and returns `canceled`.
 - To chain conversations without greeting again, set `skip_intro: true` from the second one on.
 - An interrupted slot filling can be resumed: pass its `final_frame_json` as the
   `initial_frame_json` of the next goal.
@@ -148,7 +148,7 @@ is optional:
 
 ```sh
 ros2 action send_goal /dialog/execute_task ros2_dialog_interfaces/action/DialogTask \
-  "{task_description: 'Answer the visitors questions at the museum entrance',
+  "{task_description: 'Answer the questions of the visitors at the museum entrance',
     dialog_mode: 'grounded_qa',
     resources_json: '[{\"name\": \"information\", \"description\": \"visitor information\", \"content\": \"The museum opens from Tuesday to Sunday, 10:00 to 19:00. Admission costs 8 euros.\"}, {\"name\": \"handover\", \"description\": \"who can help\", \"content\": \"The staff at the ticket desk can help you with that.\"}]'}"
 ```

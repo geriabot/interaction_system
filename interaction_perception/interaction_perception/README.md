@@ -1,20 +1,21 @@
-# interaction_perception: the perception of the user
+# interaction_perception: user perception
 
-The perception subsystem of the interaction system: what the robot perceives of the person it is
-talking to, from a camera. It runs apart from the interaction system, which uses it only through a
-topic (the lip activity, for barge-in, experimental) and a service (the state of the user, off by
-default). It is optional: without it, the conversation only loses the visual barge-in. A
-perception system that replaces these detectors only has to publish the same topic and serve the
-same service. How it fits in the system:
-[ARCHITECTURE.md](../../docs/ARCHITECTURE.md#speech-perception-and-embodiment).
+This package is the perception subsystem of the interaction system: what the robot perceives,
+from a camera, of the person it is talking to. It runs separately from the interaction system,
+which uses it only through a topic (the lip activity, for barge-in, which is experimental) and a
+service (the state of the user, off by default). It is optional: without it, the conversation only
+loses the visual barge-in. A perception system that replaces these detectors only has to publish
+the same topic and serve the same service.
+[ARCHITECTURE.md](../../docs/ARCHITECTURE.md#speech-perception-and-embodiment) shows how it fits
+in the system.
 
-> **The emotion detector is preliminary work, not validated.** It classifies each frame on its
-> own (no smoothing over time) with a third-party image classifier trained on posed faces, which
-> is unreliable with real faces, light and movement; its labels do not include `frustrated`,
-> which two prompt templates react to; a facial expression is not a reliable sign of an emotion;
-> and in the EU the AI Act restricts emotion recognition (e.g. in workplaces and education):
-> check it before using the detector with people. It is not used in the evaluation. The lip
-> activity detector (barge-in) is independent of it.
+> The emotion detector is preliminary work and has not been validated. It classifies each frame
+> on its own, without smoothing over time, with a third-party image classifier trained on posed
+> faces, which is unreliable with real faces, light and movement. Its labels do not include
+> `frustrated`, which two prompt templates react to, and a facial expression is not a reliable
+> sign of an emotion. In the EU, the AI Act restricts emotion recognition (e.g. in workplaces and
+> education), so check it before using the detector with people. The detector is not used in the
+> evaluation. The lip activity detector (barge-in) is independent of it.
 
 ## Nodes
 
@@ -30,22 +31,41 @@ before it reports speaking, and a continuous closed mouth before it stops.
 
 ## The emotion detector: current limitations and future work
 
-The emotion detector is preliminary: it runs, but it has not been validated, and the interaction
-system does not ask for the state of the user by default (`user_state_service: ""`), so no
-emotion reaches the prompts. Only two templates mention an emotion (`rephrase_explanation` and
-`procedure_help_step` acknowledge frustration when the context flags it). What the detector does
-now, and what it would need before it is used with people:
+The emotion detector runs, but the interaction system does not ask for the state of the user by
+default (`user_state_service: ""`), so no emotion reaches the prompts. Only two templates mention
+an emotion: `rephrase_explanation` and `procedure_help_step` acknowledge frustration when the
+context flags it. Before the detector is used with people, it needs the following:
 
-| Now | What it needs |
-|---|---|
-| Each frame is classified on its own, and the last label is published | A **temporal window**: aggregate the labels and confidences of the last seconds (a moving average or majority over a window, with hysteresis), and report an emotion only when it is stable, so that a single frame (a blink, a word being said, a moment of concentration) does not count |
-| Every face in the image is classified, and their results overwrite each other | Follow **one person**: the one the robot is talking to (the largest or most central face, or the one whose lips move: the lip activity detector already finds the speaker), with a tracker so that the identity does not jump between faces |
-| A third-party image classifier (`dima806/face_emotions_image_detection`) trained on posed faces | A model chosen and **validated** for spontaneous expressions in the robot's conditions (light, distance, angle, movement, older faces), with its licence checked; its accuracy measured on recordings of real conversations annotated by people |
-| Seven expression labels (angry, disgust, fear, happy, neutral, sad, surprise); the context and two prompt templates speak of `frustrated`, which never comes | A **mapping** from the labels to the states that matter for a conversation (e.g. negative and confused vs positive vs neutral), agreed with the prompts and the tests |
-| A facial expression is taken as an emotion | Expressions are an ambiguous signal of emotion: combine them with other cues (the words, the voice prosody, the course of the conversation), and use them to adapt the manner (slower, simpler, reassuring), never to state what the person feels |
-| A debug window opens by default (`show_visualization: true`) | Off by default on a robot without a screen |
-| Its use in prompts was a fixed instruction (adapt the tone to the emotion) | An evaluated effect: whether adapting to the detected state improves the conversation, measured against not adapting |
-| — | **Legal**: in the EU, the AI Act restricts emotion recognition (prohibited in workplaces and education, with exceptions); check it, and the ethics and data-protection approvals, before any use with people |
+1. A temporal window. Each frame is now classified on its own, and the last label is published.
+   The detector should aggregate the labels and confidences of the last seconds (a moving average
+   or a majority over a window, with hysteresis) and report an emotion only when it is stable, so
+   that a single frame (a blink, a word being said, a moment of concentration) does not count.
+2. One person. Every face in the image is now classified, and their results overwrite each
+   other. The detector should follow the person the robot is talking to (the largest or most
+   central face, or the one whose lips move, since the lip activity detector already finds the
+   speaker), with a tracker so that the identity does not jump between faces.
+3. A validated model. The current classifier (`dima806/face_emotions_image_detection`) is a
+   third-party model trained on posed faces. The model should be chosen and validated for
+   spontaneous expressions in the robot's conditions (light, distance, angle, movement, older
+   faces), with its license checked and its accuracy measured on recordings of real conversations
+   annotated by people.
+4. A mapping of the labels. The classifier has seven expression labels (angry, disgust, fear,
+   happy, neutral, sad, surprise), while the context and two prompt templates refer to
+   `frustrated`, which never comes. The labels should be mapped to the states that matter for a
+   conversation (e.g. negative and confused vs positive vs neutral), in agreement with the prompts
+   and the tests.
+5. Other cues. A facial expression is now taken as an emotion, but expressions are an ambiguous
+   signal of emotion. They should be combined with other cues (the words, the voice prosody, the
+   course of the conversation) and used to adapt the manner (slower, simpler, reassuring), never
+   to state what the person feels.
+6. No debug window. A debug window now opens by default (`show_visualization: true`); it should
+   be off by default on a robot without a screen.
+7. An evaluated effect. In the prompts, the emotion was used as a fixed instruction (adapt the
+   tone to the emotion). Whether adapting to the detected state improves the conversation should
+   be measured against not adapting.
+8. Legal checks. In the EU, the AI Act restricts emotion recognition (it is prohibited in
+   workplaces and education, with exceptions). Check it, and obtain the ethics and data-protection
+   approvals, before any use with people.
 
 The lip activity detector (barge-in) is independent of all this, and so is the user-state
 service, which also reports `speaking`.

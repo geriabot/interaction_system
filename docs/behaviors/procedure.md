@@ -3,7 +3,7 @@
 The robot guides the user through the steps of a procedure one at a time while the user does
 them: it waits while a step takes time, answers questions, helps when the user is stuck, repeats,
 goes back or skips on request, and sums up at the end. Typical uses: a warm-up routine, measuring
-the blood pressure, an everyday task. Tree `behavior_tree_xml/procedure.xml`, skills
+blood pressure, an everyday task. Tree `behavior_tree_xml/procedure.xml`, skills
 `interaction_intelligence/skills/procedure.py`. [Index](README.md).
 
 ## What it needs and returns
@@ -34,19 +34,19 @@ One question to the LLM (`classify_step_turn`) against the current step:
 | Wants to go back | `back` | The previous step again | Yes |
 | Anything else | `unclear` | Reminds them to say when the step is done | No |
 
-Each step is phrased for speech by the LLM (`procedure_step`) from that step only: the prompt does
-not get the context of the request, because it holds the whole procedure and small models joined
-the next steps to the current one. The prompt also forbids mentioning or joining other steps.
+Each step is phrased for speech by the LLM (`procedure_step`) from that step only. The prompt does
+not get the context of the request, because the context holds the whole procedure and small
+models merged the next steps into the current one; the prompt also forbids mentioning or joining
+other steps.
 
-**Provisional change (provisional, 2026-11-01, after the third debugging round; to be confirmed by the author).** A reply that reports the step done is `done` even when it also
-asks something ("It's done. What's the next step?"): the next step is given and the procedure moves
-on.
+A reply that reports the step done is `done` even when it also asks something ("It's done. What's
+the next step?"): the robot gives the next step and the procedure moves on.
 
 ## Tree
 
 ![The tree of the procedure](../../media/bt/procedure.svg)
 
-## Eventualities
+## Edge cases
 
 | Situation | What happens |
 |---|---|
@@ -54,15 +54,13 @@ on.
 | Silence | [Silence](silence.md) (the 2nd prompt repeats the step) |
 | "Stop" | [Spoken cancellation](cancellation.md) |
 | `max_stalled` turns in a row without progress | [Breakdown](no_progress.md): closing line, outcome `breakdown`, the steps so far are returned |
-| The LLM fails classifying a turn | `unclear` (a reminder) |
+| The LLM fails to classify a turn | `unclear` (a reminder) |
 | No steps | `error` before the robot speaks |
 | Turn limit, failure of the system | [Endings](endings.md) |
 
 ## Parameters
 
 `max_attempts` is the number of problems reported on a step that mark it stuck (the robot helps with
-the ones before). The limits are parameters of the orchestrator
-([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); `max_turns`, `max_silence` and
-`max_stalled` can also be set per request
-([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). Each step can set `duration_s` and
+the ones before). The shared limits are described in
+[What every behavior shares](README.md#what-every-behavior-shares). Each step can set `duration_s` and
 `optional` ([above](#what-it-needs-and-returns)).

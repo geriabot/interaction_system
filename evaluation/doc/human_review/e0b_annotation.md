@@ -1,12 +1,12 @@
 # E0b: annotating robot sentences
 
-[All the hand tasks](../../HUMAN_REVIEW.md) · Who: **two annotators, each alone** · When: **after
-the judges have labelled the E0b dialogues, before the E0b report** · How long: about 5 minutes of
-practice, then about 20 s per sentence: a sheet of 150 sentences takes about an hour, in as many
+[All the hand tasks](../../HUMAN_REVIEW.md) · Who: two annotators, each alone · When: after the
+judges have labeled the E0b dialogues, before the E0b report · How long: about 5 minutes of
+practice, then about 20 s per sentence. A sheet of 150 sentences takes about an hour, in as many
 sittings as you like. Each annotator does one sheet in English and one in Spanish.
 
-This page is the annotators' guide (it replaces the earlier Spanish one-page guide,
-[panels/GUIA_ANOTADORES.md](../../panels/GUIA_ANOTADORES.md), which now points here).
+This page is the annotators' guide. The short Spanish note
+[panels/GUIA_ANOTADORES.md](../../panels/GUIA_ANOTADORES.md) points here.
 
 ## What and why
 
@@ -35,8 +35,8 @@ JUDGE_VALIDATION.md (in English); the panel in Spanish shows its translation,
 
 ## Before you start
 
-- The coordinator has prepared your sheet and tells you its **letter (A or B)** and its
-  **language** (English or Spanish). Sheet A and sheet B hold the same sentences: one is for each
+- The coordinator has prepared your sheet and tells you its letter (A or B) and its language
+  (English or Spanish). Sheet A and sheet B hold the same sentences: one is for each
   annotator.
 - You work on the coordinator's computer (or on your own, see [Working on your own
   computer](#working-on-your-own-computer)).
@@ -59,7 +59,7 @@ sentences are always shown as they are).
 
 ## The screens
 
-**1. Check your details.**
+### 1. Check your details
 
 ```text
 ┌──────────────────────────────────────────────────────┐
@@ -75,14 +75,16 @@ sentences are always shown as they are).
 └──────────────────────────────────────────────────────┘
 ```
 
-If anything does not match what the coordinator told you, **do not start**: tell them.
+If anything does not match what the coordinator told you, do not start: tell them.
 
-**2. The practice.** Before the first sentence you see four examples with the right answers
+### 2. The practice
+
+Before the first sentence you see four examples with the right answers
 explained. They are not saved. Then a one-minute box explains the keys. The practice appears only
-the first time; "How to use" at the top shows the keys again, and from there you can practise
+the first time; "How to use" at the top shows the keys again, and from there you can practice
 again.
 
-**3. Annotating.**
+### 3. Annotating
 
 ```text
 ┌───────────────────────────────────────────────┬──────────────────────┐
@@ -105,24 +107,26 @@ again.
 └───────────────────────────────────────────────┴──────────────────────┘
 ```
 
-- Answer both questions with the buttons, or with the keys **Y** (or **S**) for yes and **N** for
-  no: first question 1, then question 2 (**Tab** switches between them). Then press **→** (or
+- Answer both questions with the buttons, or with the keys `Y` (or `S`) for yes and `N` for no,
+  first question 1 and then question 2 (`Tab` switches between them). Then press `→` (or
   "Next").
 - Under each question there is a one-line explanation and a "See examples" link, which points to
   the examples of the guide on the right.
 - Judge only the robot's sentence at the bottom, not its earlier ones, and do not try to guess how
   the robot was built.
-- If you are unsure, give the answer you find most likely and write the doubt in the **"Doubt or
-  comment"** field (key **/**; saved on Enter or when you leave the field). Doubts help to improve
+- If you are unsure, give the answer you find most likely and write the doubt in the "Doubt or
+  comment" field (key `/`; saved on Enter or when you leave the field). Doubts help to improve
   the guide.
 - You cannot go to the next sentence without answering both questions.
-- To change an answer, go back with **←** (or "Previous") and answer again: the last answer is kept.
-- **Everything is saved at once, by itself.** You can close the window whenever you like; when you
+- To change an answer, go back with `←` (or "Previous") and answer again: the last answer is kept.
+- Everything is saved at once, by itself. You can close the window whenever you like; when you
   open the panel again with the same command, you continue where you stopped.
 
-**4. Finishing.** After the last sentence (or with "Review and finish" at the top right) you see
+### 4. Finishing
+
+After the last sentence (or with "Review and finish" at the top right) you see
 the list of what is missing (it must be empty) and of the sentences where you wrote a doubt, in
-case you want to look at them again. Press **"Finish"**:
+case you want to look at them again. Press "Finish":
 
 ```text
 ┌──────────────────────────────────────────────────────┐
@@ -180,24 +184,31 @@ When you finish, send the coordinator the files listed on the final screen.
 
 ## For the coordinator
 
-**Prepare.** The sheets are written by `scripts/run_e0b.py label` (which runs
-`analysis/judge_validation.py sheets` for each language, once the judges' instructions are frozen
-and the local judges have labelled the dialogues): `results/e0b/<en|es>/e0/sheet_a.csv` and
-`sheet_b.csv`, two copies of the same blind sample of 150 to 300 robot sentences per language
-(stratified by persona and condition; no judge chooses the sentences, its size follows the rule of JUDGE_VALIDATION.md), and `key.json`, which links
-each row to its dialogue and the judges' labels and must never be shown to the annotators. The
-sheets are made once: `sheets` refuses to overwrite an existing `key.json` (its `--force` is only
-for before anyone annotates). Procedure: [JUDGE_VALIDATION.md](../JUDGE_VALIDATION.md#running-e0b).
+### Prepare
+
+The sheets are written by `scripts/run_e0b.py label`, which runs `analysis/judge_validation.py
+sheets` for each language once the judges' instructions are frozen and the local judges have
+labeled the dialogues. They are `results/e0b/<en|es>/e0/sheet_a.csv` and `sheet_b.csv`, two
+copies of the same blind sample of 150 to 300 robot sentences per language, and `key.json`. The
+sample is stratified by persona and condition; no judge chooses the sentences, and its size
+follows the rule of JUDGE_VALIDATION.md. `key.json` links each row to its dialogue and the judges'
+labels, and must never be shown to the annotators. The sheets are made once: `sheets` refuses to
+overwrite an existing `key.json` (its `--force` is only for before anyone annotates). The
+procedure is in [JUDGE_VALIDATION.md](../JUDGE_VALIDATION.md#running-e0b).
 
 Assign one letter per annotator and keep it in both languages (annotator A: `--sheet a --lang en`
 and `--sheet a --lang es`). Send each one their command. The panel enforces that a sheet belongs to
 one person and that a person holds one sheet per language (`results/reviews/registry.json`).
 
-**Follow the progress.** `results/e0b/<lang>/e0/sheet_<a|b>.progress.json` gives the annotator,
+### Follow the progress
+
+`results/e0b/<lang>/e0/sheet_<a|b>.progress.json` gives the annotator,
 done and total, and `finished` once they pressed "Finish"; `results/CATALOG.jsonl` has a
 `review_start` and `review_done` line per sitting. The panel has no report of its own for this task.
 
-**Compute the result.** Once the four sheets are filled, from `src/interaction_system/evaluation`
+### Compute the result
+
+Once the four sheets are filled, from `src/interaction_system/evaluation`
 in a prepared terminal ([REPRODUCING.md](../REPRODUCING.md#before-anything)):
 
 ```sh
@@ -216,9 +227,11 @@ agreement between the two annotators: below 0.67 on a label, the guide is revise
 If the sheets were made step by step in other folders (`results/e0b_judge_dialogues/e0/`, as in the
 step-by-step commands of JUDGE_VALIDATION.md), the panel opens them with `--csv <sheet file>`
 instead of `--sheet` and `--lang` (with `--annotator`, so that the page is locked). With `--csv`
-the panel tells sheets apart by their file name only (`sheet_a.csv` of English and of Spanish are
+the panel distinguishes sheets by their file name only (`sheet_a.csv` of English and of Spanish are
 the same sheet to its registry), so keep one letter per annotator in both languages.
 
-**Where the files go** (private, git-ignored): the filled sheets and their `.progress.json` in
+### Where the files go
+
+These files are private and git-ignored: the filled sheets and their `.progress.json` in
 `results/e0b/<lang>/e0/`; the report of each language in `results/e0b/<lang>/e0/report.json`; the
 judge chosen in `results/e0b/report.json`.

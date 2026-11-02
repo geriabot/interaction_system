@@ -3,7 +3,7 @@
 The robot asks the questions of a bank one at a time, without giving the answer away, grades
 each spoken answer against the expected one (accepting synonyms, other wordings and speech
 recognition errors), gives short feedback and, after the last question, the score. Typical uses:
-memory exercises, reviewing a content. Tree `behavior_tree_xml/quiz.xml`, skills
+memory exercises, reviewing content. Tree `behavior_tree_xml/quiz.xml`, skills
 `interaction_intelligence/skills/quiz.py`. [Index](README.md).
 
 ## What it needs and returns
@@ -32,24 +32,27 @@ attempts restart with each question.
 
 ![The tree of the quiz](../../media/bt/quiz.svg)
 
-## Eventualities
+## Edge cases
 
 | Situation | What happens |
 |---|---|
 | Silence | [Silence](silence.md) (the 2nd prompt repeats the question) |
 | "Stop" | [Spoken cancellation](cancellation.md) |
 | `max_stalled` replies in a row that are not answers | [Breakdown](no_progress.md): closing line, outcome `breakdown`, the answers so far are returned |
-| The LLM fails grading | Retried; if it still fails, the reply is graded right only if it is the expected answer itself (normalised), never by finding the answer inside a longer reply ("Mercury... no, lead" would pass as "Mercury"): a conservative error rather than a wrong answer accepted |
-| The LLM fails simplifying a question | The question itself |
+| The LLM fails to grade | Retried; if it still fails, graded by exact match (below) |
+| The LLM fails to simplify a question | The question itself |
 | No question bank | `error` before the robot speaks |
 | Turn limit, failure of the system | [Endings](endings.md) |
+
+When the LLM keeps failing to grade, the reply is graded right only if it is the expected answer
+itself, after normalization. The answer is never searched for inside a longer reply, where
+"Mercury... no, lead" would pass as "Mercury": rejecting a right answer is a safer error than
+accepting a wrong one.
 
 ## Parameters
 
 `max_attempts` is the number of replies to a question that are not answers before it is left
-unanswered. The limits are parameters of the orchestrator
-([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); `max_turns`, `max_silence` and
-`max_stalled` can also be set per request
-([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). The fixed phrases are
+unanswered. The shared limits are described in
+[What every behavior shares](README.md#what-every-behavior-shares). The fixed phrases are
 `phrases.quiz_correct`, `phrases.quiz_wrong` and `phrases.quiz_unanswered`
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)).

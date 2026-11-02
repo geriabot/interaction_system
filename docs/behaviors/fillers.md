@@ -1,11 +1,11 @@
 # Conversational fillers
 
-**A slow reply is preceded by a filler.** When the robot has to answer and its reply is not
-ready after a couple of seconds (the LLM is still thinking), it says a short fixed phrase,
-"Hmm…", so that the person knows that it heard them and is working on the answer, instead of
-facing a silence of several seconds. If the wait grows, the wording changes with it ("One
-moment…", "Let me think about it for a moment…", "Almost there…", then "Still on it, just a
-second…" every few seconds): a long wait is never silent, nor the same phrase over and over.
+When the robot has to answer and its reply is not ready after a couple of seconds (the LLM is
+still working on it), the robot says a short fixed phrase, "Hmm…", so that the person knows it
+heard them and is working on the answer, instead of facing a silence of several seconds. If the
+wait grows, the wording changes with it ("One moment…", "Let me think about it for a moment…",
+"Almost there…", then "Still on it, just a second…" every few seconds), so that a long wait is
+never silent and never the same phrase over and over.
 
 Shared by every strategy: the `WithFillers` node of the trees (`interaction_system_behaviors`),
 which wraps what prepares each reply, and the skill `fillers`
@@ -20,7 +20,7 @@ seconds": the filler moderates the negative impression of a long response time
 robot respond? Delaying strategies and habituation effects*, International Journal of Social
 Robotics 1(2):141–155, 2009, p. 153,
 [doi:10.1007/s12369-009-0012-8](https://doi.org/10.1007/s12369-009-0012-8)). A reply that
-depends on a language model can take several seconds on modest hardware, so the system applies
+depends on an LLM can take several seconds on modest hardware, so the system applies
 that rule: two seconds by default.
 
 ## How it works
@@ -39,33 +39,35 @@ utterance is taken as a turn), or the start of the conversation for the opening.
 | Ready | Says it at once; if a filler is being said, right after it ends |
 
 The steps fall at `filler_after_s` + 0, 3, 7 and 12 s, so a request that moves the first filler
-moves the whole ladder (decided by the author, 2026-11-01: it replaces "at most two fillers, at 2
-and 6 s", which left a longer wait silent).
+moves the whole ladder. A ladder of steps keeps a longer wait from falling silent, which a fixed
+pair of fillers would not.
 
-- **Fixed phrases, never generated.** The fillers are said while the LLM is busy preparing the
-  reply, so they cannot come from it; they are a small fixed set per language (`filler_phrases`
-  of the language file, [ADDING_A_LANGUAGE.md](../ADDING_A_LANGUAGE.md)), one per step of the
-  ladder, in order; the last one repeats:
+The fillers are fixed phrases, never generated: they are said while the LLM is busy preparing the
+reply, so they cannot come from it. They are a small fixed set per language (`filler_phrases` of
+the language file, [ADDING_A_LANGUAGE.md](../ADDING_A_LANGUAGE.md)), one per step of the ladder,
+in order; the last one repeats:
 
-  | Language | Fillers, in the order of the ladder |
-  |---|---|
-  | English | "Hmm…", "One moment…", "Let me think about it for a moment…", "Almost there…", "Still on it, just a second…" |
-  | Spanish | "Mmm…", "Un momento…", "Déjame pensarlo un momento…", "Ya casi lo tengo…", "Sigo con ello, un segundito…" |
+| Language | Fillers, in the order of the ladder |
+|---|---|
+| English | "Hmm…", "One moment…", "Let me think about it for a moment…", "Almost there…", "Still on it, just a second…" |
+| Spanish | "Mmm…", "Un momento…", "Déjame pensarlo un momento…", "Ya casi lo tengo…", "Sigo con ello, un segundito…" |
 
-- **A filler is not a turn.** It does not count as an utterance of the conversation: it does not
-  advance or reset any counter (the user turns, the silent waits, the turns without progress,
-  the attempts at an element), it is not the robot's last utterance (what the silence prompts
-  and the spoken cancellation repeat), it does not send feedback to the client, and the user is
-  not expected to answer it: the next turn of the user answers the reply.
-- **A filler never blocks the reply.** The reply is said as soon as it is ready. A filler that is
-  being said is let finish (it lasts about a second; cut in the middle of a word it would sound
-  like a fault), and the reply follows it.
-- **The opening follows the same rule.** A conversation does not start with a filler unless its
-  opening also takes more than `filler_after_s` (e.g. the LLM designs the form first).
-- **Marked in every record.** The fillers are announced apart from the lines of the conversation
-  (`/robot_filler`, not `/robot_utterance`): the transcript of the intelligence writes them with
-  the role `filler`, and the records of the simulation and of the real sessions keep them, in
-  order and with their time, as robot lines with `"filler": true`.
+A filler is not a turn and does not count as an utterance of the conversation. It does not
+advance or reset any counter, whether of user turns, silent waits, turns without progress or
+attempts at an element. It is not the robot's last utterance, which the silence prompts and the
+spoken cancellation repeat. It sends no feedback to the client, and the user is not expected to
+answer it: the user's next turn answers the reply.
+
+A filler never blocks the reply, which is said as soon as it is ready. A filler that is being said
+is allowed to finish, since it lasts about a second and cut in the middle of a word it would sound
+like a fault; the reply follows it. The opening follows the same rule: a conversation does not
+start with a filler unless its opening also takes more than `filler_after_s` (e.g. the LLM designs
+the form first).
+
+Every record marks the fillers. They are announced separately from the lines of the conversation
+(`/robot_filler`, not `/robot_utterance`): the transcript of the intelligence writes them with the
+role `filler`, and the records of the simulation and of the real sessions keep them, in order and
+with their time, as robot lines with `"filler": true`.
 
 ### Where it is in the trees, and why there
 
@@ -96,22 +98,22 @@ The filler node in a strategy (slot filling; every strategy has the same two):
 
 ![Begin, which fetches the phrases](../../media/bt/common/Begin.svg)
 
-## Eventualities
+## Edge cases
 
 | Situation | What happens |
 |---|---|
 | The reply is ready in under `filler_after_s` | No filler |
 | The reply comes while a filler is being said | The filler ends, then the reply |
-| The model does not answer (a call hangs) | The ladder (at 2, 5, 9 and 14 s) until the reply's time budget is spent (`reply_budget`, 20 s from the end of the user's turn): then the robot's fallback line, and the conversation goes on ([The wait for the model](endings.md#the-wait-for-the-model)) |
+| The LLM does not answer (a call hangs) | The ladder until the reply's time budget (`reply_budget`, 20 s) is spent, then the robot's fallback line; the conversation goes on ([The wait for the model](endings.md#the-wait-for-the-model)) |
 | The reply never comes (the intelligence itself does not answer within `intelligence_timeout`) | The ladder, then the last filler every `filler_repeat_s`; then the failure of the system: the closing line for an error, outcome `error` ([Endings](endings.md)) |
 | A skill fails while the robot waits | The same: the filler being said ends, then the closing line for an error |
-| The user speaks during a filler | The filler is not cut (it is short) and the user's words are not a turn: the robot is not listening while it prepares the reply. A barge-in cuts the reply that follows, as any utterance ([Barge-in](barge_in.md)) |
-| The goal is cancelled during a filler | The tree is halted: the filler is cut, as any utterance ([Spoken cancellation](cancellation.md)) |
+| The user speaks during a filler | The filler is not cut (it is short), and the user's words are not a turn, since the robot is not listening while it prepares the reply. A barge-in can cut the reply that follows ([Barge-in](barge_in.md)) |
+| The goal is canceled during a filler | The tree is halted: the filler is cut, like any utterance ([Spoken cancellation](cancellation.md)) |
 | Text-to-speech is not available | The filler is skipped; the conversation goes on |
 | A closing line, a silence prompt, a confirmation of a cancellation | Fixed phrases, ready at once: no filler is ever needed (the cancellation check and its confirmation are inside the wrapped reply, so a slow check gets a filler) |
 | `filler_after_s` is 0 | No fillers |
 | `filler_repeat_s` is 0 | The four steps of the ladder at most |
-| `filler_phrases` is set to blanks only | No phrases: no fillers |
+| `filler_phrases` is set to blanks only | Taken as unset: the set of the language file (to turn the fillers off, `filler_after_s` 0) |
 
 ## Parameters
 

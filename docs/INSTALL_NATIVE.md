@@ -1,13 +1,14 @@
 # Installing natively (system ROS 2 Jazzy)
 
-For a computer with ROS 2 Jazzy installed on the system (Ubuntu 24.04), for instance to integrate
-the interaction system with an existing ROS 2 installation. To reproduce the experiments, use pixi
-([INSTALL_PIXI.md](INSTALL_PIXI.md)), whose lock file fixes every dependency. What is common to
-both ways (the models, the GUI): [INSTALLATION.md](INSTALLATION.md).
+This guide is for a computer with ROS 2 Jazzy installed on the system (Ubuntu 24.04), for
+instance to integrate the interaction system with an existing ROS 2 installation. To reproduce the
+experiments, use pixi ([INSTALL_PIXI.md](INSTALL_PIXI.md)), whose lock file fixes every
+dependency. [INSTALLATION.md](INSTALLATION.md) covers what is common to both ways (the models,
+the GUI).
 
 ## Install and build
 
-Requires Ubuntu 24.04 with [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/Installation.html).
+It requires Ubuntu 24.04 with [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/Installation.html).
 `<workspace>` is the colcon workspace (e.g. `~/interaction_ws`).
 
 ```bash
@@ -32,7 +33,7 @@ colcon build --symlink-install \
 `requirements.txt` gathers the requirement files of the LLM gateway
 (`ros2_llm_manager/config/requirements.txt`) and of simple_hri
 (`src/third_party/simple_hri/simple_hri/requirements.txt`, the speech models' packages, with
-PyTorch). The perception of the user (optional) has its own:
+PyTorch). User perception (optional) has its own requirements file:
 
 ```bash
 pip install --break-system-packages \
@@ -58,9 +59,9 @@ python3 -m venv <venv>
 
 Build as above, without the environment activated. Sourcing the workspace reorders `PYTHONPATH`
 and hides the environment's packages from the nodes, which then fail with `ModuleNotFoundError`.
-`activate.sh` puts them back: set the two variables at its top, `ROS_DISTRO` (`jazzy`) and
-`DIALOSTACK_VENV` (the absolute path of `<venv>`), and in every terminal run, instead of the two
-`source` lines above:
+`activate.sh` puts them back. Set the two variables at its top, `ROS_DISTRO` (`jazzy`) and
+`DIALOSTACK_VENV` (the absolute path of `<venv>`); then, in every terminal, run it instead of the
+two `source` lines above:
 
 ```bash
 source <workspace>/src/interaction_system/activate.sh
@@ -74,10 +75,12 @@ sudo apt install ros-jazzy-rosbridge-suite nodejs npm
 ./src/interaction_system/gui.sh --dev                # Vite with hot reload, for GUI development
 ```
 
-`gui.sh` sources `/opt/ros/lyrical` or `/opt/ros/jazzy` (outside pixi) and the workspace's `install/` itself, and builds the GUI on its
-first run. What the GUI does: [INSTALLATION.md](INSTALLATION.md#the-web-gui).
+Outside pixi, `gui.sh` sources the first of `/opt/ros/lyrical`, `/opt/ros/jazzy` and
+`/opt/ros/humble` that is installed, and the workspace's `install/`; it builds the GUI on its
+first run. [INSTALLATION.md](INSTALLATION.md#the-web-gui) describes what the GUI does.
 
 ## Then
 
-The models (the LLM and the speech models): [INSTALLATION.md](INSTALLATION.md#models). The first
-conversation: [README, Quick start](../README.md#quick-start).
+[INSTALLATION.md](INSTALLATION.md#models) explains how to get the models (the LLM and the speech
+models), and the [README's Quick start](../README.md#quick-start) walks through the first
+conversation.

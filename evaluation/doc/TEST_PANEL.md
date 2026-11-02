@@ -22,10 +22,8 @@ Start the control panel ([CONTROL_PANEL.md](CONTROL_PANEL.md#starting-it)) and o
 python3 evaluation/scripts/control_panel.py      # then open http://localhost:8095/#tests
 ```
 
-Until 2026-10-30 the test panel was a page of its own (`scripts/test_panel.py`, port 8097). It is
-now a tab of the control panel, so that a single server runs one job at a time (two servers would
-each run a job, sharing the GPU, the microphone and the ROS domains). Running
-`scripts/test_panel.py` only says where it went.
+Running `scripts/test_panel.py` on its own only points to the control panel, which runs one job at
+a time across all its tabs ([Shared with the control panel](#shared-with-the-control-panel)).
 
 ## Trying a scenario
 
@@ -38,7 +36,7 @@ each run a job, sharing the GPU, the microphone and the ROS domains). Running
    `e0a_dev.yaml` in English; `dialogues_es.yaml`, `e3_es.yaml`, `e4_es.yaml` and
    `e0a_dev_es.yaml` in Spanish; `e4_es.yaml` is selected first). The language of the
    conversation follows the file.
-3. **Strategy** and **Scenario** (e.g. `pr_tea`, making a tea). The page shows the
+3. **Strategy** and **Scenario** (e.g. `pr_tea`, making tea). The page shows the
    [tester card](#the-tester-card) of the scenario: what the person playing the user must do.
 4. **Condition**: `bounded` (the method) or `llm_led` (the LLM leads the conversation). **System
    model**: a list of the models on the Ollama server of `real/sessions_es.yaml` (its `ollama`
@@ -50,23 +48,24 @@ each run a job, sharing the GPU, the microphone and the ROS domains). Running
 5. **ROS_DOMAIN_ID** (0 by default) and **DDS** (`RMW_IMPLEMENTATION`): those of the robot, or of
    this computer. The first DDS option, **inherited (...)**, leaves the `RMW_IMPLEMENTATION` of the
    terminal that started the panel (shown in brackets; "not set" means the distribution's
-   default); the others set it for the job. **Barge-in by lip activity**: disabled, future work (the environment has no
-   camera driver nor the perception's dependencies;
-   [REAL_SESSIONS.md](REAL_SESSIONS.md#barge-in) lists the steps to enable it).
-6. **How the robot sounds**, for this test only ([below](#voice-and-filler-delay)): a
-   **Configuration** of the real sessions (`real/configs/`, any, drafts included: it fills the
-   fields and fixes them, and the checks and the test pass `--config`, with its microphone and
-   speech-recognition model too), or ad-hoc values: **Voice**, **Voice configuration** (speed,
-   expressiveness, rhythm variation) and **Filler after (s)**: another Piper voice (default:
-   simple_hri's voice of the language), how it speaks (empty: the voice's own values) and the
-   seconds the robot may take to answer before it says a filler ("Mmm…"; empty: the default).
-7. Optionally, the checks: **speak** (the chosen voice says the phrase of the field above the
-   buttons; **What the robot says** fills it with a question with options in the voice's
-   language, to hear its intonation (the default), or the loudspeaker test greeting of the real
-   sessions, `check_phrase` of `real/sessions_es.yaml`; writing in the box switches it to "my own
-   text"), **listen** (one
-   transcription, which you confirm) and
-   **LLM** (the model of every condition of the sessions file answers a call of one token).
+   default); the others set it for the job. **Barge-in by lip activity** is disabled and left for
+   future work, since the environment has neither a camera driver nor the perception's
+   dependencies ([REAL_SESSIONS.md](REAL_SESSIONS.md#barge-in) lists the steps to enable it).
+6. **How the robot sounds**, for this test only ([below](#voice-and-filler-delay)), is either a
+   **Configuration** of the real sessions or ad-hoc values. A configuration (`real/configs/`, any,
+   drafts included) fills the fields and fixes them, and the checks and the test pass `--config`,
+   so its microphone and speech-recognition model are used too. The ad-hoc values are **Voice**,
+   another Piper voice (default: simple_hri's voice of the language); **Voice configuration**,
+   how it speaks (speed, expressiveness, rhythm variation; empty: the voice's own values); and
+   **Filler after (s)**, the seconds the robot may take to answer before it says a filler
+   ("Mmm…"; empty: the default).
+7. Optionally, run the checks:
+   - **speak**: the chosen voice says the phrase of the field above the buttons. **What the robot
+     says** fills that field with a question with options in the voice's language, to hear its
+     intonation (the default), or with the loudspeaker test greeting of the real sessions
+     (`check_phrase` of `real/sessions_es.yaml`); writing in the box switches it to "my own text";
+   - **listen**: one transcription, which you confirm;
+   - **LLM**: the model of every condition of the sessions file answers a call of one token.
 8. **Start the test**. The stack starts as for a trial with nothing stored
    (`real_sessions.py try-scenario`), with the limits of `real/sessions_es.yaml` and the
    configuration or the values chosen.
@@ -94,8 +93,8 @@ speech-recognition model too). Without a configuration, the microphone is `defau
 `small`, those of the starting configuration.
 
 **Voice.** The [Piper](https://huggingface.co/rhasspy/piper-voices) voices to compare
-(`VOICES` of `real/campaigns.py`, shared with the Configurations tab). **Voice of** filters the list to a man's or a woman's voice;
-each voice shows which it is (from its card, checked on the downloaded ones by their median pitch):
+(`VOICES` of `real/campaigns.py`, shared with the Configurations tab). **Voice of** filters the
+list to a man's or a woman's voice; each voice shows which it is (from its card, checked on the downloaded ones by their median pitch):
 
 | Language | A man | A woman |
 |---|---|---|
@@ -106,15 +105,15 @@ simple_hri looks a voice up in its models folder (`SIMPLE_HRI_MODELS_DIR`, or `m
 folder it runs from: the workspace, for the panels) and downloads a missing one from the Piper
 catalog the first time (63-120 MB each; the first check with it takes longer).
 
-- To **compare voices and configurations** without any model: choose a voice (and a
-  configuration, below) and press **Check: speak**. Only the voice starts (no speech recognition,
-  no microphone, no LLM), says the phrase, and stops when you confirm. The default phrase is a question with several options ("¿Quieres el café con leche
-  entera, desnatada, de avena o de soja?", or its English version for an English voice), where the
-  intonation of a question shows. In a terminal:
+- To compare voices and configurations without any model, choose a voice (and a configuration,
+  below) and press **Check: speak**. Only the voice starts (no speech recognition, no microphone,
+  no LLM), says the phrase, and stops when you confirm. The default phrase is a question with
+  several options ("¿Quieres el café con leche entera, desnatada, de avena o de soja?", or its
+  English version for an English voice), where the intonation of a question shows. In a terminal:
   `real_sessions.py check speak --voice es_ES-davefx-medium --noise-scale 0.9 --phrase "..."`. With a
   voice or a setting, the check refuses to run while another simple_hri serves `/tts_action` (its
   voice cannot be changed).
-- In a **test**, the voice and its settings are passed to `try-scenario` (`--voice`,
+- In a test, the voice and its settings are passed to `try-scenario` (`--voice`,
   `--length-scale`, `--noise-scale`, `--noise-w-scale`); the voice must be of the language of the
   scenario file. The stack then starts without its speech nodes (`speech:=none`) and
   `real_sessions.py` starts simple_hri itself with them (its logs, `speech_0.log` and
@@ -150,23 +149,22 @@ else the orchestrator's `filler_after_s`; `0`: no fillers; e.g. `0.5` to hear th
 written for the panel), from the Spanish files first, and run in the `bounded` condition unless
 the list says otherwise.
 
-- **One per strategy**: the scenario of the study with real participants (`e4_es.yaml`) of each
+- One per strategy: the scenario of the study with real participants (`e4_es.yaml`) of each
   implemented strategy: `sf_coffee` (slot filling), `qz_geography` (quiz), `pr_tea` (procedure),
   `ex_bus` (explanation, with teach-back), `qa_museum` (grounded question answering),
   `qn_museum_satisfaction` (questionnaire) and `rp_interview` (role play). Each also provokes a
   mechanism and a detour, as in the sessions. topic_chat and the urgency escalation are not
   implemented and have no example.
-- **One per mechanism**: every mechanism that a scenario of `e3_es.yaml` (E3: one mechanism per
+- One per mechanism: every mechanism that a scenario of `e3_es.yaml` (E3: one mechanism per
   scenario, provoked by events at fixed turns) or `e4_es.yaml` provokes on purpose, with a short
   id (C cancellation, S silence, O endings, N breakdown, SF slot filling, Q quiz, P procedure, EX
   explanation, R role play, G grounded question answering, QN questionnaire, SYS staying in the
   task). When several scenarios provoke the same mechanism, the example is the shortest one (fewest
   events and turns), or the one whose check measures it (the teach-back repair, EX2, comes from
   the E3 scenario with a planted wrong point, not from `ex_bus`). The exact stop command (C1) is
-  a Spanish one ("Para."): each language has its exact commands (its language file,
-  [ADDING_A_LANGUAGE.md](../../docs/ADDING_A_LANGUAGE.md)); until 2026-10-30 the list was English
-  only and C1 was the only English example. A few mechanisms that no E3 or E4 scenario provokes are planned by the role of
-  a scenario of `dialogues_es.yaml` (its `user_goal`, with no events): a step stuck, a step
+  a Spanish one ("Para."), since each language has its own exact commands (its language file,
+  [ADDING_A_LANGUAGE.md](../../docs/ADDING_A_LANGUAGE.md)). A few mechanisms that no E3 or E4
+  scenario provokes are planned by the role of a scenario of `dialogues_es.yaml` (its `user_goal`, with no events): a step stuck, a step
   skipped, a step repeated, going back a step, declining the teach-back, giving up an explanation
   (ending failed), a hint, ending a role play, the scene's own end, a questionnaire item declined
   or repeated. Their note says so: the person does it when the role says, not at a fixed turn.
@@ -215,6 +213,6 @@ For the chosen scenario, in the language of the scenario file (the page itself i
 
 The tab runs its jobs as the rest of the control panel: one job at a time across all its tabs,
 none while a campaign started from the page runs, and the output of each job in
-`~/.ros/interaction_panel/`. Its ROS_DOMAIN_ID and DDS are its own fields (the Real sessions tab
-has its own). Like a trial, a test refuses to start when the Ollama server holds
-models of other work (the page never passes `--force`).
+`~/.ros/interaction_panel/` ([CONTROL_PANEL.md](CONTROL_PANEL.md) explains why a single server
+runs one job at a time). The tab's ROS_DOMAIN_ID and DDS are its own fields (the Real sessions tab has its own). Like a trial, a test refuses to start when the Ollama
+server holds models of other work (the page never passes `--force`).

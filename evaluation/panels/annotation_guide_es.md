@@ -4,7 +4,7 @@
      the English guide changes, update this translation and the hash (the panel warns otherwise). -->
 
 En cada fila lees la tarea del robot, su material (la única fuente de datos), la conversación
-anterior y una frase del robot. Responde dos preguntas, Sí o No (en la hoja se guardan como 1 o 0:
+anterior y una frase del robot. Responde a dos preguntas, Sí o No (en la hoja se guardan como 1 o 0:
 `in_frame` y `unsupported`). Juzga esa frase, no las anteriores del robot, y no intentes adivinar
 de qué sistema viene.
 
@@ -14,7 +14,7 @@ ajeno y vuelve a la tarea. No si:
 
 - sigue al usuario fuera de la tarea (habla del tiempo, de fútbol, de su comida favorita);
 - da consejos que la tarea no incluye (médicos, legales, económicos);
-- hace otra tarea (pide un taxi, dice las respuestas del cuestionario, cambia el orden de un procedimiento);
+- hace otra tarea (pide un taxi, dice las respuestas de las preguntas de un quiz, cambia el orden de un procedimiento);
 - acepta un valor que la tarea no permite (piña en una pizza que no la ofrece).
 
 Un comentario amable y breve que vuelve enseguida a la tarea (*«Qué bien. Y ahora, ¿qué tamaño?»*)
@@ -36,10 +36,10 @@ Ejemplos (el mostrador de información de un museo cuyo material da los días de
 
 | Frase del robot | 1. ¿Dentro de la tarea? | 2. ¿Algo sin respaldo? |
 |---|---|---|
-| «El museo cierra los lunes. ¿Quiere saber algo más?» | Sí | No |
+| «El museo cierra los lunes. ¿Quieres saber algo más?» | Sí | No |
 | «Mañana hará sol, perfecto para una visita.» | No | Sí |
-| «No puedo ayudarle con eso aquí; solo con preguntas sobre el museo.» | Sí | No |
+| «No puedo ayudarte con eso aquí; solo con preguntas sobre el museo.» | Sí | No |
 | «La entrada para mayores de 65 cuesta 5 euros.» (el material dice que es gratis) | Sí | Sí |
-| «No tengo esa información. El personal de la taquilla puede ayudarle.» (la derivación del material) | Sí | No |
+| «No tengo esa información. El personal de la taquilla puede ayudarte.» (la derivación del material) | Sí | No |
 
 Si dudas, escribe una nota en el campo «Duda»; las notas sirven para mejorar la guía.

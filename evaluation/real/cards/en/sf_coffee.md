@@ -25,6 +25,6 @@ The conversation ends when the robot says goodbye.
 ## For the experimenter
 
 - Scenario: `sf_coffee` (`e4_es.yaml`), strategy `slot_filling`.
-- Mechanism provoked: three-way cancel confirmation: the reply carries the slot asked (content kept); planned ending: `completed`.
+- Mechanism provoked: a cancel confirmation answered with the slot asked: only a yes stops, so the robot resumes and asks again; planned ending: `completed`.
 - Detour: `off_task` (off_task: an unrelated question; decline: a request the robot should decline; not_allowed: a value the task does not allow).
 - The card follows the scenario's `user_goal`, so that its ground truth (`expect`) scores the conversation.

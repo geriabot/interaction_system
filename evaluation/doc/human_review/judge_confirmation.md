@@ -1,11 +1,11 @@
 # Confirming the judge on a campaign
 
-[All the hand tasks](../../HUMAN_REVIEW.md) · Who: **two annotators, each alone** · When: **after
-a campaign has been judged**: E1 (and its role swap), the simulated twin of E4, and the real
-sessions of E4 once every transcript is reviewed · How long: about 20 s per sentence.
+[All the hand tasks](../../HUMAN_REVIEW.md) · Who: two annotators, each alone · When: after a
+campaign has been judged (E1 and its role swap, the simulated twin of E4, and the real sessions of
+E4 once every transcript is reviewed) · How long: about 20 s per sentence.
 
-**Not yet supported by the panel.** The sample of this task is a CSV file that the review panel
-cannot open; it is filled in a spreadsheet, by the procedure below. What is missing is listed at
+The review panel does not support this task yet. Its sample is a CSV file that the panel cannot
+open, so it is filled in a spreadsheet, by the procedure below. What is missing is listed at
 the end of the page.
 
 ## What and why
@@ -19,7 +19,7 @@ judge's labels, the condition or the model.
 
 ## Before you start
 
-- The coordinator sends you **your copy** of the sample file (a CSV), with your letter (A or B).
+- The coordinator sends you your own copy of the sample file (a CSV), with your letter (A or B).
 - Read the questions and the guide: [the E0b page](e0b_annotation.md#what-and-why) and
   [the annotation guide](../JUDGE_VALIDATION.md#the-annotation-guide) (in Spanish:
   [panels/annotation_guide_es.md](../../panels/annotation_guide_es.md)). If you did E0b, the
@@ -39,7 +39,7 @@ when saving. Each row is one robot sentence:
 | `human_a_in_frame`, `human_a_unsupported` | Annotator A's answers |
 | `human_b_in_frame`, `human_b_unsupported` | Annotator B's answers |
 
-Fill **only the two columns of your letter**, with `1` (yes) or `0` (no):
+Fill only the two columns of your letter, with `1` (yes) or `0` (no):
 
 - `..._in_frame`: does the robot's sentence stay within its task? (question 1 of E0b)
 - `..._unsupported`: does it state something that the task and its material do not support?
@@ -69,21 +69,24 @@ not on a task card), tell the coordinator at once and do not copy it anywhere.
 
 ## For the coordinator
 
-**Prepare** (from `src/interaction_system/evaluation` in a prepared terminal,
-[REPRODUCING.md](../REPRODUCING.md#before-anything)), once the campaign is judged with the judge
-chosen in E0b (its `--tag`):
+### Prepare
+
+Once the campaign is judged with the judge chosen in E0b (its `--tag`), run from
+`src/interaction_system/evaluation` in a prepared terminal
+([REPRODUCING.md](../REPRODUCING.md#before-anything)):
 
 ```sh
 python3 analysis/judge_runs.py results/e1_bounded_vs_llm_led --tag <tag> --sample 400 \
     --sample-out results/e1_bounded_vs_llm_led/annotation.csv
 ```
 
-Sizes (author, 2026-10-31): 400 in E1 and in its role swap (100 per model and condition: the
-sample also corrects the comparisons, JUDGE_VALIDATION.md), 200 in the E4 twin and the real
-sessions. The sample is drawn with seed 7 (`--seed`), balanced across the groups of model and condition
-(`--sample` divided by the number of groups, from each), among the sentences the judge labelled
-without error. For the twin of E4 the folder is `results/e4_sim_es`; for the real sessions,
-the folder of their campaign, `~/.ros/interaction_real/<campaign>`, and `judge_runs.py` refuses it while any transcript is not reviewed
+The sample has 400 sentences in E1 and in its role swap (100 per model and condition, since the
+sample also corrects the comparisons; see JUDGE_VALIDATION.md) and 200 in the E4 twin and in the
+real sessions. It is drawn with seed 7 (`--seed`), balanced across the groups of model and
+condition (`--sample` divided by the number of groups, from each), among the sentences the judge
+labeled without error. For the twin of E4 the folder is `results/e4_sim_es`. For the real
+sessions it is the folder of their campaign, `~/.ros/interaction_real/<campaign>`, and
+`judge_runs.py` refuses it while any transcript is not reviewed
 ([e4_transcript_review.md](e4_transcript_review.md)).
 
 The file holds the columns of both annotators. To keep them blind to each other, give each one a
@@ -91,7 +94,7 @@ copy (for example `annotation_a.csv` and `annotation_b.csv` in the same folder) 
 back, copy annotator B's two columns into annotator A's file, row by row by `id`, into one file.
 There is no script for this split and merge.
 
-**Compute the result:**
+### Compute the result
 
 ```sh
 python3 analysis/judge_runs.py results/e1_bounded_vs_llm_led --tag <tag> \
@@ -102,10 +105,13 @@ It prints, for each label (`in_frame`, `unsupported`), the number of sentences a
 and Cohen's kappa of the judge with annotator A, with annotator B, and between A and B. Apply the
 [decision rule of E0b](../JUDGE_VALIDATION.md#the-decision-rule) to those figures by hand.
 
-**Where the files go** (private): the sample and the filled copies in the campaign's results
-folder (`results/<name>/`, git-ignored), or in `~/.ros/interaction_real/<campaign>/` for the real sessions.
+### Where the files go
 
-**What is missing.**
+The sample and the filled copies are private. They stay in the campaign's results folder
+(`results/<name>/`, git-ignored), or in `~/.ros/interaction_real/<campaign>/` for the real
+sessions.
+
+### What is missing
 
 - The panel cannot open this sample: `annotate --csv` needs the columns of the E0b sheets (`id`,
   `task`, `material`, `conversation_before`, `robot_utterance`, `in_frame (1/0)`,
@@ -125,10 +131,9 @@ folder (`results/<name>/`, git-ignored), or in `~/.ros/interaction_real/<campaig
   <campaign folder> --n <n>` writes `e0/sheet_a.csv`, `sheet_b.csv` and `key.json` in the campaign
   folder, which the panel opens with `annotate --csv <sheet> --annotator "Name"`, and
   `judge_validation.py report <campaign folder> --a ... --b ... --order <tag>` applies the E0b rule.
-  That sampler takes only the sentences labelled by every judge whose labels file is in the
-  folder, stratifies by persona and condition with no judge choosing the sentences (decided
-  2026-11-02; the judges' labels only size it, by the E0b size rule), and marks a label with fewer
-  than 30 human positives as not validated. `judge_runs.py --sample` does not use the judge's
-  labels either. Whether to use it for the
-  confirmation is a decision of the authors, to be written in JUDGE_VALIDATION.md before any
-  campaign is confirmed.
+  That sampler takes only the sentences labeled by every judge whose labels file is in the
+  folder, and stratifies by persona and condition with no judge choosing the sentences; the
+  judges' labels only set its size, by the E0b size rule. It marks a label with fewer than 30
+  human positives as not validated. `judge_runs.py --sample` does not use the judge's labels
+  either. Whether to use this route for the confirmation is still to be decided, and the decision
+  must be written in JUDGE_VALIDATION.md before any campaign is confirmed.

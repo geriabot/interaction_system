@@ -2,11 +2,11 @@
 
 The interaction system has no code for any particular robot. It needs a way to listen and to
 speak, and the rest of the robot needs a way to ask it for a conversation. Everything else (the
-gestures, the lights, the perception of the user) is optional and follows generic signals. This
+gestures, the lights, user perception) is optional and follows generic signals. This
 page lists what a robot must or may provide, with the NAO of `robots/nao` as the worked example.
 How the robot's software asks for a conversation is in [INTEGRATING.md](INTEGRATING.md).
 
-![The nodes of the interaction system, and the behavioral control architecture, speech, perception of the user, embodiment and models around it](../media/interaction_system_architecture.drawio.svg)
+![The nodes of the interaction system, and the behavioral control architecture, speech, user perception, embodiment and models around it](../media/interaction_system_architecture.drawio.svg)
 
 ## What a robot provides
 
@@ -14,8 +14,8 @@ How the robot's software asks for a conversation is in [INTEGRATING.md](INTEGRAT
 |---|---|---|---|
 | Speech: listening and speaking | Yes | simple_hri on a computer with a microphone and a speaker, or the robot's own speech serving the same actions | [Speech](#speech) |
 | A behavior that asks for conversations | Yes | A goal to `/dialog/execute_task`, from a Behavior Tree (`ExecuteDialog`) or any node | [INTEGRATING.md](INTEGRATING.md) |
-| Embodiment: gestures, lights | No | Nodes of the robot that follow `/is_speaking` and the other signals of the conversation | [Embodiment](#embodiment) |
-| Perception of the user | No | A camera for `interaction_perception`, or the robot's own detector publishing `/user_speaking` | [Perception of the user](#perception-of-the-user) |
+| Embodiment: gestures, lights | No | Robot nodes that follow `/is_speaking` and the other signals of the conversation | [Embodiment](#embodiment) |
+| User perception | No | A camera for `interaction_perception`, or the robot's own detector publishing `/user_speaking` | [User perception](#user-perception) |
 | An LLM | Yes | Ollama on the robot's computer or on a GPU server; not part of the robot | [MODELS.md](MODELS.md) |
 
 The robot's software and the interaction system talk over ROS 2, so they run on the same ROS
@@ -57,7 +57,7 @@ The interaction system publishes generic signals that the robot's nodes can foll
 `/is_speaking` is published by the `Speak` and `WithFillers` nodes of the trees, not by the speech package, so an
 embodiment written for it works with simple_hri and with the robot's own speech alike.
 
-## Perception of the user
+## User perception
 
 Optional. It gives the visual barge-in (experimental, not validated) and the emotion of the user
 (preliminary, off by default;
@@ -79,9 +79,14 @@ a consumer of the signals above; the interaction system does not depend on it.
 | What | How the NAO provides it |
 |---|---|
 | Speech | simple_hri on the computer next to the robot (its microphone and speaker), or with the synthesized audio forwarded |
-| Embodiment | `nao_pose_manager`: `arm_gesture_manager` moves the arms with talking gestures and idle poses while `/is_speaking` is true; `eye_led_feedback` sets the color of the eye LEDs from `/is_speaking` (and from `/user_vad` if something publishes it). Both command the robot through the `nao_lola` effector topics |
-| Perception of the user | `interaction_perception`, with a camera |
+| Embodiment | `nao_pose_manager`: `arm_gesture_manager` (talking gestures and idle poses) and `eye_led_feedback` (the color of the eye LEDs), described below |
+| User perception | `interaction_perception`, with a camera |
 | The behaviors | Any behavior of the robot's architecture, with `ExecuteDialog` ([dialostack_bt_client](../dialostack_bt_client/README.md)) |
+
+In `nao_pose_manager`, `arm_gesture_manager` moves the arms with talking gestures and idle poses
+while `/is_speaking` is true, and `eye_led_feedback` sets the color of the eye LEDs from
+`/is_speaking` (and from `/user_vad` if something publishes it). Both command the robot through
+the `nao_lola` effector topics.
 
 The NAO packages are not in the `build` task of pixi. Build them, then start the gestures and the
 LEDs next to the interaction system (they need `nao_lola` running on the robot):
@@ -105,4 +110,4 @@ simulation in RViz in the [NAO README](../robots/nao/README.md#usage).
 4. Optionally, write the embodiment: a node that subscribes to `/is_speaking` (and
    `/interaction_system/status`) and drives the robot's gestures or lights, as
    `nao_pose_manager` does.
-5. Optionally, add the perception of the user for the visual barge-in.
+5. Optionally, add user perception for the visual barge-in.

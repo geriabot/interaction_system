@@ -4,8 +4,9 @@ One ROS 2 node that puts LLM inference behind a single action and a few session 
 serves local models through Ollama and cloud models through Google Gemini, Anthropic Claude,
 OpenAI or any OpenAI-compatible server, with optional stateful (history-keeping) sessions and
 JSON-schema-constrained output. The interaction intelligence is its main client (two stateless
-sessions per conversation, with Ollama), but any node can use it. How it fits in the system:
-[ARCHITECTURE.md](../docs/ARCHITECTURE.md#the-llm-gateway-ros2_llm_manager).
+sessions per conversation, with Ollama), but any node can use it.
+[ARCHITECTURE.md](../docs/ARCHITECTURE.md#the-llm-gateway-ros2_llm_manager) shows how it fits in
+the system.
 
 ## Nodes
 
@@ -47,6 +48,6 @@ Adding a provider means implementing `BaseProvider` (`connect`, `ensure_model_re
 ## Configuration
 
 [`config/params.yaml`](config/params.yaml) ships the same values as the `llm_manager_node`
-section of the stack's `app_params.yaml`: Ollama only, with `qwen2.5:7b`. Every parameter, and
-the environment variables of the API keys, are in
-[CONFIGURATION.md](../docs/CONFIGURATION.md#llm_manager_node).
+section of the stack's `app_params.yaml`: Ollama only, with `qwen2.5:7b`.
+[CONFIGURATION.md](../docs/CONFIGURATION.md#llm_manager_node) lists every parameter and the
+environment variables of the API keys.

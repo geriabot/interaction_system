@@ -10,11 +10,11 @@ that every mechanism is observed with people; the endings and the outcome are ob
 
 | Card (Spanish) | English | Strategy | Mechanism provoked | Planned ending | Detour |
 |---|---|---|---|---|---|
-| [En la cafetería](es/sf_coffee.md) | [At the café](en/sf_coffee.md) | `slot_filling` | three-way cancel confirmation: the reply carries the slot asked (content kept) | `completed` | off_task |
+| [En la cafetería](es/sf_coffee.md) | [At the café](en/sf_coffee.md) | `slot_filling` | a cancel confirmation answered with the slot asked: only a yes stops, so the robot resumes and asks again | `completed` | off_task |
 | [¿Cómo llego en autobús?](es/ex_bus.md) | [How do I get there by bus?](en/ex_bus.md) | `explanation` | teach-back with a key point wrong (only that point repaired) | `completed` | decline |
 | [Preguntas de geografía](es/qz_geography.md) | [Geography questions](en/qz_geography.md) | `quiz` | bounded recovery and communication breakdown | `breakdown` | decline |
-| [Preparar un té](es/pr_tea.md) | [Making a tea](en/pr_tea.md) | `procedure` | silence during a step with a declared duration; an optional step skipped | `completed` | off_task |
-| [Ensayar una entrevista de trabajo](es/rp_interview.md) | [Practising a job interview](en/rp_interview.md) | `roleplay` | long silence (waiting feedback) and a cancel denied | `completed` | off_task |
+| [Preparar un té](es/pr_tea.md) | [Making tea](en/pr_tea.md) | `procedure` | silence during a step with a declared duration; an optional step skipped | `completed` | off_task |
+| [Ensayar una entrevista de trabajo](es/rp_interview.md) | [Practicing a job interview](en/rp_interview.md) | `roleplay` | long silence (waiting feedback) and a cancel denied | `completed` | off_task |
 | [Pedir una pizza](es/sf_pizza.md) | [Ordering a pizza](en/sf_pizza.md) | `slot_filling` | a slot the user does not give (left unanswered) | `partial` | not_allowed |
 | [En la entrada del museo](es/qa_museum.md) | [At the museum entrance](en/qa_museum.md) | `grounded_qa` | abstention, a comment and a request to repeat | `completed` | off_task |
 | [Encuesta de satisfacción](es/qn_museum_satisfaction.md) | [Satisfaction survey](en/qn_museum_satisfaction.md) | `questionnaire` | items read literally; a question about an item's meaning and an answer between options | `completed` | decline |

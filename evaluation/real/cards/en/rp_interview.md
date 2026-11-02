@@ -1,11 +1,11 @@
-# Practising a job interview
+# Practicing a job interview
 
 *English translation for readers; the participants read the Spanish card ([es/rp_interview.md](../es/rp_interview.md)).*
 
 What the participant reads:
 
 ```text
-PRACTISING A JOB INTERVIEW
+PRACTICING A JOB INTERVIEW
 
 The robot will play the manager of a bookshop who interviews you for a job.
 • Answer as someone who loves books and has worked two summers in a supermarket.

@@ -1,18 +1,18 @@
 # robots/nao: NAO embodiment layer
 
-Optional embodiment layer for the SoftBank NAO: the robot model (`nao_description`) and the
-pose, gesture and eye LED tooling (`nao_pose_manager`). It only consumes the signals of the
-conversation (`/is_speaking`, `/target_pose`, and `/user_vad` if something publishes it): the
-interaction system has no NAO dependency and runs unchanged without it. `/is_speaking` is
-published by the interaction system's `Speak` node while the robot speaks, whatever the speech
-capability, so the gestures and the eye LEDs follow the conversation. How a robot connects to the
-interaction system, with the NAO as the worked example, is in
-[ADDING_A_ROBOT.md](../../docs/ADDING_A_ROBOT.md).
+This is an optional embodiment layer for the SoftBank NAO: the robot model (`nao_description`)
+and the pose, gesture and eye LED tooling (`nao_pose_manager`). It only consumes the signals of
+the conversation (`/is_speaking`, `/target_pose`, and `/user_vad` if something publishes it), so
+the interaction system has no NAO dependency and runs unchanged without it. The interaction
+system's `Speak` and `WithFillers` nodes publish `/is_speaking` while the robot speaks (its lines
+and its fillers), whatever the speech capability, so the gestures and the eye LEDs follow the
+conversation. [ADDING_A_ROBOT.md](../../docs/ADDING_A_ROBOT.md) explains how a robot connects to
+the interaction system, with the NAO as the worked example.
 
 ## Packages
 
-- **nao_description**: URDF and RViz config for the NAO V40, plus a sim bringup.
-- **nao_pose_manager**: pose capture, playback, gesture managers and eye-LED feedback.
+- `nao_description`: URDF and RViz config for the NAO V40, plus a sim bringup.
+- `nao_pose_manager`: pose capture, playback, gesture managers and eye-LED feedback.
 
 The NAO 3D meshes are licensed by SoftBank Robotics and cannot be redistributed here (`meshes/`
 and `texture/` are git-ignored). To visualize the full model, install them with the official
@@ -42,8 +42,8 @@ bridge on the robot. The simulation path does not need it.
 
 ## Usage
 
-These packages are not in the `build` task of pixi nor in the package list of the README's
-build: build them with colcon (`--packages-select nao_description nao_pose_manager`). The
+These packages are neither in pixi's `build` task nor in the package list of the README's build,
+so build them with colcon (`--packages-select nao_description nao_pose_manager`). The
 simulation also needs `xacro`, `joint_state_publisher_gui` and RViz, which the pixi environment
 (`ros-base`) does not include.
 
