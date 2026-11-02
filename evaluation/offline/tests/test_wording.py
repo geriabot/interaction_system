@@ -135,9 +135,13 @@ def test_the_pipeline_reports_rates_per_check_and_never_a_critical_error():
     g = res["global"]
     assert g["cases"] == len(cases()) and g["critical_total"] == 0 and g["no_answer"] == 0
     assert set(g["checks"]) == set(bw.CHECKS)
-    assert res["by_language"]["es"]["checks"]["informal"]["rate"] == 0.0
+    # Every line is formal but the cancel closing: a closing with a question mark is replaced by
+    # the fixed one, which is what the user hears (decided by the author, 2026-11-02)
+    es = [c for c in cases() if c["language"] == "es"]
+    fixed = sum(c["prompt"] == "cancel_confirmed_response" for c in es) / len(es)
+    assert res["by_language"]["es"]["checks"]["informal"]["rate"] == fixed > 0
     assert res["by_language"]["en"]["checks"]["informal"]["lines"] == 0
-    assert g["rate_informal"] == 0.0
+    assert g["rate_informal"] == fixed
     # The closings asked something: question_form fails on them, not on the questions
     assert 0 < g["rate_question_form"] < 1
 

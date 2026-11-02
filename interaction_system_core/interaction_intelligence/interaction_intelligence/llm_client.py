@@ -1084,8 +1084,13 @@ class LLMDialogClient:
         self, task: str, frame: DialogFrame | None = None, ctx: DialogContext | None = None
     ) -> str:
         prompt = self._pb.cancel_confirmed_response(task, frame, ctx)
-        res = self._call_nlg(prompt, max_tokens=60)
-        return self._clean(res) or self._fb["cancel_ok"]
+        res = self._clean(self._call_nlg(prompt, max_tokens=60))
+        # The dialogue ends here: a closing that asks something ("do you need anything else?",
+        # found in the debugging) is replaced by the fixed one; the prompt is left as it is
+        # (decided by the author, 2026-11-02)
+        if not res or "?" in res or "¿" in res:
+            return self._fb["cancel_ok"]
+        return res
 
     # ==== TRANSPORT ====
 

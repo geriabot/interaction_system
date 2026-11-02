@@ -58,7 +58,7 @@ Every user turn goes first to `CancelCheck`, before the strategy:
 
 | Answer | Label | The robot | The conversation |
 |---|---|---|---|
-| Yes | `confirmed` | A brief generated closing (`cancel_confirmed_response`; fallback "Alright, cancelled.") | Ends: outcome `cancelled`, reason `Cancelled by the user` |
+| Yes | `confirmed` | A brief generated closing (`cancel_confirmed_response`; fallback "Alright, cancelled."). It is the robot's last line, so it never asks anything: a generated closing with a question mark is replaced by the fallback, the prompt unchanged (decided by the author, 2026-11-02: in round 9 of the debugging, 4 of 13 closings asked "do you need anything else?") | Ends: outcome `cancelled`, reason `Cancelled by the user` |
 | No | `denied` | "OK, let's continue." (`cancel_no`) and what it had asked before | Goes on |
 | Finished: they have nothing more to ask or add ("No, I have no more questions"), in a strategy whose end the user decides (grounded question answering) | `finished` | The strategy's own closing (`DialogueMode.on_finished`; grounded QA: "Alright. Have a good day!") | Ends normally: the strategy's own outcome (`completed`), not a cancellation |
 | Finished, in a strategy whose end the user does not decide | `denied` | As for no | Goes on |
