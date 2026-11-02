@@ -601,6 +601,10 @@ def test_a_simulator_error_marks_the_dialogue(run_experiment):
     assert run_experiment.simulator_failed(types.SimpleNamespace(log=[{"turn": 1},
                                                                      {"error": "HTTP 429"}]))
     assert not run_experiment.simulator_failed(types.SimpleNamespace(log=[{"turn": 1}]))
+    # A run that ends with dialogues unsaved is not complete: it exits with an error (the
+    # credit-out drill, 2026-11-02: the credit ran out in the last two dialogues and it exited 0)
+    assert run_experiment.unsaved_message({"simulator_failures": 0}) == ""
+    assert "2 dialogue(s) not saved" in run_experiment.unsaved_message({"simulator_failures": 2})
 
 
 def test_the_warm_up_uses_phase_a_rule_and_the_fit_is_recorded(run_experiment, monkeypatch,

@@ -80,7 +80,9 @@ A dialogue is not saved (the resume runs it again) when the Ollama server it use
 at its end (a dropped tunnel makes every dialogue fail fast: the run stops), or when the simulated
 user failed in it (a failed call is replaced by "Sorry, could you repeat that?": the dialogue is
 not the one planned). Those are logged in simulator_errors.jsonl; after
-MAX_SIMULATOR_FAILURES such dialogues in a row the run stops (credit exhausted, a quota?).
+MAX_SIMULATOR_FAILURES such dialogues in a row the run stops (credit exhausted, a quota?); a
+run that ends with any of them unsaved exits with an error too (a caller never takes it as
+complete).
 --force-busy runs on servers that seem in use; --force-provenance resumes a folder begun with
 other code (--force: the old name of --force-busy).
 """
@@ -428,6 +430,15 @@ def simulator_failed(user) -> bool:
     """Whether a call of the simulated user failed in the dialogue (it was replaced by a fixed
     line: the dialogue is not the one planned)."""
     return any("error" in e for e in getattr(user, "log", []))
+
+
+def unsaved_message(counts: dict) -> str:
+    """Why a run that went to its end is not complete ("": it is): dialogues not saved because the
+    simulated user failed in them (credit exhausted, a quota, the API down). The run then exits
+    with an error, so that no caller takes it as complete (the resume runs them again)."""
+    n = counts.get("simulator_failures", 0)
+    return (f"{n} dialogue(s) not saved: the simulated user failed in them (see "
+            f"simulator_errors.jsonl). Run again to resume") if n else ""
 
 
 def condition_params(condition: dict, model: str) -> dict:
@@ -879,6 +890,9 @@ def main() -> None:
                     routed_models(c, model) for c in conditions.values())):
                 ollama_models.unload_all(ollama_base, [split_model(model)[1]] + [
                     m for c in conditions.values() for m in routed_models(c, model)])
+        unsaved = unsaved_message(counts)
+        if unsaved:
+            stop(unsaved)
         provenance.catalog("finish", out, {**counts, "models": models,
                                            "lane": args.lane or ""})
     finally:
