@@ -467,9 +467,10 @@ every model ran, so that all are compared on the same cases.
 and data used (besides each results folder's `provenance.json`). After E0a only bug fixes are
 allowed; a change of prompts or trees re-runs phase A for the chosen model and the debugging.
 
-**If (almost) no model passes the gate** (fixed before running). If fewer than 2 models pass the
-safety gate in a language, the 3 with the fewest distinct critical cases of repetition 1 in that
-language (each case counted once; ties: the smaller model, then the name) go to phase B, chosen
+**If few models pass the gate.** If fewer than 5 models (about 30% of the candidates) pass the
+safety gate in a language, 5 go to phase B: those that passed, then those with the fewest distinct
+critical cases of repetition 1 in that language (each case counted once; ties: the smaller model,
+then the name), chosen
 among the **comparable** models only: complete runs, at most 5% of calls without an answer and no
 case error in that language. The result is reported as "no model passed the safety gate" (or "only
 one model passed"); the gate is not relaxed in any other way.

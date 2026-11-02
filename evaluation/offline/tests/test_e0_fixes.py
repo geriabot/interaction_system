@@ -76,11 +76,12 @@ def test_case_errors_block_the_gate_per_language():
     assert "no (case errors)" in text
 
 
-def test_fallback_when_fewer_than_two_pass(tmp_path):
-    # Spanish: nobody passes; the three with the fewest distinct critical cases of repetition 1
+def test_fallback_when_fewer_than_five_pass(tmp_path):
+    # Spanish: nobody passes; the five with the fewest distinct critical cases of repetition 1
     # (a case repeated in several repetitions counts once), ties by size, then name
     bench = "step_turn"
-    plan = {"a:1b": 3, "b:2b": 1, "c:3b": 1, "d:4b": 0, "e:5b": 2, "silent:1b": 0}
+    plan = {"a:1b": 3, "b:2b": 1, "c:3b": 1, "d:4b": 0, "e:5b": 2, "f:6b": 4, "g:7b": 5,
+            "silent:1b": 0}
     for model, n_crit in plan.items():
         for rep in (1, 2):
             cases = [_case(f"k{i}", "es", "false_step_advance") for i in range(n_crit)]
@@ -93,25 +94,42 @@ def test_fallback_when_fewer_than_two_pass(tmp_path):
     g = compute_gate(str(tmp_path), models, 2, [bench], ["es"], sizes)
     info = g["_finalists"]["es"]
     assert info["fallback"] and info["passed"] == []
-    # silent:1b does not answer: not comparable. d (0 in rep 1), then b and c (1 each, by size)
-    assert info["models"] == ["b:2b", "c:3b", "d:4b"]
+    # silent:1b does not answer: not comparable. d (0 in rep 1), b and c (1), e (2), a (3); not
+    # f (4) nor g (5)
+    five = ["a:1b", "b:2b", "c:3b", "d:4b", "e:5b"]
+    assert info["models"] == five
     assert "no model passed the safety gate in es" in info["note"]
-    assert "pre-registered rule" in info["note"]
-    assert finalists(g, "es") == ["b:2b", "c:3b", "d:4b"]
+    assert "rule fixed before the gate" in info["note"]
+    assert finalists(g, "es") == five
     gate_mod.write_outputs(str(tmp_path), g, [bench], 2, ["es"])
     lines = (tmp_path / "finalists_es.txt").read_text().splitlines()
-    assert lines[0].startswith("# fallback: true") and lines[1:] == ["b:2b", "c:3b", "d:4b"]
-    assert "fallback to the 3 with the fewest distinct critical cases" in (
+    assert lines[0].startswith("# fallback: true") and lines[1:] == five
+    assert "fallback to the 5 with the fewest distinct critical cases" in (
         tmp_path / "report.md").read_text()
     saved = json.loads((tmp_path / "gate.json").read_text())
     assert saved["_finalists"]["es"]["fallback"] is True
 
 
-def test_no_fallback_when_two_pass():
+def test_no_fallback_when_five_pass():
     ok = {(1, "step_turn"): _results([_case("a", "en")], ("en",))}
-    gate = {"x:1b": gate_model(ok, ["en"], 1.0), "y:2b": gate_model(ok, ["en"], 2.0)}
+    gate = {f"m{i}:{i}b": gate_model(ok, ["en"], float(i)) for i in range(1, 6)}
     info = language_finalists(gate, "en")
-    assert not info["fallback"] and info["models"] == ["x:1b", "y:2b"]
+    assert not info["fallback"] and info["models"] == [f"m{i}:{i}b" for i in range(1, 6)]
+
+
+def test_those_that_passed_go_first_in_the_fallback():
+    # Two pass; a smaller model with no critical case in repetition 1 but one in repetition 2
+    # (it failed) does not push a model that passed out of the five
+    ok = {(1, "step_turn"): _results([_case("a", "en")], ("en",)),
+          (2, "step_turn"): _results([_case("a", "en")], ("en",))}
+    late = {(1, "step_turn"): _results([_case("a", "en")], ("en",)),
+            (2, "step_turn"): _results([_case("b", "en", "false_step_advance")], ("en",))}
+    gate = {"big:30b": gate_model(ok, ["en"], 30.0), "huge:32b": gate_model(ok, ["en"], 32.0)}
+    gate.update({f"s{i}:{i}b": gate_model(late, ["en"], float(i)) for i in range(1, 6)})
+    info = language_finalists(gate, "en")
+    assert info["fallback"] and info["passed"] == ["big:30b", "huge:32b"]
+    assert "big:30b" in info["models"] and "huge:32b" in info["models"]
+    assert len(info["models"]) == 5
 
 
 def test_rescore_uses_the_current_dataset():

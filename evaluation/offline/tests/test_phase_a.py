@@ -416,7 +416,7 @@ def test_gate_per_language():
     assert not g["passed"] and g["passed_by_language"] == {"en": False, "es": True}
     from core.gate import finalists
     assert finalists({"m:7b": g}, "es") == ["m:7b"]
-    # Fewer than 2 pass in English: the fallback rule (the comparable models with the fewest
+    # Fewer than 5 pass in English: the fallback rule (the comparable models with the fewest
     # distinct critical cases of repetition 1) still gives phase B its candidates
     from core.gate import language_finalists
     info = language_finalists({"m:7b": g}, "en")
