@@ -36,7 +36,7 @@ the English one, and so does the test `test/test_languages.py`.
 | `yes_words`, `no_words` | lists | Yes and no, lowercase. Only fallbacks, like the fixed phrases: when a yes/no value comes back as text (a last-resort parsing fallback of the slot values), and when the model fails to read the answer to "do you want to stop?" (the whole answer, normalised, exactly one of these words of the conversation's language: [Spoken cancellation](behaviors/cancellation.md)). The model decides whenever it answers | The dialogue frame; the spoken cancellation |
 | `asr_noise_phrases` | list | Fillers and recurrent hallucinations of the recognizer ("thanks for watching") that are never a turn: a transcription made only of these (one or more) is dropped; one inside real words is kept. List only what is never a turn on its own (not a goodbye like "see you next time", not an answer like "next week") | The transcriptions |
 | `ack_phrases` | list | Acknowledgments said after slot filling takes a value ("Noted.") | Slot filling |
-| `filler_phrases` | list | Conversational fillers said while the reply is prepared ("Hmm…"), at least two | [Fillers](behaviors/fillers.md) |
+| `filler_phrases` | list | Conversational fillers said while the reply is prepared, in the order of the ladder: five, one per step (2, 5, 9 and 14 s) and the one that repeats ("Hmm…", "One moment…"…) | [Fillers](behaviors/fillers.md) |
 | `phrases` | mapping | Every fixed phrase: the fallback of each generated line, the silence prompts, the closings of the endings, the fixed parts of the strategies ("Step {n} of {total}: {step}") | Every strategy and mechanism |
 
 **The fixed phrases** are said when the model fails, or are never generated at all (the

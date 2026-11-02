@@ -23,11 +23,12 @@
     opening_budget: 30.0        # the same for the opening (it may design the frame or list the
                                 # key points, and generate the longest text: an explanation)
     user_speaking_topic: "/user_speaking"  # barge-in (Bool); "" disables it
-    filler_after_s: 2.0         # a reply not ready after this many seconds: the robot says a
-                                # fixed filler ("Hmm..."); the default of the requests that leave
-                                # it unset; 0 = no fillers
-    filler_repeat_s: 4.0        # still not ready this many seconds later: one more filler (the
-                                # last); 0 = only one
+    filler_after_s: 2.0         # a reply not ready after this many seconds: the robot starts
+                                # the ladder of fixed fillers ("Hmm..." at 2 s, then 5, 9 and 14 s,
+                                # each with its own phrase); the default of the requests that
+                                # leave it unset; 0 = no fillers
+    filler_repeat_s: 8.0        # after the ladder, one more filler (the last phrase) every this
+                                # many seconds; 0 = none after the ladder
 
     # The catalog of dialogue behaviors. A request names one with dialog_mode, or the
     # intelligence chooses among those whose needs the request provides

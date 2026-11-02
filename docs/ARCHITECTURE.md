@@ -266,9 +266,9 @@ a bounded recovery ladder that ends by leaving it unfinished
 ([Recovery and breakdown](behaviors/no_progress.md)). Barge-in is in the `Speak` node, not in a
 subtree, and is experimental ([Barge-in](behaviors/barge_in.md)). The conversational fillers are
 in the `WithFillers` node, which each strategy wraps around its opening and around the reply to a
-user turn: a reply not ready after `filler_after_s` (2 s) is preceded by one fixed filler ("Hmm…",
-"Just a moment…"), and by one more `filler_repeat_s` (4 s) later; a filler is not a turn and
-changes no counter ([Conversational fillers](behaviors/fillers.md)).
+user turn: a reply not ready after `filler_after_s` (2 s) is preceded by a fixed filler ("Hmm…"),
+whose wording changes as the wait grows (5, 9 and 14 s), then the last phrase every
+`filler_repeat_s` (8 s); a filler is not a turn and changes no counter ([Conversational fillers](behaviors/fillers.md)).
 
 ### The strategies
 

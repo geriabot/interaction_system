@@ -71,7 +71,10 @@ asr_noise_phrases:
 
 ack_phrases: ["Anotado.", "Hecho.", "Perfecto.", "Entendido.", "De acuerdo."]
 
-filler_phrases: ["Mmm…", "Un momento…", "Déjame pensar…"]
+# Muletillas mientras se prepara la respuesta, en el orden de la escalera (a los 2, 5, 9 y 14 s;
+# la última se repite cada filler_repeat_s); filler_phrases / phrases.filler las sustituyen
+filler_phrases: ["Mmm…", "Un momento…", "Déjame pensarlo un momento…", "Ya casi lo tengo…",
+                 "Sigo con ello, un segundito…"]
 
 phrases:
   opening: "Hola, ¿en qué puedo ayudarte?"

@@ -117,7 +117,8 @@ interaction_orchestrator:
     user_speaking_topic: "/user_speaking"
 
     # Conversational fillers: a reply not ready after filler_after_s seconds is preceded by a
-    # fixed filler ("Hmm..."), and by one more filler_repeat_s seconds later. 0 = none.
+    # ladder of fixed fillers whose wording changes as the wait grows (after 2, 5, 9 and 14 s),
+    # then by the last one every filler_repeat_s seconds. 0 = none.
     filler_after_s: 2.0
-    filler_repeat_s: 4.0
+    filler_repeat_s: 8.0
 

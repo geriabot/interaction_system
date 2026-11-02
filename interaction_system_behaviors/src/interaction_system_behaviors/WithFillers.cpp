@@ -4,6 +4,7 @@
 
 #include "interaction_system_behaviors/WithFillers.hpp"
 
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -12,7 +13,7 @@ namespace interaction_system_behaviors
 {
 
 WithFillers::WithFillers(const std::string & name, const BT::NodeConfig & conf)
-: BT::DecoratorNode(name, conf), rng_(std::random_device{}())
+: BT::DecoratorNode(name, conf)
 {
   node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
   if (!node_) {
@@ -43,20 +44,26 @@ WithFillers::parse_phrases(const std::string & text)
   return phrases;
 }
 
-size_t
-WithFillers::choose(
-  const std::vector<std::string> & phrases, const std::string & last, size_t pick)
+double
+WithFillers::due_s(size_t step, double after_s, double repeat_s)
 {
-  std::vector<size_t> candidates;
-  for (size_t i = 0; i < phrases.size(); ++i) {
-    if (phrases[i] != last) {
-      candidates.push_back(i);
-    }
+  if (after_s <= 0.0) {
+    return -1.0;
   }
-  if (candidates.empty()) {
-    return phrases.empty() ? 0 : pick % phrases.size();
+  const size_t steps = STEP_OFFSETS_S.size();
+  if (step < steps) {
+    return after_s + STEP_OFFSETS_S[step];
   }
-  return candidates[pick % candidates.size()];
+  if (repeat_s <= 0.0) {
+    return -1.0;
+  }
+  return after_s + STEP_OFFSETS_S.back() + static_cast<double>(step - steps + 1) * repeat_s;
+}
+
+size_t
+WithFillers::phrase_index(size_t step, size_t phrases)
+{
+  return phrases == 0 ? 0 : std::min(step, phrases - 1);
 }
 
 void
@@ -81,7 +88,7 @@ void
 WithFillers::start_filler()
 {
   // Counted even when it cannot be said, so that it is not tried again on every tick
-  ++fillers_said_;
+  const auto step = static_cast<size_t>(fillers_said_++);
   std::string text;
   getInput("phrases", text);
   const auto phrases = parse_phrases(text);
@@ -92,9 +99,7 @@ WithFillers::start_filler()
     RCLCPP_WARN(node_->get_logger(), "WithFillers: text-to-speech not available, no filler");
     return;
   }
-  std::string last;
-  getInput("last", last);
-  const auto & filler = phrases[choose(phrases, last, rng_())];
+  const auto & filler = phrases[phrase_index(step, phrases.size())];
   setOutput("last", filler);
 
   filler_pub_->publish(std_msgs::msg::String().set__data(filler));
@@ -162,17 +167,16 @@ WithFillers::tick()
     return speaking_ ? BT::NodeStatus::RUNNING : child_status_;
   }
 
-  // Not ready: a filler at after_s, one more at after_s + repeat_s, then nothing
+  // Not ready: the next step of the ladder, when it is due
   double after_s = 0.0;
   double repeat_s = 0.0;
   getInput("after_s", after_s);
   getInput("repeat_s", repeat_s);
-  const bool none_left = fillers_said_ >= 2 || (fillers_said_ == 1 && repeat_s <= 0.0);
-  if (speaking_ || after_s <= 0.0 || none_left) {
+  const double due = due_s(static_cast<size_t>(fillers_said_), after_s, repeat_s);
+  if (speaking_ || due < 0.0) {
     return BT::NodeStatus::RUNNING;
   }
-  const double due_s = fillers_said_ == 0 ? after_s : after_s + repeat_s;
-  if (std::chrono::duration<double>(now - started_).count() >= due_s) {
+  if (std::chrono::duration<double>(now - started_).count() >= due) {
     start_filler();
   }
   return BT::NodeStatus::RUNNING;

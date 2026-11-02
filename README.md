@@ -149,7 +149,7 @@ classifies the turn):
 | [Spoken cancellation](docs/behaviors/cancellation.md) | "Stop, forget it": the robot asks for confirmation; only a yes ends; any other answer resumes with what it had asked |
 | [Recovery and communication breakdown](docs/behaviors/no_progress.md) | An element the user cannot answer is repeated, simplified, then left unanswered; after `max_stalled` turns in a row without progress (4 by default) the robot closes |
 | [Endings](docs/behaviors/endings.md) | No silent endings: every ending has a closing line, and the result says how and why the conversation ended |
-| [Conversational fillers](docs/behaviors/fillers.md) | A reply not ready in two seconds is preceded by a fixed filler ("Hmm…", "Just a moment…"), and by one more four seconds later; a filler is not a turn and changes no counter |
+| [Conversational fillers](docs/behaviors/fillers.md) | A reply not ready in two seconds is preceded by a fixed filler ("Hmm…"), whose wording changes as the wait grows ("One moment…" at 5 s, "Let me think about it for a moment…" at 9 s, "Almost there…" at 14 s, then "Still on it…" every 8 s); a filler is not a turn and changes no counter |
 | [Barge-in](docs/behaviors/barge_in.md) *(experimental)* | The user can interrupt the robot: it stops speaking and listens (with the lip activity of the perception of the user; without it, the robot finishes each utterance). Implemented, not validated |
 
 The result's `outcome` is one of `completed` (the only success), `partial` (ended normally with

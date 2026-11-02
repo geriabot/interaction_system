@@ -31,10 +31,10 @@ What the behaviors of the robot use.
 | `max_turns` | `int32` | Most user turns (outcome `turn_limit`). Default `-1` |
 | `max_silence` | `float64` | Seconds of continuous silence of the user that end the conversation (outcome `user_silent`). Default `-1.0` |
 | `max_stalled` | `int32` | User turns in a row without progress (not understood, asked to repeat) that end the conversation (outcome `breakdown`). Default `-1` |
-| `filler_after_s` | `float64` | Seconds the robot may take to answer before it says a fixed conversational filler ("Hmm…"; at most two per reply, not turns) ([Conversational fillers](behaviors/fillers.md)); `0`: no fillers. Default `-1.0` |
+| `filler_after_s` | `float64` | Seconds the robot may take to answer before it says a fixed conversational filler ("Hmm…", then a ladder of fixed phrases as the wait grows; not turns) ([Conversational fillers](behaviors/fillers.md)); `0`: no fillers. Default `-1.0` |
 | `max_attempts` | `int32` | Attempts per element (explanations of a topic, helps with a step, askings of a slot, repetitions of a quiz question) ([recovery and breakdown](behaviors/no_progress.md)). Default `-1` |
 | `max_off_task` | `int32` | Requests in a row outside the task, in grounded question answering (a question within the task resets the count, a reaction does not), that end the conversation (outcome `breakdown`, reason `Off-task: …`) ([grounded QA](behaviors/grounded_qa.md)); `0`: unlimited. Default `-1` |
-| `filler_repeat_s` | `float64` | Further seconds before the second and last filler of a reply. Default `-1.0` |
+| `filler_repeat_s` | `float64` | After the ladder of fillers (2, 5, 9 and 14 s), seconds between fillers. Default `-1.0` |
 | `wait_timeout` | `float64` | Seconds of silence of the user before each prompt that the robot is waiting ([silence](behaviors/silence.md)); `-1.0` or `0`: the system's value. Default `-1.0` |
 | `reply_budget`, `opening_budget` | `float64` | Seconds the intelligence may spend asking the model for a reply (the opening) before it answers with the fallbacks ([the wait for the model](behaviors/endings.md#the-wait-for-the-model)); `0`: no budget. Default `-1.0` |
 | `acknowledgments` | `int32` | Whether the robot prefixes its replies with a short acknowledgment ("Noted."): `1` yes, `0` no. Default `-1` |

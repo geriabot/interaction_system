@@ -178,10 +178,10 @@
     </Action>
     <Decorator ID="WithFillers" editable="true">
       <input_port name="after_s" default="{filler_after_s}" type="double">Seconds without a reply before the first filler (&lt;= 0: no fillers)</input_port>
-      <input_port name="repeat_s" default="{filler_repeat_s}" type="double">Further seconds before the second and last filler (&lt;= 0: only one)</input_port>
+      <input_port name="repeat_s" default="{filler_repeat_s}" type="double">Seconds between the fillers after the ladder&apos;s steps (&lt;= 0: none after them)</input_port>
       <input_port name="phrases" default="{fillers}" type="std::string">The filler phrases, one per line</input_port>
       <input_port name="timeout_s" default="{tts_timeout}" type="double">Longest time to say a filler (s)</input_port>
-      <inout_port name="last" default="{last_filler}" type="std::string">The last filler said (not repeated in a row)</inout_port>
+      <inout_port name="last" default="{last_filler}" type="std::string">The last filler said</inout_port>
       <input_port name="budget_s" default="{reply_budget}" type="double">Time the intelligence may spend asking the model for this reply (s; &lt;= 0: no budget)</input_port>
       <output_port name="deadline" default="{reply_deadline}" type="double">When the budget of the reply ends (steady clock, s; 0 when no reply is being prepared)</output_port>
     </Decorator>

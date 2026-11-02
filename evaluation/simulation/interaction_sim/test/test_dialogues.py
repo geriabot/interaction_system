@@ -750,7 +750,7 @@ def test_unknown_mode(system):
 
 # ==== CONVERSATIONAL FILLERS ====
 # "slow N" makes the scripted LLM take N seconds (scripted_llm.py). The system's filler_after_s
-# and filler_repeat_s are the defaults, 2 s and 4 s. The times are those of the harness: a user
+# and filler_repeat_s are the defaults, 2 s and 8 s: the ladder at 2, 5, 9 and 14 s, then every 8 s. The times are those of the harness: a user
 # line when it is heard, a robot line when it starts.
 
 
@@ -799,15 +799,17 @@ def test_filler_after_two_seconds(system):
     assert r.user_lines() == [slow, "size=large", "yes"]
 
 
-def test_second_filler_four_seconds_later_and_no_more(system):
-    slow = "slow 9; drink=coffee"
-    r = run(system, goal(schema=DRINKS), [slow, "size=large", "yes"], timeout=90)
+def test_the_filler_ladder_changes_its_wording_as_the_wait_grows(system):
+    slow = "slow 24; drink=coffee"
+    r = run(system, goal(schema=DRINKS), [slow, "size=large", "yes"], timeout=120)
     assert r.status == "succeeded", r
     fillers = r.fillers()
-    assert len(fillers) == 2  # at about 2 s and 6 s; none at 9 s
-    assert 1.8 <= fillers[0]["t"] - _user_t(r, slow) <= 3.0
-    assert 3.5 <= fillers[1]["t"] - fillers[0]["t"] <= 5.0
-    assert fillers[0]["text"] != fillers[1]["text"]  # never the same twice in a row
+    # At about 2, 5, 9 and 14 s, each with its own phrase, then the last one at 22 s
+    phrases = load_language(system.language).filler_phrases
+    assert [f["text"] for f in fillers] == list(phrases)  # the fifth repeats after the ladder
+    times = [f["t"] - _user_t(r, slow) for f in fillers]
+    for t, due in zip(times, (2, 5, 9, 14, 22)):
+        assert due - 0.3 <= t <= due + 1.5, times
     assert r.robot_lines() == HAPPY
 
 
@@ -857,7 +859,7 @@ def test_filler_time_of_the_request(system):
     r = run(system, goal(schema=DRINKS, filler_after_s=1.0), [slow, "size=large", "yes"])
     assert r.status == "succeeded"
     fillers = r.fillers()
-    assert len(fillers) == 1  # at about 1 s; the second would be at 5 s
+    assert len(fillers) == 1  # at about 1 s; the second would be at 4 s
     assert 0.8 <= fillers[0]["t"] - _user_t(r, slow) <= 1.8
     # Unset (USE_DEFAULT_SECONDS): the system's 2 s, so this reply has no filler
     r = run(system, goal(schema=DRINKS, filler_after_s=DialogTask.Goal.USE_DEFAULT_SECONDS),

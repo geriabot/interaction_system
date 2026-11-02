@@ -2,8 +2,10 @@
 
 **A slow reply is preceded by a filler.** When the robot has to answer and its reply is not
 ready after a couple of seconds (the LLM is still thinking), it says a short fixed phrase,
-"Hmm…", "Just a moment…", "Let me think…", so that the person knows that it heard them and is
-working on the answer, instead of facing a silence of several seconds.
+"Hmm…", so that the person knows that it heard them and is working on the answer, instead of
+facing a silence of several seconds. If the wait grows, the wording changes with it ("One
+moment…", "Let me think about it for a moment…", "Almost there…", then "Still on it, just a
+second…" every few seconds): a long wait is never silent, nor the same phrase over and over.
 
 Shared by every strategy: the `WithFillers` node of the trees (`interaction_system_behaviors`),
 which wraps what prepares each reply, and the skill `fillers`
@@ -29,20 +31,26 @@ utterance is taken as a turn), or the start of the conversation for the opening.
 | The reply is... | The robot |
 |---|---|
 | Ready before `filler_after_s` (2 s) | Says the reply; no filler |
-| Not ready at `filler_after_s` | Says one filler |
-| Still not ready `filler_repeat_s` (4 s) later, at 6 s | Says one more filler, the last |
-| Still not ready after that | Waits in silence for the reply |
+| Not ready at `filler_after_s` (2 s) | "Hmm…" |
+| Still not ready 3 s later (5 s) | "One moment…" |
+| Still not ready at 9 s | "Let me think about it for a moment…" |
+| Still not ready at 14 s | "Almost there…" |
+| Still not ready after that | "Still on it, just a second…" every `filler_repeat_s` (8 s: at 22, 30 s…) |
 | Ready | Says it at once; if a filler is being said, right after it ends |
+
+The steps fall at `filler_after_s` + 0, 3, 7 and 12 s, so a request that moves the first filler
+moves the whole ladder (decided by the author, 2026-11-01: it replaces "at most two fillers, at 2
+and 6 s", which left a longer wait silent).
 
 - **Fixed phrases, never generated.** The fillers are said while the LLM is busy preparing the
   reply, so they cannot come from it; they are a small fixed set per language (`filler_phrases`
-  of the language file, [ADDING_A_LANGUAGE.md](../ADDING_A_LANGUAGE.md)), chosen at random
-  without repeating the same phrase twice in a row (also across turns):
+  of the language file, [ADDING_A_LANGUAGE.md](../ADDING_A_LANGUAGE.md)), one per step of the
+  ladder, in order; the last one repeats:
 
-  | Language | Fillers |
+  | Language | Fillers, in the order of the ladder |
   |---|---|
-  | English | "Hmm…", "Just a moment…", "Let me think…" |
-  | Spanish | "Mmm…", "Un momento…", "Déjame pensar…" |
+  | English | "Hmm…", "One moment…", "Let me think about it for a moment…", "Almost there…", "Still on it, just a second…" |
+  | Spanish | "Mmm…", "Un momento…", "Déjame pensarlo un momento…", "Ya casi lo tengo…", "Sigo con ello, un segundito…" |
 
 - **A filler is not a turn.** It does not count as an utterance of the conversation: it does not
   advance or reset any counter (the user turns, the silent waits, the turns without progress,
@@ -94,15 +102,15 @@ The filler node in a strategy (slot filling; every strategy has the same two):
 |---|---|
 | The reply is ready in under `filler_after_s` | No filler |
 | The reply comes while a filler is being said | The filler ends, then the reply |
-| The model does not answer (a call hangs) | Two fillers at most (at 2 s and 6 s), then silence until the reply's time budget is spent (`reply_budget`, 20 s from the end of the user's turn): then the robot's fallback line, and the conversation goes on ([The wait for the model](endings.md#the-wait-for-the-model)) |
-| The reply never comes (the intelligence itself does not answer within `intelligence_timeout`) | Two fillers at most, then silence; then the failure of the system: the closing line for an error, outcome `error` ([Endings](endings.md)) |
+| The model does not answer (a call hangs) | The ladder (at 2, 5, 9 and 14 s) until the reply's time budget is spent (`reply_budget`, 20 s from the end of the user's turn): then the robot's fallback line, and the conversation goes on ([The wait for the model](endings.md#the-wait-for-the-model)) |
+| The reply never comes (the intelligence itself does not answer within `intelligence_timeout`) | The ladder, then the last filler every `filler_repeat_s`; then the failure of the system: the closing line for an error, outcome `error` ([Endings](endings.md)) |
 | A skill fails while the robot waits | The same: the filler being said ends, then the closing line for an error |
 | The user speaks during a filler | The filler is not cut (it is short) and the user's words are not a turn: the robot is not listening while it prepares the reply. A barge-in cuts the reply that follows, as any utterance ([Barge-in](barge_in.md)) |
 | The goal is cancelled during a filler | The tree is halted: the filler is cut, as any utterance ([Spoken cancellation](cancellation.md)) |
 | Text-to-speech is not available | The filler is skipped; the conversation goes on |
 | A closing line, a silence prompt, a confirmation of a cancellation | Fixed phrases, ready at once: no filler is ever needed (the cancellation check and its confirmation are inside the wrapped reply, so a slow check gets a filler) |
 | `filler_after_s` is 0 | No fillers |
-| `filler_repeat_s` is 0 | One filler at most |
+| `filler_repeat_s` is 0 | The four steps of the ladder at most |
 | `filler_phrases` is set to blanks only | No phrases: no fillers |
 
 ## Parameters
@@ -110,8 +118,8 @@ The filler node in a strategy (slot filling; every strategy has the same two):
 | Parameter | Where | Default | Meaning |
 |---|---|---|---|
 | `filler_after_s` | Orchestrator ([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); per request in the `DialogTask` goal ([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)) | `2.0` | Seconds without a reply before the first filler; `0` = no fillers. A request that leaves it unset (`-1`) uses the orchestrator's |
-| `filler_repeat_s` | Orchestrator | `4.0` | Further seconds before the second and last filler; `0` = only one |
-| `filler_phrases` | Intelligence ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)) | `[""]` | The phrases; empty: the set of the language file of `language`. `phrases.filler` overrides it, as `phrases.ack` does the acknowledgments |
+| `filler_repeat_s` | Orchestrator; per request in the `DialogTask` goal | `8.0` | After the ladder, seconds between fillers (the last phrase); `0` = none after the ladder |
+| `filler_phrases` | Intelligence ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)) | `[""]` | The phrases, in the order of the ladder (the last one repeats); empty: the set of the language file of `language`. `phrases.filler` overrides it, as `phrases.ack` does the acknowledgments |
 
 The topic `/robot_filler` (`std_msgs/String`, each filler when it starts) is in
 [ROS_INTERFACES.md](../ROS_INTERFACES.md#the-public-interface); `/is_speaking` is also true

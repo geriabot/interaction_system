@@ -65,10 +65,11 @@ int32   max_off_task -1     # Requests in a row outside the task (grounded quest
                             # closes the dialogue (outcome breakdown, reason "Off-task: ...").
                             # -1 (USE_DEFAULT): the system's value; 0: unlimited.
 float64 filler_after_s -1.0 # Seconds the robot may take to answer before it says a fixed
-                            # conversational filler ("Hmm...", "Just a moment..."; at most two
-                            # per reply, not turns of the dialogue). -1.0 (USE_DEFAULT_SECONDS):
+                            # ladder of conversational fillers ("Hmm..." and, as the wait grows,
+                            # "One moment...", "Let me think about it for a moment...", "Almost
+                            # there..."; not turns of the dialogue). -1.0 (USE_DEFAULT_SECONDS):
                             # the system's value; 0: no fillers.
-float64 filler_repeat_s -1.0 # Seconds after the first filler before the second one.
+float64 filler_repeat_s -1.0 # After the ladder, seconds between fillers ("Still on it...").
                             # -1.0 (USE_DEFAULT_SECONDS): the system's value.
 float64 wait_timeout -1.0   # Seconds of silence of the user before each prompt that the robot is
                             # waiting ("Take your time"). -1.0 (USE_DEFAULT_SECONDS) or 0: the

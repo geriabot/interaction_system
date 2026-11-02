@@ -74,7 +74,7 @@ InteractionOrchestrator::InteractionOrchestrator(BT::Blackboard::Ptr blackboard)
   declare_parameter<double>("opening_budget", 30.0);
   declare_parameter<std::string>("user_speaking_topic", "/user_speaking");
   declare_parameter<double>("filler_after_s", 2.0);
-  declare_parameter<double>("filler_repeat_s", 4.0);
+  declare_parameter<double>("filler_repeat_s", 8.0);
 
   status_pub_ = create_publisher<Status>("/interaction_system/status", 10);
   behavior_status_sub_ = create_subscription<std_msgs::msg::String>(

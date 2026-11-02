@@ -67,9 +67,11 @@ asr_noise_phrases:
 # ack_phrases / phrases.ack of the node override them
 ack_phrases: ["Noted.", "Done.", "Got it.", "Understood.", "Alright."]
 
-# Conversational fillers said while the reply is being prepared (never the same twice in a row);
-# filler_phrases / phrases.filler override them
-filler_phrases: ["Hmm…", "Just a moment…", "Let me think…"]
+# Conversational fillers said while the reply is being prepared, in the order of the ladder (at
+# 2, 5, 9 and 14 s; the last one repeats every filler_repeat_s); filler_phrases / phrases.filler
+# override them
+filler_phrases: ["Hmm…", "One moment…", "Let me think about it for a moment…", "Almost there…",
+                 "Still on it, just a second…"]
 
 # The fixed phrases: what the robot says when the model fails (the fallback of each generated
 # line), and the lines that are never generated (silence prompts, closings of the endings,
