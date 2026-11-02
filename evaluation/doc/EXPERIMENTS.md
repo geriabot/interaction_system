@@ -256,7 +256,7 @@ People review a small part of the material, once or per campaign, never everythi
 | Experiment | What people review | How much |
 |---|---|---|
 | [E0a](#e0a-choosing-the-local-model) | The adherence checker, audited by hand once: for each item of the goal, whether its verdict is right | About 30–50 dialogues, English and Spanish, one person (a second one only for doubtful cases) |
-| [E0b](#e0b-validating-the-judge) | Two annotators label the robot's utterances, blind to the condition | About 150 utterances per language |
+| [E0b](#e0b-validating-the-judge) | Two annotators label the robot's utterances, blind to the condition | 150 to 300 utterances per language (the size rule of E0b) |
 | [E1](#e1-bounded-against-llm-led-conversation) and the twin of [E4](#e4-validation-with-real-users) | A short confirmation of the adherence checker (being replaced, decided 2026-10-31: a local annotator marks the simulated user's lines after the dialogue, validated once by a person on its disagreements with the simulator's own declarations, a random sample and every verdict-changing case; per campaign, only the disagreements of two local annotators) and of the judge | About 20 dialogues per campaign, stratified by condition and persona (each campaign is in one language) |
 | [E4](#e4-validation-with-real-users) | The transcripts of the real sessions, reviewed before the judge reads them | Every session |
 
@@ -328,7 +328,7 @@ LLM-led, talks with the simulated user of
 E1 under three personas chosen to produce every kind of utterance: 84 dialogues in English
 (2 scenarios per strategy) and 48 in Spanish (the 8 scenarios of E4). The dialogues are split into a
 development half, on which the judge's instructions are adjusted and frozen, and a validation half,
-from which two annotators label about 150 utterances per language. The candidate judges, taken
+from which two annotators label 150 to 300 utterances per language (no judge chooses them; the size rises until the expected positives of each label reach 30). The candidate judges, taken
 from the literature on LLM judges (local open models first, then cloud models), are compared on the
 same annotated utterances; among those that reach kappa 0.8 on both labels, with both annotators
 and in both languages, the cheapest is used in every experiment (the first local judge in the fixed

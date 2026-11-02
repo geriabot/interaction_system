@@ -183,8 +183,8 @@ When you finish, send the coordinator the files listed on the final screen.
 **Prepare.** The sheets are written by `scripts/run_e0b.py label` (which runs
 `analysis/judge_validation.py sheets` for each language, once the judges' instructions are frozen
 and the local judges have labelled the dialogues): `results/e0b/<en|es>/e0/sheet_a.csv` and
-`sheet_b.csv`, two copies of the same blind sample of about 150 robot sentences per language
-(stratified by persona and condition, the rare labels oversampled), and `key.json`, which links
+`sheet_b.csv`, two copies of the same blind sample of 150 to 300 robot sentences per language
+(stratified by persona and condition; no judge chooses the sentences, its size follows the rule of JUDGE_VALIDATION.md), and `key.json`, which links
 each row to its dialogue and the judges' labels and must never be shown to the annotators. The
 sheets are made once: `sheets` refuses to overwrite an existing `key.json` (its `--force` is only
 for before anyone annotates). Procedure: [JUDGE_VALIDATION.md](../JUDGE_VALIDATION.md#running-e0b).

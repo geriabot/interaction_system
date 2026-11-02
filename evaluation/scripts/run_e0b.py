@@ -24,7 +24,8 @@ E0b, the validation of the judge (doc/JUDGE_VALIDATION.md), in stages, each one 
         ladder labels every dialogue, one judge on the server at a time (pulled if missing,
         unloaded and removed after its two languages; a judge with nothing left to label is not
         pulled), then the annotation sheets of each language are drawn from the validation half
-        (the oversampling of rare labels uses the local judges' labels). --keep-models keeps the
+        (no judge chooses them; the local judges' labels of the development half only size the
+        sample). --keep-models keeps the
         judges pulled here.
     python3 run_e0b.py report --a-en A.csv --b-en B.csv --a-es A.csv --b-es B.csv
         Phase 4, once two people have filled the sheets: the report of each language

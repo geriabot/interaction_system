@@ -125,8 +125,10 @@ folder (`results/<name>/`, git-ignored), or in `~/.ros/interaction_real/<campaig
   <campaign folder> --n <n>` writes `e0/sheet_a.csv`, `sheet_b.csv` and `key.json` in the campaign
   folder, which the panel opens with `annotate --csv <sheet> --annotator "Name"`, and
   `judge_validation.py report <campaign folder> --a ... --b ... --order <tag>` applies the E0b rule.
-  But that sampler takes only the sentences labelled by every judge whose labels file is in the
-  folder, oversamples the judges' rare labels, stratifies by persona and condition, and marks a
-  label with fewer than 30 human positives as not validated. Whether to use it for the
+  That sampler takes only the sentences labelled by every judge whose labels file is in the
+  folder, stratifies by persona and condition with no judge choosing the sentences (decided
+  2026-11-02; the judges' labels only size it, by the E0b size rule), and marks a label with fewer
+  than 30 human positives as not validated. `judge_runs.py --sample` does not use the judge's
+  labels either. Whether to use it for the
   confirmation is a decision of the authors, to be written in JUDGE_VALIDATION.md before any
   campaign is confirmed.

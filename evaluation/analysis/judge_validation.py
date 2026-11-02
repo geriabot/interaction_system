@@ -16,9 +16,12 @@ measure, and a rule decides whether the judge is used.
         After the judge has labelled the validation dialogues (judge_runs.py): a sample of their
         robot utterances, written as one annotation sheet per annotator (they do not see the
         judge's labels, the condition nor each other's sheet). The sample is stratified by
-        persona x condition (judge-independent strata, equal allocation); the rare labels (out of
-        the frame, unsupported, for any judge) are oversampled up to half of it. The inclusion
-        probability of every utterance is stored in key.json (prevalence-weighted kappa). An
+        persona x condition (equal allocation) and no judge chooses it, so that the human labels
+        are a reference for any judge (author, 2026-11-02). Its size: --n (150), raised by
+        SIZE_STEP up to MAX_N until the expected positives of each label reach MIN_POSITIVES,
+        estimated on the development half (each stratum's allocation times the label's prevalence
+        in its development utterances, by the judges, their mean); the judges only size it. The
+        inclusion probability of every utterance is stored in key.json (weighted kappa). An
         existing key.json is never overwritten (the annotations made on it would be lost) unless
         --force.
     python3 judge_validation.py report <pilot results> --a sheet_a.csv --b sheet_b.csv
@@ -26,7 +29,7 @@ measure, and a rule decides whether the judge is used.
         sensitivity and specificity (the annotator as reference), Cohen's unweighted kappa (the
         decision statistic, pre-registered) with a 95% interval from a cluster bootstrap over
         DIALOGUES (the utterances of a dialogue are not independent), and the kappa weighted by
-        the inverse inclusion probabilities (reported: the oversampling of rare labels undone).
+        the inverse inclusion probabilities (reported: the equal allocation of the strata undone).
         The decision of each judge and label:
           kappa >= 0.8 with each annotator      use the judge
           0.67 <= kappa < 0.8 with each one     use it; conclusions on that measure are tentative
@@ -68,6 +71,9 @@ USE, TENTATIVE = 0.8, 0.67
 POSITIVE = {"in_frame": 0, "unsupported": 1}
 # Fewer human positives than this (by either annotator) in a label and language: not validated
 MIN_POSITIVES = 30
+# The size of the sample: from --n, SIZE_STEP more at a time up to MAX_N, until the expected
+# positives of every label reach MIN_POSITIVES (a rule fixed before the sheets: 2026-11-02)
+SIZE_STEP, MAX_N = 50, 300
 BOOTSTRAP = 2000
 NOT_DECIDABLE = "NOT DECIDABLE: a kappa is not defined (one label only)"
 NOT_VALIDATED = f"NOT VALIDATED: fewer than {MIN_POSITIVES} human positives"
@@ -155,34 +161,65 @@ def _allocate(total: int, sizes: dict) -> dict:
     return alloc
 
 
-def stratified_sample(items: list, n: int, rng: random.Random) -> list:
-    """(item, stratum, pool, inclusion probability) for the sample: up to n // 2 from the rare
-    pool (any judge gave a rare label), the rest from the common pool, each pool split in
-    persona x condition strata with equal allocation. Every item of a (pool, stratum) cell has the
-    same inclusion probability: drawn / size of the cell."""
-    def stratum(x):
-        return f"{x[1].get('persona', '?')}|{x[1].get('condition', '?')}"
+def stratum_of(x) -> str:
+    """The stratum of an item: persona x condition (never a judge's label)."""
+    return f"{x[1].get('persona', '?')}|{x[1].get('condition', '?')}"
 
-    def rare(x):
-        return any(lab["in_frame"] == 0 or lab["unsupported"] == 1 for lab in x[5].values())
 
-    cells: dict[tuple, list] = defaultdict(list)
+def _cells(items: list) -> dict:
+    cells: dict[str, list] = defaultdict(list)
     for x in items:
-        cells[("rare" if rare(x) else "common", stratum(x))].append(x)
-    n_rare = min(n // 2, sum(len(v) for k, v in cells.items() if k[0] == "rare"))
-    alloc = _allocate(n_rare, {k: len(v) for k, v in cells.items() if k[0] == "rare"})
-    n_common = n - sum(alloc.values())
-    alloc.update(_allocate(n_common, {k: len(v) for k, v in cells.items() if k[0] == "common"}))
-    left = n - sum(alloc.values())
-    if left > 0:  # the common pool is short: more rare ones
-        alloc.update(_allocate(left + sum(v for k, v in alloc.items() if k[0] == "rare"),
-                               {k: len(v) for k, v in cells.items() if k[0] == "rare"}))
+        cells[stratum_of(x)].append(x)
+    return cells
+
+
+def stratified_sample(items: list, n: int, rng: random.Random) -> list:
+    """(item, stratum, inclusion probability) for the sample: persona x condition strata with
+    equal allocation; no judge's label takes part. Every item of a stratum has the same inclusion
+    probability: drawn / size of the stratum."""
+    cells = _cells(items)
+    alloc = _allocate(n, {k: len(v) for k, v in cells.items()})
     out = []
     for key in sorted(cells):
         group = cells[key]
         for x in rng.sample(group, alloc.get(key, 0)):
-            out.append((x, key[1], key[0], alloc[key] / len(group)))
+            out.append((x, key, alloc[key] / len(group)))
     return out
+
+
+def positive(lab: dict, measure: str) -> bool:
+    return lab[measure] == POSITIVE[measure]
+
+
+def expected_positives(items: list, development: list, n: int) -> dict:
+    """Per measure, the positives a sample of n of `items` is expected to hold: each stratum's
+    allocation times the label's prevalence among the development utterances of that stratum,
+    by the judges (their mean). None for a measure when no development utterance shares a stratum
+    with the sample."""
+    alloc = _allocate(n, {k: len(v) for k, v in _cells(items).items()})
+    dev = _cells(development)
+    out = {}
+    for m in MEASURES:
+        total, known = 0.0, False
+        for k, drawn in alloc.items():
+            labs = [lab for x in dev.get(k, []) for lab in x[5].values()]
+            if labs:
+                known = True
+                total += drawn * sum(positive(lab, m) for lab in labs) / len(labs)
+        out[m] = round(total, 1) if known else None
+    return out
+
+
+def sample_size(items: list, development: list, n: int) -> tuple[int, dict]:
+    """The size rule: n, then SIZE_STEP more at a time up to MAX_N (never more than there are),
+    until every measure is expected to reach MIN_POSITIVES; without a development half, n."""
+    n = min(n, len(items))
+    expected = expected_positives(items, development, n) if development else {}
+    while (expected and any(v is not None and v < MIN_POSITIVES for v in expected.values())
+           and n < min(MAX_N, len(items))):
+        n = min(n + SIZE_STEP, MAX_N, len(items))
+        expected = expected_positives(items, development, n)
+    return n, expected
 
 
 def sheets(args) -> None:
@@ -201,6 +238,7 @@ def sheets(args) -> None:
     if os.path.exists(split_path):
         with open(split_path, encoding="utf-8") as f:
             validation = set(json.load(f)["validation"])
+    development = []  # the development half: it only sizes the sample
     judges = judge_files(args.results)
     if not judges:
         sys.exit("No judge's labels: run judge_runs.py on the dialogues first (one --tag per "
@@ -208,43 +246,47 @@ def sheets(args) -> None:
     labels = {name: judge_runs.load_judgments(path) for name, path in judges.items()}
     items = []
     for run, rec in judge_runs.load_runs(args.results):
-        if validation is not None and run not in validation:
-            continue
         if args.language and rec.get("language", args.language) != args.language:
             continue
+        into = development if validation is not None and run not in validation else items
         for i, text, history in judge_runs.utterances(rec):
             js = {name: lab.get((run, i)) for name, lab in labels.items()}
             if all(j and "error" not in j for j in js.values()):
-                items.append((run, rec, i, text, history,
-                              {name: judge_labels(j) for name, j in js.items()}))
+                into.append((run, rec, i, text, history,
+                             {name: judge_labels(j) for name, j in js.items()}))
     if not items:
         sys.exit("No judged utterance in the validation dialogues: run judge_runs.py on the "
                  "pilot first (with the frozen instructions)")
+    n, expected = sample_size(items, development, args.n)
     rng = random.Random(args.seed)
-    chosen = stratified_sample(items, args.n, rng)
+    chosen = stratified_sample(items, n, rng)
     rng.shuffle(chosen)
     key = {"prompt_hash": prompt_hash(), "language": args.language, "n": len(chosen),
            "judges": sorted(judges), "seed": args.seed,
-           "sampling": "persona x condition strata, equal allocation; rare labels (any judge) "
-                       "oversampled up to half; inclusion probability per item",
-           "rare_oversampled": sum(1 for c in chosen if c[2] == "rare"), "items": {}}
+           "sampling": "persona x condition strata, equal allocation; no judge chooses the "
+                       "utterances; inclusion probability per item",
+           "size_rule": {"start": args.n, "step": SIZE_STEP, "max": MAX_N,
+                         "min_positives": MIN_POSITIVES, "chosen": n,
+                         "expected_positives": expected,
+                         "development_utterances": len(development)},
+           "items": {}}
     for name in ("a", "b"):
         with open(os.path.join(folder, f"sheet_{name}.csv"), "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["id", "task", "material", "conversation_before", "robot_utterance",
                         "in_frame (1/0)", "unsupported (1/0)", "note"])
-            for n, ((run, rec, i, text, history, _), _, _, _) in enumerate(chosen, 1):
+            for n, ((run, rec, i, text, history, _), _, _) in enumerate(chosen, 1):
                 goal = rec.get("goal", {})
                 w.writerow([n, goal.get("task_description", ""), judge_runs.material(goal),
                             history, text, "", "", ""])
-    for n, ((run, rec, i, text, history, labs), stratum, pool, prob) in enumerate(chosen, 1):
+    for n, ((run, rec, i, text, history, labs), stratum, prob) in enumerate(chosen, 1):
         key["items"][str(n)] = {"run": run, "index": i, "judges": labs,
                                 "condition": rec.get("condition"), "model": rec.get("model"),
                                 "persona": rec.get("persona"), "stratum": stratum,
-                                "pool": pool, "inclusion_probability": round(prob, 6)}
+                                "inclusion_probability": round(prob, 6)}
     with open(key_path, "w", encoding="utf-8") as f:
         json.dump(key, f, indent=1)
-    print(f"{len(chosen)} utterances ({key['rare_oversampled']} with a rare judge label) -> "
+    print(f"{len(chosen)} utterances (size rule: expected positives {expected or 'not estimated'}) -> "
           f"{folder}/sheet_a.csv and sheet_b.csv, one per annotator; the key (judge's labels) "
           f"in key.json, not for the annotators")
 
@@ -495,7 +537,9 @@ def main() -> None:
     p.add_argument("--force", action="store_true")
     p = sub.add_parser("sheets")
     p.add_argument("results")
-    p.add_argument("--n", type=int, default=150, help="Utterances in the sample (per language)")
+    p.add_argument("--n", type=int, default=150,
+                   help="Utterances in the sample to start from (per language; the size rule may "
+                        "raise it up to MAX_N)")
     p.add_argument("--language", default="", help="Only the dialogues in this language")
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--force", action="store_true",

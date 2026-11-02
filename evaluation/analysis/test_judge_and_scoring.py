@@ -202,17 +202,38 @@ def test_the_sample_is_stratified_with_inclusion_probabilities():
     items = _items()
     chosen = jv.stratified_sample(items, 60, random.Random(7))
     assert len(chosen) == 60
-    rare = [c for c in chosen if c[2] == "rare"]
-    assert 0 < len(rare) <= 30
-    pools = {}
+    strata = {}
     for x in items:
-        strat = f"{x[1]['persona']}|{x[1]['condition']}"
-        is_rare = x[5]["j"]["in_frame"] == 0
-        pools.setdefault(("rare" if is_rare else "common", strat), []).append(x)
-    for x, stratum, pool, prob in chosen:
-        drawn = sum(1 for c in chosen if c[1] == stratum and c[2] == pool)
-        assert prob == pytest.approx(drawn / len(pools[(pool, stratum)]))
-    assert len({c[1] for c in chosen if c[2] == "common"}) == 4  # every stratum
+        strata.setdefault(f"{x[1]['persona']}|{x[1]['condition']}", []).append(x)
+    for x, stratum, prob in chosen:
+        drawn = sum(1 for c in chosen if c[1] == stratum)
+        assert drawn == 15 and prob == pytest.approx(drawn / len(strata[stratum]))
+    assert len({c[1] for c in chosen}) == 4  # every stratum
+
+
+def test_no_judge_chooses_the_utterances():
+    # The same items with other judge's labels give the same sample (author, 2026-11-02)
+    items = _items()
+    flipped = [x[:5] + ({"j": {"in_frame": 1 - x[5]["j"]["in_frame"], "unsupported": 1}},)
+               for x in items]
+    a = [(c[0][0], c[0][2]) for c in jv.stratified_sample(items, 60, random.Random(7))]
+    b = [(c[0][0], c[0][2]) for c in jv.stratified_sample(flipped, 60, random.Random(7))]
+    assert a == b
+
+
+def test_the_sample_grows_until_the_expected_positives_reach_the_minimum():
+    # 800 utterances, 1 in 7 out of the frame and unsupported by the judge
+    items = [x[:5] + ({"j": {"in_frame": x[5]["j"]["in_frame"],
+                             "unsupported": 1 - x[5]["j"]["in_frame"]}},)
+             for x in _items(n_runs=200)]
+    n, expected = jv.sample_size(items, items, 150)
+    # 150 x 1/7 = 21 < 30; 200 x 1/7 = 28.6 < 30; 250 x 1/7 = 35.7: the first size that reaches it
+    assert n == 250 and expected["in_frame"] >= jv.MIN_POSITIVES
+    # Never more than MAX_N; and without a development half, the size asked for
+    assert jv.sample_size(items, [], 150) == (150, {})
+    rare = [x[:5] + ({"j": {"in_frame": 1 if k % 50 else 0, "unsupported": 0}},)
+            for k, x in enumerate(items)]
+    assert jv.sample_size(rare, rare, 150)[0] == jv.MAX_N
 
 
 def test_the_bootstrap_resamples_dialogues():
