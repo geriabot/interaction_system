@@ -169,6 +169,7 @@ def test_phase_b_unloads_each_finalist_and_removes_what_it_pulled(server, tmp_pa
 
     monkeypatch.setattr(run_e0a, "run", fake_run)
     run_e0a.phase_b(types.SimpleNamespace(allow_cloud=True))
+    server.events = [e for e in server.events if "gemma3:12b" not in e[1]]  # the annotator
     assert server.events[0] == ("unload", "last:9b")
     # a: both of its runs then unloaded, kept (it was on the server); b: unloaded and removed
     assert ("unload", "a:1b") in server.events and ("remove", "a:1b") not in server.events
@@ -176,6 +177,61 @@ def test_phase_b_unloads_each_finalist_and_removes_what_it_pulled(server, tmp_pa
     assert not server.loaded and json.load(open(tmp_path / "e0a" / "pulled.json")) == []
     runs = [c[c.index("--models") + 1] for c in commands if "--models" in c]
     assert runs == ["a:1b", "b:2b", "b:2b"]
+
+
+def test_phase_b_handles_a_reasoning_variant_by_its_base_name(server, tmp_path, monkeypatch):
+    # "<model>@critical" is the same model on the server: pulled once, unloaded by its base name
+    # after each variant (it stayed in GPU memory beside the next one), removed after the last
+    # (review before running phase B, 2026-11-02)
+    phase_a = tmp_path / "phase_a"
+    phase_a.mkdir()
+    (phase_a / "finalists_en.txt").write_text("q:8b\nq:8b@critical\n")
+    (phase_a / "finalists_es.txt").write_text("q:8b@critical\n")
+    monkeypatch.setattr(run_e0a, "PHASE_A", str(phase_a))
+    monkeypatch.setattr(run_e0a, "PULLED", str(tmp_path / "e0a" / "pulled.json"))
+    server.installed = {"gemma3:12b"}
+
+    def fake_run(cmd, cwd=None):
+        if "--models" in cmd:
+            server.installed.add("q:8b")
+            server.loaded.add("q:8b")
+
+    monkeypatch.setattr(run_e0a, "run", fake_run)
+    run_e0a.phase_b(types.SimpleNamespace(allow_cloud=True))
+    ev = [e for e in server.events if "gemma3:12b" not in e[1]]
+    assert ev == [("unload", "q:8b"), ("unload", "q:8b"), ("remove", "q:8b")]
+    assert not server.loaded and "q:8b" not in server.installed
+    assert json.load(open(tmp_path / "e0a" / "pulled.json")) == []
+
+
+def test_phase_b_annotates_its_dialogues_with_the_local_annotator(server, tmp_path, monkeypatch):
+    # The grounded-QA scoring and the adherence check read the annotator's marks: phase B makes
+    # them after the dialogues (pulling the annotator if missing, removing it after) and decide
+    # refuses dialogues without them (review before running phase B, 2026-11-02)
+    phase_a = tmp_path / "phase_a"
+    phase_a.mkdir()
+    (phase_a / "finalists_en.txt").write_text("a:1b\n")
+    (phase_a / "finalists_es.txt").write_text("")
+    monkeypatch.setattr(run_e0a, "PHASE_A", str(phase_a))
+    monkeypatch.setattr(run_e0a, "PULLED", str(tmp_path / "e0a" / "pulled.json"))
+    server.installed = {"a:1b"}
+    commands = []
+    monkeypatch.setattr(run_e0a, "run", lambda cmd, cwd=None: commands.append(cmd))
+    run_e0a.phase_b(types.SimpleNamespace(allow_cloud=True))
+    annotated = [c for c in commands if any(str(x).endswith("annotate_turns.py") for x in c)]
+    assert len(annotated) == 1 and run_e0a.PHASE_B["en"][1] in annotated[0]
+    assert commands.index(annotated[0]) > max(i for i, c in enumerate(commands)
+                                              if "--models" in c)
+    assert ("pull", "gemma3:12b") in server.events and ("remove", "gemma3:12b") in server.events
+    out = tmp_path / "out"
+    rec = out / "runs" / "a:1b" / "bounded" / "x.json"
+    rec.parent.mkdir(parents=True)
+    rec.write_text("{}")
+    assert run_e0a.unannotated(str(out)) == [str(rec)]
+    side = run_e0a.annotate_turns.sidecar(str(rec))
+    os.makedirs(os.path.dirname(side))
+    open(side, "w").write("{}")
+    assert run_e0a.unannotated(str(out)) == []
 
 
 def test_phase_b_crash_keeps_the_pull_for_the_resume(server, tmp_path, monkeypatch):
@@ -305,6 +361,7 @@ def test_decide_end_to_end_on_synthetic_records(tmp_path, monkeypatch, catalog_i
     monkeypatch.setattr(run_e0a, "OUT", str(tmp_path / "e0a"))
     monkeypatch.setattr(run_e0a, "planned_units", lambda experiment: 6)
     monkeypatch.setattr(run_e0a, "model_digests", lambda models: {m: "sha" for m in models})
+    monkeypatch.setattr(run_e0a, "unannotated", lambda out: [])  # annotated (no marks needed)
     run_e0a.decide(types.SimpleNamespace())
     result = json.load(open(tmp_path / "e0a" / "decision.json"))
     assert result["languages"]["en"]["chosen"] == "b:8b"

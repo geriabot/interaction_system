@@ -2,9 +2,10 @@
 # A, the narrow questions offline) with simulated users, on the development scenarios
 # (scenarios/e0a_dev_es.yaml: three per strategy, disjoint from the scenarios of E1-E4). Only the
 # method (the bounded conversation): E0a chooses the model the method runs with. It measures the
-# two criteria of phase B of the decision rule (doc/EXPERIMENTS.md, E0a): the 95th percentile of
-# the system's time per turn, and task success (analysis/score_runs.py). No judge. The simulated
-# user's adherence to its goal items is checked on every dialogue.
+# criterion of phase B of the decision rule (doc/EXPERIMENTS.md, E0a): task success
+# (analysis/score_runs.py, with the local annotator's marks of the simulated user's lines); the
+# system's time per turn is reported, not a criterion. No judge. The simulated user's adherence
+# to its goal items is checked on every dialogue (reported; E0a excludes none).
 # The same as e0a_dialogues.yaml, in Spanish: the language of the real-user study, so the local
 # model of E4 (and of its simulated twin) is chosen in Spanish. E1 and E3 run in English only
 # (decided 2026-10-30) and use the English choice.

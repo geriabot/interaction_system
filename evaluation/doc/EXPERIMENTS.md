@@ -506,7 +506,13 @@ whose declared duration, 90 s, is longer than E0a's 60 s wait, so that the first
 it and the robot stays silent; requests to repeat), and
 the user's goals add a clarification request, an answer between two options, a declined item, a
 stuck step, an optional step skipped, a request for help and a request to stop a role play. Every
-scenario lists its goal items for the adherence check. `decide` reads task success per model from
+scenario lists its goal items for the adherence check. After the dialogues, `phase-b` runs the local
+annotator of the simulated user's lines ([annotate_turns.py](../analysis/annotate_turns.py), no paid
+call), whose marks the grounded-QA scoring and the adherence check read; `decide` refuses dialogues
+without them (both added on 2026-11-02, in the review before running phase B: until then phase B
+would have scored grounded QA position by position and the adherence check would have seen nothing).
+A `<model>@critical` variant is the same model on the server: it is pulled, unloaded and removed
+by its base name. `decide` reads task success per model from
 the dialogues of phase B, with the latency figures it reports (median and 95th percentile of the
 system's time per turn, share of turns over 2 s, fillers).
 

@@ -18,8 +18,10 @@ and E3, Spanish for E4), in stages, each one resumable:
     python3 run_e0a.py phase-b --allow-cloud
         Whole dialogues of the finalists of each language (e0a_dialogues.yaml in English,
         e0a_dialogues_es.yaml in Spanish, 3 repetitions; the simulated user is Gemini, paid), one
-        model at a time, unloaded (and removed if this stage pulled it) after its dialogues, then
-        scored. A separate stage: it needs the author's go (credit loaded).
+        model at a time, unloaded (and removed if this stage pulled it) after its dialogues;
+        then the local annotator marks the simulated user's lines (annotate_turns.py: read by
+        the grounded-QA scoring and the adherence check) and the dialogues are scored. A
+        separate stage: it needs the author's go (credit loaded).
     python3 run_e0a.py decide
         The rule (the author), per language, on ALL the dialogues of phase B (3 repetitions; E0a
         excludes none, the simulator's exclusion rate is reported as a check): among the
@@ -61,6 +63,7 @@ EVAL = os.path.normpath(os.path.join(HERE, ".."))
 OFFLINE = os.path.join(EVAL, "offline")
 sys.path.append(os.path.join(OFFLINE, "core"))
 sys.path.append(os.path.join(EVAL, "analysis"))
+import annotate_turns  # noqa: E402
 import gpu_lock  # noqa: E402
 import ollama_models  # noqa: E402
 import provenance  # noqa: E402
@@ -121,6 +124,12 @@ def remove(model: str, pulled: list[str] | None = None) -> None:
         ollama_models.save_pulled(PULLED, pulled)
 
 
+def server_name(model: str) -> str:
+    """The model's name on the Ollama server: "<model>@critical" (selective reasoning) is the
+    same model, pulled, unloaded and removed by its base name."""
+    return model.partition("@")[0]
+
+
 def finalists(lang: str) -> list[str]:
     """The finalists of a language (finalists_<lang>.txt; a "#" line is a note, e.g. the fallback
     rule's)."""
@@ -176,9 +185,11 @@ def phase_b(args) -> None:
         ollama_models.unload_all(OLLAMA, phase_a_models())
         pulled = ollama_models.load_pulled(PULLED)
         # One model on the server at a time: its dialogues in every language it is a finalist of
-        for model in sorted({m for ms in per_lang.values() for m in ms}):
-            if model not in server_models() and model not in pulled:
-                pulled.append(model)  # recorded before the pull: a crash is cleaned on resume
+        order = sorted({m for ms in per_lang.values() for m in ms})
+        for i, model in enumerate(order):
+            name = server_name(model)
+            if name not in server_models() and name not in pulled:
+                pulled.append(name)  # recorded before the pull: a crash is cleaned on resume
                 ollama_models.save_pulled(PULLED, pulled)
             try:
                 for lang, (experiment, out) in PHASE_B.items():
@@ -188,24 +199,54 @@ def phase_b(args) -> None:
                                "--allow-cloud"))
             finally:
                 # Out of the GPU before the next model (the provider loads with keep_alive -1)
-                ollama_models.unload(OLLAMA, model)
-            if model in pulled:
-                remove(model, pulled)
+                ollama_models.unload(OLLAMA, name)
+            # Kept for the next variant of the same model (qwen3:14b, then qwen3:14b@critical)
+            if name in pulled and name not in {server_name(m) for m in order[i + 1:]}:
+                remove(name, pulled)
         for model in list(pulled):  # a model pulled before a crash and no longer a finalist
             remove(model, pulled)
+        annotate([out for lang, (_, out) in PHASE_B.items() if per_lang[lang]], pulled)
     for lang, (_, out) in PHASE_B.items():
         if per_lang[lang]:
             run(py("analysis/score_runs.py", out))
 
 
+def annotate(outs: list[str], pulled: list[str]) -> None:
+    """The local annotator's marks of the simulated user's lines in the dialogues of phase B
+    (annotate_turns.py, no paid call; what is annotated already is skipped on a resume), with
+    the system's models out of the GPU; its model is pulled if missing and removed after."""
+    if not outs:
+        return
+    model = annotate_turns.DEFAULT_MODEL
+    if model not in server_models():
+        if model not in pulled:
+            pulled.append(model)
+            ollama_models.save_pulled(PULLED, pulled)
+        ollama_models.pull(OLLAMA, model)
+    try:
+        for out in outs:
+            run(py("analysis/annotate_turns.py", out, "--model", model, "--host", OLLAMA))
+    finally:
+        ollama_models.unload(OLLAMA, model)
+    if model in pulled:
+        remove(model, pulled)
+
+
+def unannotated(out: str) -> list[str]:
+    """The records of phase B without the annotator's marks (annotate_turns.py)."""
+    import score_runs
+    return [p for p in score_runs.run_files(out)
+            if not os.path.exists(annotate_turns.sidecar(p))]
+
+
 def phase_b_units(out: str) -> dict:
     """{model: {(scenario, persona, rep): {"success": 0|1, "latencies": [...], "excluded":
-    bool}}} from the records of phase B: every dialogue (E0a excludes none)."""
+    bool}}} from the records of phase B with the annotator's marks merged (the grounded-QA
+    scoring and the adherence check read them): every dialogue (E0a excludes none)."""
     import score_runs
     units: dict[str, dict] = {}
     for path in score_runs.run_files(out):
-        with open(path, encoding="utf-8") as f:
-            rec = json.load(f)
+        rec = annotate_turns.load_record(path)
         row = score_runs.add_adherence(score_runs.score(rec), rec)
         units.setdefault(row["model"], {})[(rec["scenario"], rec["persona"], rec.get("rep", 1))] = {
             "success": int(bool(row["task_success"])), "latencies": row["_latencies"],
@@ -349,6 +390,10 @@ def decide(args) -> None:
     fits = gpu_fits()
     decision = {}
     for lang, (experiment, out) in PHASE_B.items():
+        missing = unannotated(out) if os.path.isdir(out) else []
+        if missing:
+            sys.exit(f"{len(missing)} dialogues of {out} without the annotator's marks: run "
+                     f"phase-b again (it resumes) or analysis/annotate_turns.py {out}")
         units = phase_b_units(out) if os.path.isdir(out) else {}
         decision[lang] = decide_language(finalists(lang), units, planned_units(experiment), sizes,
                                          fits)
