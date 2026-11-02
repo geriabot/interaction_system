@@ -175,3 +175,53 @@ def test_a_roleplay_turn_the_model_cannot_read_is_unclear_not_a_line_of_the_scen
         assert len(calls) == c.MAX_RETRIES
     c, _ = client(['{"intent": "continue"}'], CallLimits())
     assert c.classify_roleplay_turn("It does not heat.", SCENE, []) == "continue"
+
+
+# ==== SELECTIVE REASONING ====
+
+
+def reasoning_client(answers, limits, clock):
+    """A client that reasons before the critical questions; a call that returns nothing takes
+    its whole wait (a timeout)."""
+    calls = []
+
+    def infer(session, prompt, max_tokens, schema, think=False):
+        calls.append((think, limits.wait))
+        answer = answers[min(len(calls), len(answers)) - 1]
+        clock.now += (limits.wait or 0.0) if answer is None else 0.5
+        return answer
+
+    return LLMDialogClient("nlu", "nlg", infer, builder(), limits=limits,
+                           reasoning="critical"), calls
+
+
+MATERIAL = [{"name": "information", "content": "Open at 10."}]
+
+
+def test_a_long_reasoning_is_cut_and_the_question_asked_without_it():
+    # Round 8: reasoning calls ran to llm_timeout (15 s) and the model, taken as unresponsive,
+    # was not asked again. A reasoning call waits at most reasoning_timeout; past it the same
+    # question goes at once without reasoning, and the model is not taken as unresponsive
+    clock = Clock()
+    limits = CallLimits(15.0, 20.0, clock=clock, reasoning_timeout=10.0)
+    c, calls = reasoning_client([None, '{"supported": true}'], limits, clock)
+    assert c.verify_answer("It opens at 10.", MATERIAL)
+    assert calls == [(True, 10.0), (False, 10.0)]
+    assert (limits.reasoning_cuts, limits.timeouts, limits.unresponsive) == (1, 0, False)
+
+
+def test_a_hung_model_that_may_reason_still_costs_at_most_the_budget():
+    clock = Clock()
+    limits = CallLimits(15.0, 20.0, clock=clock, reasoning_timeout=10.0)
+    c, calls = reasoning_client([None], limits, clock)
+    assert not c.verify_answer("It opens at 10.", MATERIAL)
+    assert calls == [(True, 10.0), (False, 10.0)] and clock.now - 100.0 == 20.0
+    assert limits.unresponsive and limits.timeouts == 1
+    assert limits.refusal()  # the other questions of the skill make no call
+
+
+def test_a_call_without_reasoning_does_not_use_the_reasoning_timeout():
+    clock = Clock()
+    limits = CallLimits(15.0, clock=clock, reasoning_timeout=10.0)
+    assert limits.next_wait() == 15.0 and limits.next_wait(think=True) == 10.0
+    assert CallLimits(15.0, clock=clock).next_wait(think=True) == 15.0

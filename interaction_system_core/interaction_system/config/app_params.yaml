@@ -78,6 +78,10 @@ interaction_intelligence:
     # other questions of the same skill fail at once (the model is taken as unresponsive); the
     # reply's time budget (reply_budget, an orchestrator parameter) can cut a call shorter.
     llm_timeout: 15.0
+    # Longest wait for a call that may reason (selective reasoning, `reasoning`; s): past it the
+    # question is asked again at once without reasoning, and the model is not taken as
+    # unresponsive. 0 = only llm_timeout.
+    reasoning_timeout: 10.0
     # Prompt spoken when the user doesn't respond within wait_timeout seconds.
     # Empty = the phrase of the language file of `language`; set to override.
     timeout_prompt: ""

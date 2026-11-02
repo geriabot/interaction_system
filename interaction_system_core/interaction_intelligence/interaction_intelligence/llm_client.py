@@ -106,27 +106,37 @@ class CallLimits:
       call_timeout  the longest wait for one call (s; llm_timeout); <= 0: no limit of its own
       budget_s      what is left of the time budget of the reply being prepared when the request
                     arrives (s); <= 0: no budget
+      reasoning_timeout  the longest wait for a call that may reason (s; selective reasoning);
+                    <= 0: no limit of its own
 
     A call waits at most call_timeout, or what is left of the budget if that is shorter
     (`wait`, set before each call for the function that calls the model). A call that times out
     is not repeated, and the model is taken as unresponsive for the rest of the request: its
     other calls fail at once, so that a hung model costs one wait, not one per question. Once
     the budget is spent, no call is made. A call that is not made returns nothing, as a failed
-    call: the question falls back to its safe default (a fixed phrase, "not understood")."""
+    call: the question falls back to its safe default (a fixed phrase, "not understood").
+
+    A call that may reason and runs out of its time is not a hung model but a long reasoning:
+    it is counted apart (reasoning_cuts) and the question is asked again at once without
+    reasoning, within what is left of the budget (round 8: such calls hit llm_timeout, and the
+    unresponsive model then refused the question without reasoning)."""
 
     # A call with less time than this left is not worth making
     MIN_CALL_S = 0.5
     # A call that returned nothing this close to its time limit timed out
     _TIMEOUT_TOLERANCE_S = 0.1
 
-    def __init__(self, call_timeout: float = 0.0, budget_s: float = 0.0, clock=time.monotonic):
+    def __init__(self, call_timeout: float = 0.0, budget_s: float = 0.0, clock=time.monotonic,
+                 reasoning_timeout: float = 0.0):
         self._clock = clock
         self.call_timeout = float(call_timeout or 0.0)
+        self.reasoning_timeout = float(reasoning_timeout or 0.0)
         self.deadline = clock() + float(budget_s) if budget_s and budget_s > 0 else None
         self.wait: float | None = None
         self.unresponsive = False
         self.timeouts = 0  # calls that timed out
         self.skipped = 0  # calls not made: the model unresponsive or the budget spent
+        self.reasoning_cuts = 0  # calls that may reason and ran out of their time
 
     def now(self) -> float:
         return self._clock()
@@ -135,9 +145,12 @@ class CallLimits:
         """Seconds left of the budget (None: no budget)."""
         return None if self.deadline is None else self.deadline - self._clock()
 
-    def next_wait(self) -> float | None:
-        """How long the next call may wait for the model (None: no limit)."""
+    def next_wait(self, think: bool = False) -> float | None:
+        """How long the next call may wait for the model (None: no limit); think: it may
+        reason."""
         limits = [t for t in (self.call_timeout if self.call_timeout > 0 else None,
+                              self.reasoning_timeout if think and self.reasoning_timeout > 0
+                              else None,
                               self.time_left()) if t is not None]
         return max(min(limits), 0.0) if limits else None
 
@@ -150,11 +163,16 @@ class CallLimits:
             return "the time budget of the reply is spent"
         return ""
 
-    def done(self, started: float, wait: float | None, answered: bool) -> None:
-        """Record a call: one that returned nothing at its time limit timed out."""
+    def done(self, started: float, wait: float | None, answered: bool,
+             think: bool = False) -> None:
+        """Record a call: one that returned nothing at its time limit timed out (think: it may
+        reason, and running out of time is a reasoning cut, not an unresponsive model)."""
         if answered or wait is None:
             return
         if self._clock() - started >= wait - self._TIMEOUT_TOLERANCE_S:
+            if think:
+                self.reasoning_cuts += 1
+                return
             self.unresponsive = True
             self.timeouts += 1
 
@@ -1079,7 +1097,7 @@ class LLMDialogClient:
             self.limits.skipped += 1
             self._log.warning(f"{op}: no call to the model ({refusal}); it falls back")
             return None
-        wait = self.limits.next_wait()
+        wait = self.limits.next_wait(think)
         self.limits.wait = wait
         started = self.limits.now()
         timeouts = self.limits.timeouts
@@ -1091,7 +1109,7 @@ class LLMDialogClient:
             return result
         finally:
             self.model_status = bool(result and str(result).strip())
-            self.limits.done(started, wait, result is not None)
+            self.limits.done(started, wait, result is not None, think)
             self.limits.wait = None
             if self.limits.timeouts > timeouts:
                 self._log.warning(
@@ -1122,9 +1140,9 @@ class LLMDialogClient:
             think = self._reasoning == "critical" and _op in self.REASONING_QUESTIONS
             result = self._infer_limited(_op, sid, prompt, max_tokens, schema, think)
             if think and not self._usable(result, schema):
-                # The model reasoned past its allowance (an empty answer) or gave no JSON: the
-                # same question at once without reasoning, so that reasoning never leaves a
-                # critical question unanswered (round 8: 4 of 64 reasoning calls, at 8-9 s)
+                # The model reasoned past its allowance (an empty answer) or its time
+                # (reasoning_timeout), or gave no JSON: the same question at once without
+                # reasoning, so that reasoning never leaves a critical question unanswered
                 self._log.warning(f"{_op}: no usable answer with reasoning; asked without it")
                 result = self._infer_limited(_op, sid, prompt, max_tokens, schema, False)
             if result and schema is not None:

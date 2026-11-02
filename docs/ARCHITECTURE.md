@@ -401,7 +401,8 @@ understanding question ships a JSON schema that the provider enforces (Ollama al
 temperature 0), and its answer is validated, retried and, if still unusable, replaced by a safe
 default (e.g. "not understood"); every utterance falls back to a fixed phrase of the
 conversation's language ([PROMPTS.md](PROMPTS.md#understanding-and-generation)). The wait for the
-model is bounded: each call waits at most `llm_timeout` and is not repeated if it times out (the
+model is bounded: each call waits at most `llm_timeout` (`reasoning_timeout` when it may reason,
+after which it is asked again without reasoning) and is not repeated if it times out (the
 other calls of the same skill then fail at once), and all the calls that prepare one reply share
 its time budget (`reply_budget` from the end of the user's turn; `opening_budget` for the
 opening), after which they fall back without asking the model; `intelligence_timeout` is the

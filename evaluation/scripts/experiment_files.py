@@ -174,6 +174,7 @@ MODEL_WAIT_NODES = {
     "opening_budget": "interaction_orchestrator",        # 0: no budget for the opening
     "intelligence_timeout": "interaction_orchestrator",  # the hard limit of a request (> 0)
     "llm_timeout": "interaction_intelligence",           # 0: no limit of its own per call
+    "reasoning_timeout": "interaction_intelligence",     # 0: a reasoning call waits llm_timeout
 }
 # The one that cannot be 0: the tree waits for each request at most this long
 MODEL_WAIT_POSITIVE = {"intelligence_timeout"}

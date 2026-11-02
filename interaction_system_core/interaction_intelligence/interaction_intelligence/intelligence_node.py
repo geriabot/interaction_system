@@ -158,6 +158,9 @@ class InteractionIntelligence(Node):
             "llm_timeout": 15.0,
             # "none" or "critical": the model may reason before the critical questions only
             "reasoning": "none",
+            # Longest wait for a call that may reason (s); past it the question is asked again
+            # without reasoning (llm_client.CallLimits); 0: only llm_timeout
+            "reasoning_timeout": 10.0,
             "llm_provider": "",
             "llm_model": "",
             "language": "English",
@@ -195,6 +198,7 @@ class InteractionIntelligence(Node):
         self._reasoning = (p("reasoning").value or "none").strip() or "none"
         if self._reasoning not in ("none", "critical"):
             raise ValueError(f"reasoning must be 'none' or 'critical', not {self._reasoning!r}")
+        self._reasoning_timeout = p("reasoning_timeout").value
         self._llm_provider = p("llm_provider").value
         self._llm_model = p("llm_model").value
         self._routes: dict[str, str] = {}
@@ -346,13 +350,15 @@ class InteractionIntelligence(Node):
         t0 = time.monotonic()
         # The calls of this request wait at most llm_timeout each, and only while the budget of
         # the reply being prepared lasts (budget_s; 0: none)
-        limits = CallLimits(self._llm_timeout, req.budget_s)
+        limits = CallLimits(self._llm_timeout, req.budget_s,
+                            reasoning_timeout=self._reasoning_timeout)
         res = self._ask(req, res, limits)
         self._trace_pub.publish(String(data=json.dumps({
             "dialogue_id": req.dialogue_id, "skill": req.skill, "label": res.label,
             "success": res.success, "time_s": round(time.monotonic() - t0, 3),
             "message": res.message, "budget_s": round(req.budget_s, 3),
             "llm_timeouts": limits.timeouts, "llm_skipped": limits.skipped,
+            "reasoning_cuts": limits.reasoning_cuts,
         })))
         return res
 
@@ -422,7 +428,8 @@ class InteractionIntelligence(Node):
             )
             ctx.update_user_state(self._current_user_state())
             chosen, offered = choose_behavior(
-                self._llm_for(selection_id, CallLimits(self._llm_timeout)),
+                self._llm_for(selection_id, CallLimits(
+                    self._llm_timeout, reasoning_timeout=self._reasoning_timeout)),
                 req.task_description, behaviors, resources, ctx
             )
             res.success = True

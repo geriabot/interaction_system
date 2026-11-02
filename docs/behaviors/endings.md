@@ -82,6 +82,7 @@ down, ends as a `breakdown`). Three limits, from the innermost:
 | Limit (default) | Where | What it bounds |
 |---|---|---|
 | `llm_timeout` (15 s) | Intelligence | One call to the model. A call that times out is not asked again, and the other calls of the same skill fail at once: the model is taken as unresponsive for the rest of that request. A call that fails fast (an error) or answers something invalid is asked again while there is time |
+| `reasoning_timeout` (10 s) | Intelligence | One call that may reason (selective reasoning, `reasoning: critical`). Past it the same question is asked at once without reasoning, and the model is not taken as unresponsive: a long reasoning is not a hung model (a model that does not answer that second call either is) |
 | `reply_budget` (20 s); `opening_budget` (30 s) for the opening | Orchestrator (`WithFillers`) | All the calls that prepare one reply of the robot, counted from the end of the user's turn (for the opening, from its start). Each skill request carries what is left of it (`budget_s`); once it is spent, no call is made and the questions fall back to their safe defaults (a fixed phrase, "not understood"), so the robot speaks its fallback instead of waiting |
 | `intelligence_timeout` (30 s) | Orchestrator (`AskIntelligence`) | One request to the intelligence: the hard limit. Past it the conversation ends with the `error_closing` line and the outcome `error`. A request never gets more budget than `intelligence_timeout` minus 2 s, so a skill that spends its budget still answers in time |
 
