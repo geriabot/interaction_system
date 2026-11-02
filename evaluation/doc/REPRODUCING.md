@@ -98,7 +98,8 @@ Every run writes under `evaluation/results/<name>/`, which is not part of the re
 starts with a `provenance.json`: a hash of the code and configuration of the system and the
 evaluation, the git commit, the digest of every local model, the command and the time of the start
 and of every resume. A folder holds the results of one version of the code: resuming it with changed
-code is refused (use a new folder). `evaluation/results/CATALOG.jsonl` has one line per start, resume
+code is refused (use a new folder; `--force-provenance` resumes it anyway, only when the
+change cannot alter the runs already saved, and the resume is recorded in the file). `evaluation/results/CATALOG.jsonl` has one line per start, resume
 and end of every run, per decision of E0a and E0b and per human review saved;
 `python3 scripts/provenance.py` lists it. Human reviews and annotations are kept under
 `evaluation/results/` as well (they carry the reviewers' names).

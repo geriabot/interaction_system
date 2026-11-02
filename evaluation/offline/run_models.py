@@ -310,6 +310,9 @@ def main() -> None:
                         help="Remove the models this run pulled once their runs are done")
     parser.add_argument("--gate-only", action="store_true",
                         help="Only compute the gate from the runs already saved")
+    parser.add_argument("--force-provenance", action="store_true",
+                        help="Resume a results folder begun with other code or model digests "
+                             "(the change is recorded in its provenance.json)")
     args = parser.parse_args()
 
     models_file = args.models_file or (None if args.models else CANDIDATES)
@@ -339,7 +342,7 @@ def main() -> None:
     rescorer, hashes = dataset_rescorer(rescore_specs(phase_a))
     if not args.gate_only:
         # What code and models produce these results; a resume with other code is refused
-        provenance.record(out, models, base if ollama else None)
+        provenance.record(out, models, base if ollama else None, force=args.force_provenance)
         # Pass 1: repetition 1 of every model
         for model in models:
             run_model(cfg, model, args, out, benchmarks, ollama, base, info, pulled,

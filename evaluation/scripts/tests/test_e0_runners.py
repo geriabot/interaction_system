@@ -49,6 +49,16 @@ def lock_in_tmp(tmp_path, monkeypatch):
         what, str(tmp_path / ".gpu_run.lock")))
 
 
+def test_phase_a_resumes_with_other_code_only_when_asked(monkeypatch):
+    # --force-provenance: phase A begun before a change that cannot alter its saved runs (the
+    # selective-reasoning variants added after the freeze, 2026-11-02)
+    commands = []
+    monkeypatch.setattr(run_e0a, "run", lambda cmd, cwd=None: commands.append(cmd))
+    run_e0a.phase_a(types.SimpleNamespace())
+    run_e0a.phase_a(types.SimpleNamespace(force_provenance=True))
+    assert "--force-provenance" not in commands[0] and commands[1][-1] == "--force-provenance"
+
+
 def _catalog(path):
     with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f]

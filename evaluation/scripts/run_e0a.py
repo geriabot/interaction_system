@@ -150,7 +150,9 @@ def preflight(args) -> None:
 def phase_a(args) -> None:
     with gpu_lock.held("run_e0a.py phase-a"):
         run([sys.executable, "run_models.py", "--config", "config_ollama.yaml", "--reps", "3",
-             "--pull", "--remove-pulled", "--out", PHASE_A], cwd=OFFLINE)
+             "--pull", "--remove-pulled", "--out", PHASE_A]
+            + (["--force-provenance"] if getattr(args, "force_provenance", False) else []),
+            cwd=OFFLINE)
 
 
 def phase_a_models() -> list[str]:
@@ -448,6 +450,11 @@ def main() -> None:
     sub = parser.add_subparsers(dest="stage", required=True)
     for name in ("preflight", "phase-a", "phase-b", "decide", "apply", "all"):
         p = sub.add_parser(name)
+        if name == "phase-a":
+            p.add_argument("--force-provenance", action="store_true",
+                           help="Resume phase A begun with other code (recorded in its "
+                                "provenance.json): only when the change cannot alter the runs "
+                                "already saved")
         if name in ("preflight", "phase-b", "all"):
             p.add_argument("--allow-cloud", action="store_true",
                            help="Paid calls (phase-b: the simulated user; preflight, all: one "
