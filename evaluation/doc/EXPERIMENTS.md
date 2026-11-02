@@ -421,8 +421,15 @@ face resemble those of the campaigns.
    time "should be designed to be less than two seconds", and a robot "should perform conversation
    fillers if it cannot respond in two seconds" (Shiwa et al., 2009, International Journal of Social
    Robotics).
-3. **Task success (phase B).** Three repetitions per scenario and persona, every dialogue (none is
-   excluded; the simulated user's exclusion rate is reported as a check). In each language the
+3. **Task success (phase B).** Three repetitions per scenario and persona. A dialogue is excluded
+   only when the simulated user failed its script **having had the chance to follow it**: it never
+   said a planned change of value although it had at least one more turn after the first value, or
+   it said a value outside its script that the robot had not proposed (off script). A goal item
+   never revealed because the robot ended early or never asked is the robot's failure and is not
+   excluded. The dialogues excluded are reported per model. (Deviation decided by the author on
+   2026-11-02, before any result of phase B: until then E0a excluded no dialogue; in the first
+   dialogues of phase B neither Gemini nor the local simulator said the planned change of
+   `sf_dev_cake` in English, which made the scenario fail for every model alike.) In each language the
    finalist with the highest task success is chosen among the finalists that **fit** the GPU server
    entirely: loaded with the 8k context, the whole model is in GPU memory, without offloading to
    the CPU. The fit is read from the inference server's list of loaded models (the memory in the
