@@ -98,8 +98,11 @@ ARTICLES = ("the ", "a ", "an ", "el ", "la ", "los ", "las ", "un ", "una ")
 
 
 def norm(value) -> str:
-    """The value as compared: lower case, without accents (a dropped accent is not a wrong
-    value), without a leading article."""
+    """The value as compared: its letters and digits only, in one string (lower case, without
+    accents, spaces, punctuation or symbols: a dropped accent or a final full stop is not a wrong
+    value, "Andrés Gil." is "Andrés Gil"), without a leading article; a number as a number. For
+    the general case of social robotics, accepting that it may fail in a rare value whose
+    symbols matter (decided by the author, 2026-11-02)."""
     if isinstance(value, (list, tuple)):
         return "|".join(sorted(norm(v) for v in value))
     text = unicodedata.normalize("NFKD", str(value).strip().lower())
@@ -110,7 +113,7 @@ def norm(value) -> str:
     try:
         return str(float(text))
     except ValueError:
-        return text
+        return "".join(c for c in text if c.isalnum())
 
 
 def _slot_values(data: dict) -> list[str]:

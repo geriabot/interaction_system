@@ -92,8 +92,13 @@ system must return is known before the run. The keys of `expect` are listed at t
 | Grounded question answering | Questions the material answers, questions within the task that it does not answer, questions outside the task | Every question is resolved as planned: `answered`, `abstained` or `declined` (`expect.qa_resolutions`). With the simulated user's per-turn marks, each planned question is scored by what the robot did the **first** time it was asked (right only on a re-ask counts as wrong), each entry of the robot's list linked to its user turn (the same words in the bounded system; the turn sharing most words, at least half, in the LLM-led condition, whose list the model writes), and re-asked questions, false questions and questions never asked are reported apart (not in `content_ok`); without the marks (scenarios without goal items, older runs) the list is compared position by position; when the scenario lists them (`expect.qa_facts`, parallel to `qa_resolutions`: the key facts of each answered question, `null` for the others), every answer states its key facts (numbers exactly; a doubtful match is flagged for review, never failed: `analysis/key_facts.py`) |
 | Standardized questionnaire | The option of each item in the user's own words, ambiguous answers, a refusal | Every item records the planned option, or none for a refusal (`expect.answers`), and `items_literal` is 1 |
 
-Values are compared in lower case, without accents and without a leading article (English and
-Spanish), and numbers as numbers.
+Values are compared by their letters and digits only, in one string: lower case, without
+accents, spaces, punctuation or symbols ("Andrés Gil." is "Andrés Gil"), without a leading article
+(English and Spanish), and numbers as numbers. Decided by the author on 2026-11-02 for the general
+case of social robotics, accepting that it may fail in a rare value whose symbols matter: in round
+9 of the debugging a final full stop had made a right name wrong; over the 1,105 dialogues of
+rounds 7-9 the change turns exactly those two (a final full stop) from wrong to right and no other.
+Applied before E0a phase B.
 
 ### The summary
 

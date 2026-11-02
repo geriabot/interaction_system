@@ -86,6 +86,18 @@ def test_a_frame_designed_by_the_llm_is_scored_on_its_values():
     assert out["content_ok"] is False and abs(out["slot_accuracy"] - 2 / 3) < 1e-9
 
 
+def test_a_value_is_compared_by_its_letters_and_digits():
+    # Case, accents, spaces, punctuation and symbols do not make a value wrong (round 9: the
+    # name recorded with a final full stop; decided by the author, 2026-11-02)
+    expect = {"frame": {"customer_name": "Andrés Gil", "service": "lavar y secar", "hour": 11}}
+    got = {"customer_name": "andres gil.", "service": " Lavar y  secar ", "hour": "11"}
+    assert score_runs.score_slot_filling(got, expect) == {"slot_accuracy": 1.0,
+                                                          "content_ok": True}
+    assert score_runs.norm("#Andrés-Gil!") == score_runs.norm("Andres Gil")
+    assert score_runs.norm("Andrés Gil") != score_runs.norm("Andrés Gómez")
+    assert score_runs.norm(["Té", "café."]) == score_runs.norm(["cafe", "te"])
+
+
 # ==== QUESTIONNAIRE ====
 
 def test_the_score_computed_by_code_is_compared():
