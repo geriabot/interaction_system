@@ -374,6 +374,7 @@ InteractionOrchestrator::write_request_to_blackboard()
     {"domain", goal->domain},
     {"skip_intro", goal->skip_intro},
     {"acknowledgments", goal->acknowledgments},
+    {"reasoning", goal->reasoning},
   };
 
   blackboard_->set("goal", request.dump());

@@ -238,6 +238,7 @@ class LLMManagerNode(Node):
             format_schema=format_schema,
             stream_callback=stream_cb,
             cache_prefix_len=req.cache_prefix_len,
+            think=req.think,
         )
 
         elapsed = time.monotonic() - t0

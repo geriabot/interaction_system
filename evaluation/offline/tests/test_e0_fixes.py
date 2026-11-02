@@ -455,3 +455,21 @@ def test_every_answerable_case_has_key_facts():
 
 def test_cancel_detection_is_reported_not_critical():
     assert "cancel_detect" not in phase_a.CRITICAL_CATEGORIES["false_cancel"]
+
+
+def test_a_reasoning_variant_is_the_same_model_with_selective_reasoning():
+    from run_models import split_variant
+    assert split_variant("qwen3:14b") == ("qwen3:14b", "none")
+    assert split_variant("qwen3:14b@critical") == ("qwen3:14b", "critical")
+    import pytest
+    with pytest.raises(ValueError):
+        split_variant("qwen3:14b@always")
+
+
+def test_the_transport_passes_the_reasoning_of_a_call():
+    from core.phase_a import CountingInfer
+    seen = []
+    transport = CountingInfer(lambda s, p, m, sch, **kw: seen.append(kw) or '{"a": 1}')
+    transport("s", "p", 10, {"type": "object"}, think=True)
+    transport("s", "p", 10, {"type": "object"})
+    assert seen == [{"think": True}, {}]

@@ -690,7 +690,7 @@ class DatasetReview:
             lang = case["language"]
             prompts = []
 
-            def infer(session_id, prompt, max_tokens, schema):
+            def infer(session_id, prompt, max_tokens, schema, **kwargs):
                 if prompt not in prompts:
                     prompts.append(prompt)
                 return None   # no answer: the question is built and asked, never answered

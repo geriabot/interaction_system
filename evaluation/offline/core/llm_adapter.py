@@ -20,7 +20,7 @@ InferFn = Callable[[str, str, Optional[int], Optional[dict]], Optional[str]]
 # off) count toward num_predict: a cap of 30-80 tokens would be spent thinking and the answer
 # would come back empty. Such a model gets this many tokens more; the same allowance as the
 # production OllamaProvider, so that phase A, phase B and E1 ask alike.
-REASONING_ALLOWANCE = 1024
+REASONING_ALLOWANCE = 2048
 
 
 def thinks(think) -> bool:
@@ -61,6 +61,7 @@ def make_gemini_infer_fn(
         prompt: str,
         max_tokens: Optional[int],
         schema: Optional[dict],
+        think=None,
     ) -> Optional[str]:
         kwargs: dict = {}
         if max_tokens and max_tokens > 0:
@@ -94,6 +95,7 @@ def make_ollama_infer_fn(
     think: bool | str = False,
     num_ctx: int | None = None,
 ) -> InferFn:
+    think_default = think
     """think: False (no reasoning, as the system), or a level ("low") for the models that cannot
     switch it off (they get REASONING_ALLOWANCE more tokens). num_ctx: the context window, when
     the run fixes it. A transport failure raises TransportError; an empty answer of the model,
@@ -108,10 +110,15 @@ def make_ollama_infer_fn(
         prompt: str,
         max_tokens: Optional[int],
         schema: Optional[dict],
+        think=None,
     ) -> Optional[str]:
-        payload: dict = {"model": model, "prompt": prompt, "stream": False, "think": think}
+        # A question that may reason (selective reasoning: think=True from the client) reasons;
+        # a model that cannot switch reasoning off (a level, gpt-oss) goes to "medium" for it
+        now = think_default if not think else (
+            "medium" if isinstance(think_default, str) and thinks(think_default) else True)
+        payload: dict = {"model": model, "prompt": prompt, "stream": False, "think": now}
         options: dict = {}
-        cap = num_predict(max_tokens, think)
+        cap = num_predict(max_tokens, now)
         if cap:
             options["num_predict"] = cap
         if num_ctx:
@@ -169,6 +176,7 @@ def make_claude_infer_fn(
         prompt: str,
         max_tokens: Optional[int],
         schema: Optional[dict],
+        think=None,
     ) -> Optional[str]:
         result = provider.generate(
             model=model,
@@ -218,6 +226,7 @@ def make_openai_infer_fn(
         prompt: str,
         max_tokens: Optional[int],
         schema: Optional[dict],
+        think=None,
     ) -> Optional[str]:
         result = provider.generate(
             model=model,

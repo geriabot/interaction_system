@@ -405,3 +405,12 @@ def test_make_scripted_without_a_switch_is_the_scripted_llm(monkeypatch):
     assert llm.detect_cancel_intent("cancel") is True
     assert llm.get_opening("Take an order", type("F", (), {"next_slot": lambda s: "drink"})()) \
         == "[opening] drink?"
+
+
+def test_without_a_fault_a_call_that_may_reason_keeps_its_flag(switch_path):
+    # Selective reasoning: think=True reaches the model through the fault wrapper
+    _, switch = armed(switch_path, {"turn": 2, "kind": "error"})
+    seen = []
+    infer = faulty_infer(lambda *a, **kw: seen.append(kw) or '{"ok": true}', switch)
+    assert infer("nlu", "p", 10, {}, think=True) == '{"ok": true}'
+    assert seen == [{"think": True}]

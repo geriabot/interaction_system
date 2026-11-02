@@ -36,8 +36,11 @@ import httpx
 
 from ..base_provider import BaseProvider, GenerateResult
 
-# Tokens added to num_predict when the model may think (see the module docstring)
-REASONING_ALLOWANCE = 1024
+# Tokens added to num_predict when the model may think (see the module docstring). Measured on
+# the offline benchmarks with selective reasoning: with 1024 a reasoning model still ran out of
+# tokens on some critical questions and answered nothing; 2048 left almost none, and 4096 changed
+# no answer and only lengthened the slowest calls.
+REASONING_ALLOWANCE = 2048
 DEFAULT_NUM_CTX = 8192
 
 
@@ -127,17 +130,21 @@ class OllamaProvider(BaseProvider):
         format_schema: Optional[dict] = None,
         stream_callback: Optional[Callable[[str], bool]] = None,
         cache_prefix_len: int = 0,
+        think: str = "",
     ) -> GenerateResult:
+        # The request's own setting ("" = the provider's): the intelligence lets the model reason
+        # only before its critical questions (selective reasoning)
+        think_now = normalize_think(think) if think.strip() else self._think
         payload: dict = {
             "model": model,
             "messages": messages,
             "stream": stream_callback is not None,
             "keep_alive": -1,
-            "think": self._think,
+            "think": think_now,
         }
         options: dict = {}
         if max_tokens > 0:
-            options["num_predict"] = max_tokens + (REASONING_ALLOWANCE if self._think else 0)
+            options["num_predict"] = max_tokens + (REASONING_ALLOWANCE if think_now else 0)
         if self._num_ctx:
             options["num_ctx"] = self._num_ctx
         if format_schema:

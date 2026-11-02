@@ -105,3 +105,30 @@ def test_the_runner_writes_them_into_the_params_of_the_launch(tmp_path, monkeypa
             assert got == expected, (cname, got)
             assert orch["wait_timeout"] == 60.0  # the experiment's limits are kept
     assert len(launched) == 4
+
+
+def test_a_reasoning_variant_runs_the_same_model_with_selective_reasoning(tmp_path, monkeypatch):
+    """"<model>@critical" (E0a's selective-reasoning candidates): the gateway serves <model>, and
+    the intelligence lets it reason before the critical questions only."""
+    re = pytest.importorskip("run_experiment")
+
+    class Proc:
+        pid = 0
+
+    monkeypatch.setattr(re.subprocess, "Popen", lambda args, **kw: Proc())
+    assert re.split_model("qwen3:14b@critical") == ("ollama", "qwen3:14b")
+    assert re.reasoning_of("qwen3:14b@critical") == "critical"
+    assert re.reasoning_of("qwen3:14b") == "none"
+    with pytest.raises(ValueError):
+        re.reasoning_of("qwen3:14b@always")
+    exp = load("e1_role_swap.yaml")
+    condition = next(iter(exp["conditions"].values())) or {}
+    for model, model_name, reasoning in (("qwen3:14b@critical", "qwen3:14b", "critical"),
+                                         ("qwen3:14b", "qwen3:14b", "none")):
+        system = re.System(exp, model, condition, str(tmp_path / reasoning))
+        system.log.close()
+        with open(system.params_file, encoding="utf-8") as f:
+            params = yaml.safe_load(f)
+        gateway = params["llm_manager_node"]["ros__parameters"]["ollama"]
+        assert gateway["model"] == model_name
+        assert params["interaction_intelligence"]["ros__parameters"]["reasoning"] == reasoning

@@ -499,7 +499,7 @@ def test_the_benchmark_requests_carry_think_and_the_context(monkeypatch):
     # A model that thinks gets the reasoning allowance on top of the cap (its reasoning tokens
     # count toward num_predict)
     assert sent[0]["think"] == "low" and sent[0]["options"] == {
-        "num_predict": 30 + 1024, "num_ctx": 8192, "temperature": 0}
+        "num_predict": 30 + 2048, "num_ctx": 8192, "temperature": 0}
 
 
 def test_registered_candidates_are_the_default():
@@ -510,10 +510,14 @@ def test_registered_candidates_are_the_default():
                       "mistral:7b", "phi4:14b", "gpt-oss:20b", "gemma3:12b", "qwen2.5:7b",
                       "qwen2.5:14b", "gemma2:9b", "granite4:tiny-h",
                       # exploratory, by the authors' judgement (2026-10-30)
-                      "qwen3:32b", "gemma3:27b", "mistral-small3.2:24b"]
+                      "qwen3:32b", "gemma3:27b", "mistral-small3.2:24b",
+                      # selective reasoning, by the author's decision (2026-11-02)
+                      "qwen3:8b@critical", "qwen3:14b@critical", "qwen3:30b-a3b@critical",
+                      "qwen3:32b@critical", "gpt-oss:20b@critical"]
     with open(run_models.CANDIDATES, encoding="utf-8") as f:
         text = f.read()
     assert "Registered 2026-10-29" in text and "Exploratory candidates, added 2026-10-30" in text
+    assert "Selective reasoning (added 2026-11-02" in text
 
 
 def test_model_sizes_and_protected_models():

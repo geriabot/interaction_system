@@ -82,6 +82,10 @@ float64 opening_budget -1.0 # The same for the opening line. -1.0 (USE_DEFAULT_S
 int32   acknowledgments -1  # Whether the robot prefixes its replies with a short acknowledgment
                             # ("Noted.", "Got it."). -1 (USE_DEFAULT): the system's value; 0: no;
                             # 1: yes.
+int32   reasoning -1        # Whether the model may reason before the critical understanding
+                            # questions (selective reasoning: more reliable, slower turns there).
+                            # -1 (USE_DEFAULT): the system's value (the intelligence's
+                            # `reasoning`); 0: no reasoning at all; 1: on the critical questions.
 ---
 # Result
 # How the dialogue ended. Only OUTCOME_COMPLETED is a success; failure_reason says why otherwise.

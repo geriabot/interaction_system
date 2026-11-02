@@ -130,3 +130,18 @@ def test_with_the_injector_the_injected_answer_is_recorded(marker, tmp_path):
     finally:
         call_log.uninstall()
         llm_faults.uninstall()
+
+
+def test_a_call_that_may_reason_passes_through_and_is_recorded(marker):
+    # Selective reasoning: the client sends think=True on its critical questions; the recorder
+    # must pass it to the model and record it (round 8: without this, those calls all failed)
+    log = CallLog(marker)
+    log.start()
+    seen = []
+    infer = recorded_infer(lambda *a, **kw: seen.append(kw) or "ok", Recorder(marker), set())
+    infer("nlu", "critical", 10, {"type": "object"}, think=True)
+    infer("nlu", "plain", 10, None)
+    calls = log.finish()
+    assert seen == [{"think": True}, {}]
+    assert [(c["prompt"], c["think"], c["answer"]) for c in calls] == [
+        ("critical", True, "ok"), ("plain", False, "ok")]

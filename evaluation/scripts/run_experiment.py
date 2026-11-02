@@ -149,11 +149,21 @@ def load_hardware(path: str) -> dict:
 
 
 def split_model(model: str) -> tuple[str, str]:
-    """(provider, model) of a system model: provider/model for a cloud one, else Ollama."""
+    """(provider, model) of a system model: provider/model for a cloud one, else Ollama. A local
+    model's "@critical" (selective reasoning) is not part of its name on the server."""
     provider, sep, name = model.partition("/")
     if sep and provider in CLOUD_PROVIDERS:
         return provider, name
-    return "ollama", model
+    return "ollama", model.partition("@")[0]
+
+
+def reasoning_of(model: str) -> str:
+    """The intelligence's `reasoning` for a system model: "critical" for "<model>@critical" (it
+    may reason before the critical questions only; E0a's variants), else "none"."""
+    variant = model.partition("@")[2]
+    if variant not in ("", "critical"):
+        raise ValueError(f"unknown variant '@{variant}' of {model.partition('@')[0]}")
+    return "critical" if variant else "none"
 
 
 def seed_of(*parts) -> int:
@@ -197,6 +207,7 @@ class System:
                 # with `model_wait` (model_wait_params below: the same for every condition; E1);
                 # ollama.timeout above is only the gateway's limit for one request to the server
                 "skill_modules": skill_modules(condition, faults, record_calls),
+                "reasoning": reasoning_of(model),
             }},
             "interaction_orchestrator": {"ros__parameters": dict(exp.get("limits", {}))},
         }
@@ -354,7 +365,7 @@ def ensure_models(exp: dict, models: list[str], base: str | None = None) -> None
     """Pull on the Ollama server (the system's, or base) the models it does not have (a request
     for a missing model fails: Ollama does not download it by itself). Cloud models are
     skipped."""
-    models = [m for m in models if split_model(m)[0] == "ollama"]
+    models = sorted({split_model(m)[1] for m in models if split_model(m)[0] == "ollama"})
     if not models:
         return
     llm = exp.get("ollama", {})
@@ -375,7 +386,7 @@ def warm_up(exp: dict, model: str):
     a cloud model."""
     if split_model(model)[0] != "ollama":
         return None
-    return ollama_models.warm_up(system_base(exp), model, False, num_ctx(exp))
+    return ollama_models.warm_up(system_base(exp), split_model(model)[1], False, num_ctx(exp))
 
 
 def record_fit(out: str, exp: dict, model: str) -> dict | None:
@@ -384,7 +395,7 @@ def record_fit(out: str, exp: dict, model: str) -> dict | None:
     that fits). None for a cloud model."""
     if split_model(model)[0] != "ollama":
         return None
-    fit = ollama_models.gpu_fit(system_base(exp), model)
+    fit = ollama_models.gpu_fit(system_base(exp), split_model(model)[1])
     path = os.path.join(out, "model_fit.json")
     known = {}
     if os.path.exists(path):
@@ -866,7 +877,7 @@ def main() -> None:
             # unless --keep-loaded
             if not args.keep_loaded and (split_model(model)[0] == "ollama" or any(
                     routed_models(c, model) for c in conditions.values())):
-                ollama_models.unload_all(ollama_base, [model] + [
+                ollama_models.unload_all(ollama_base, [split_model(model)[1]] + [
                     m for c in conditions.values() for m in routed_models(c, model)])
         provenance.catalog("finish", out, {**counts, "models": models,
                                            "lane": args.lane or ""})

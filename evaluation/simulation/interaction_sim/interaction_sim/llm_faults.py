@@ -343,11 +343,11 @@ def faulty_infer(infer, switch: FaultSwitch, limits=lambda: None):
     the client's CallLimits, whose `wait` (the time the client waits for this call) ends a
     hang."""
 
-    def call(session_id, prompt, max_tokens, schema):
+    def call(session_id, prompt, max_tokens, schema, **kwargs):
         names = list(_in_progress()) or [_caller_question()]
         hit = switch.active(names, ("error", "invalid", "hang", "answer"))
         if hit is None:
-            return infer(session_id, prompt, max_tokens, schema)
+            return infer(session_id, prompt, max_tokens, schema, **kwargs)
         fault, state = hit
         current = limits()
         return fail(fault, state, switch, names[-1], schema,
@@ -533,7 +533,7 @@ class FaultyClient:
 
         limits = self.limits if self.limits is not None else CallLimits()
 
-        def infer(session_id, prompt, max_tokens, schema):
+        def infer(session_id, prompt, max_tokens, schema, **kwargs):
             if fault is None:
                 raise InjectedFault(f"{question}: no call was expected")
             return fail(fault, state, self._switch, question, schema, limits.wait)

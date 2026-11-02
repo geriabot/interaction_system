@@ -19,7 +19,7 @@ language: English
 repetitions: 1
 # mistral-nemo:12b: the held-out family (doc/DEBUGGING.md, "Exit, then freeze"): it fixes nothing;
 # a failure of it alone is the model's and changes no prompt. Not gemma: it is the simulated user.
-models: [qwen3:8b, llama3.1:8b, mistral-nemo:12b]
+models: [qwen3:8b, llama3.1:8b, mistral-nemo:12b, qwen3:8b@critical]  # @critical: selective reasoning (round 8)
 conditions:
   # The method: the Behavior Trees with the default parameters (no routes: one model)
   bounded: {}

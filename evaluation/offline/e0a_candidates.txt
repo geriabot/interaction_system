@@ -26,3 +26,12 @@ granite4:tiny-h
 qwen3:32b              # the dense Qwen3 of the largest size that fits
 gemma3:27b             # the largest Gemma 3 that fits
 mistral-small3.2:24b   # the current Mistral of the 20-32B range
+# Selective reasoning (added 2026-11-02 by the author's decision, after the reasoning probe:
+# qwen3:14b 11 -> 7 critical errors): the models that can reason, again, letting them reason
+# before the critical questions only (llm_client.REASONING_QUESTIONS); gpt-oss goes from "low"
+# to "medium" on those questions. Each variant is a candidate of its own.
+qwen3:8b@critical
+qwen3:14b@critical
+qwen3:30b-a3b@critical
+qwen3:32b@critical
+gpt-oss:20b@critical

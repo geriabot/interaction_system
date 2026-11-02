@@ -6,6 +6,9 @@ string format_schema
 int32  cache_prefix_len   # Optional. Length (characters) of the leading part of `prompt`
                           # that repeats across calls (instructions, session context).
                           # Providers with prompt caching cache it. 0 = no hint.
+string think              # Optional. Whether the model may reason before answering this
+                          # request: "true", "false" or a level ("low"...). "" = the
+                          # provider's setting (ollama.think).
 ---
 # Result
 bool    success

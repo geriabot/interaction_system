@@ -186,6 +186,7 @@ class LLMDialogClient:
         phrase_overrides: dict[str, str] | None = None,
         routes: dict[str, tuple[str, str]] | None = None,
         limits: CallLimits | None = None,
+        reasoning: str = "none",
     ):
         # How long the calls of this client may wait for the model (no limit by default: the
         # intelligence passes llm_timeout and the budget of the request). The function that calls
@@ -213,6 +214,23 @@ class LLMDialogClient:
         # classify_intent) -> (nlu session, nlg session) of that model. A route that names no
         # question is a configuration error: it would be ignored silently, so it stops here.
         self._routes = self.resolve_routes(routes or {})
+        # Reasoning: "none" (no question lets the model reason) or "critical" (only the
+        # REASONING_QUESTIONS)
+        if reasoning not in ("none", "critical"):
+            raise ValueError(f"reasoning must be 'none' or 'critical', not {reasoning!r}")
+        self._reasoning = reasoning
+
+    # The questions whose wrong answer is a critical error (the safety gate of E0a: a correction
+    # taken as a confirmation, a wrong answer graded right, an unsupported answer verified, a
+    # stop not asked for, an option not chosen, a step not done, an end not asked for). With
+    # reasoning="critical" the model may reason before answering them, and only them: the other
+    # questions and the generated lines stay fast (selective reasoning, decided by the author,
+    # 2026-11-02, after qwen3:14b went from 11 to 7 critical errors in phase A with it)
+    REASONING_QUESTIONS = frozenset({
+        "classify_intent", "evaluate_quiz_answer", "judge_teach_back", "answer_from_material",
+        "verify_answer", "classify_cancel_reply", "map_scale_answer", "classify_step_turn",
+        "classify_roleplay_turn",
+    })
 
     # Names by which a question may also be routed: the prompt template it uses, when it differs
     # from the method that asks it
@@ -1052,7 +1070,7 @@ class LLMDialogClient:
     # ==== TRANSPORT ====
 
     def _infer_limited(self, op: str, sid: str, prompt: str, max_tokens: int,
-                       schema: dict | None) -> str | None:
+                       schema: dict | None, think: bool = False) -> str | None:
         """One call to the model within the limits of the request: not made (None) when the
         model is unresponsive or the budget is spent; the time it may wait in limits.wait."""
         refusal = self.limits.refusal()
@@ -1067,7 +1085,9 @@ class LLMDialogClient:
         timeouts = self.limits.timeouts
         result = None
         try:
-            result = self._infer(sid, prompt, max_tokens, schema)
+            # A call that may reason says so (think=True); the others keep the plain signature
+            result = (self._infer(sid, prompt, max_tokens, schema, think=True) if think
+                      else self._infer(sid, prompt, max_tokens, schema))
             return result
         finally:
             self.model_status = bool(result and str(result).strip())
@@ -1078,6 +1098,19 @@ class LLMDialogClient:
                     f"{op}: the model did not answer in {wait:.1f} s; the other calls of this "
                     "skill fall back without asking it")
 
+    @staticmethod
+    def _usable(result: str | None, schema: dict | None) -> bool:
+        """Whether an answer can be used: not empty, and JSON when a schema was asked for."""
+        if not result or not str(result).strip():
+            return False
+        if schema is None:
+            return True
+        try:
+            parse_loose_json(result)
+            return True
+        except Exception:
+            return False
+
     def _call_nlu(self, prompt: str, schema: dict | None, max_tokens: int) -> str | None:
         # TRACE
         _op = inspect.currentframe().f_back.f_code.co_name
@@ -1086,7 +1119,14 @@ class LLMDialogClient:
         # /TRACE
         try:
             sid = self._routes.get(_op, (self._nlu_sid, self._nlg_sid))[0]
-            result = self._infer_limited(_op, sid, prompt, max_tokens, schema)
+            think = self._reasoning == "critical" and _op in self.REASONING_QUESTIONS
+            result = self._infer_limited(_op, sid, prompt, max_tokens, schema, think)
+            if think and not self._usable(result, schema):
+                # The model reasoned past its allowance (an empty answer) or gave no JSON: the
+                # same question at once without reasoning, so that reasoning never leaves a
+                # critical question unanswered (round 8: 4 of 64 reasoning calls, at 8-9 s)
+                self._log.warning(f"{_op}: no usable answer with reasoning; asked without it")
+                result = self._infer_limited(_op, sid, prompt, max_tokens, schema, False)
             if result and schema is not None:
                 try:
                     parse_loose_json(result)

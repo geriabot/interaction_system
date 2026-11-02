@@ -158,6 +158,19 @@ def _save_json(path: str, data) -> None:
     os.replace(tmp, path)
 
 
+# A candidate "<model>@critical" is <model> with selective reasoning: it may reason before the
+# critical questions only (llm_client.REASONING_QUESTIONS; decided by the author, 2026-11-02)
+VARIANTS = {"critical": "critical"}
+
+
+def split_variant(model: str) -> tuple[str, str]:
+    """The model on the server and the reasoning of a candidate ("none" without a variant)."""
+    name, _, variant = model.partition("@")
+    if variant and variant not in VARIANTS:
+        raise ValueError(f"unknown variant '@{variant}' of {name} (known: {sorted(VARIANTS)})")
+    return name, VARIANTS.get(variant, "none")
+
+
 def run_model(cfg: dict, model: str, args, out: str, benchmarks: list[str],
               ollama: bool, base: str, info: dict, pulled: list, wanted_think=False,
               reps: list[int] | None = None) -> None:
@@ -171,35 +184,41 @@ def run_model(cfg: dict, model: str, args, out: str, benchmarks: list[str],
     else:
         print(f"\n== {model}: {len(todo)} run(s) to do", flush=True)
     settings = info.get(model) if isinstance(info.get(model), dict) else {}
+    server_model, reasoning = split_variant(model)
     if todo and ollama:
         if not ollama_models.wait_for_server(base):
             sys.exit(f"The Ollama server at {base} does not answer: stopping (resume later)")
         try:
-            if model not in ollama_models.installed(base):
+            if server_model not in ollama_models.installed(base):
                 if not args.pull:
-                    print(f"   {model} is not on the server (use --pull): skipped", flush=True)
+                    print(f"   {server_model} is not on the server (use --pull): skipped",
+                          flush=True)
                     return
-                if model not in pulled:  # recorded first: a pull cut halfway is cleaned too
-                    pulled.append(model)
+                if server_model not in pulled:  # recorded first: a pull cut halfway is cleaned
+                    pulled.append(server_model)
                     _save_json(os.path.join(out, "pulled.json"), pulled)
-                ollama_models.pull(base, model)
-            think = ollama_models.warm_up(base, model, wanted_think, cfg["llm"].get("num_ctx"))
+                ollama_models.pull(base, server_model)
+            think = ollama_models.warm_up(base, server_model, wanted_think,
+                                          cfg["llm"].get("num_ctx"))
             # Whether it is entirely in GPU memory with the run's context (E0a chooses only a
             # model that fits)
-            fit = ollama_models.gpu_fit(base, model)
-            provenance.add_models(out, [model], base)
+            fit = ollama_models.gpu_fit(base, server_model)
+            provenance.add_models(out, [server_model], base)
         except requests.RequestException as exc:
-            print(f"   {model} could not be pulled or loaded ({exc}): skipped", flush=True)
-            _remove_pulled(args, base, model, pulled, out)
+            print(f"   {server_model} could not be pulled or loaded ({exc}): skipped", flush=True)
+            _remove_pulled(args, base, server_model, pulled, out)
             return
-        settings = {"size_b": settings.get("size_b") or ollama_models.show_size(base, model)
-                    or ollama_models.parse_size(model),  # read while the model is on the server
-                    "think": think, "num_ctx": cfg["llm"].get("num_ctx"), "gpu": fit}
+        settings = {"size_b": settings.get("size_b")
+                    or ollama_models.show_size(base, server_model)
+                    or ollama_models.parse_size(server_model),  # read while it is on the server
+                    "think": think, "reasoning": reasoning, "num_ctx": cfg["llm"].get("num_ctx"),
+                    "gpu": fit}
         info[model] = settings
         _save_json(os.path.join(out, "model_info.json"), info)
 
-    cfg["llm"]["model"] = model
+    cfg["llm"]["model"] = server_model
     cfg["llm"]["think"] = settings.get("think", wanted_think)
+    cfg["llm"]["reasoning"] = reasoning
     for rep, name in todo:
         mod = importlib.import_module(BENCHMARKS[name][0])
         for attempt in range(TRANSPORT_RETRIES + 1):
@@ -212,11 +231,12 @@ def run_model(cfg: dict, model: str, args, out: str, benchmarks: list[str],
                   flush=True)
             if attempt == TRANSPORT_RETRIES or (ollama and not ollama_models.wait_for_server(base)):
                 if ollama:
-                    ollama_models.unload(base, model)
+                    ollama_models.unload(base, server_model)
                 sys.exit(f"Transport errors in {model} rep{rep}/{name} (the server or the tunnel "
                          "failed): not saved; stopping (resume later: it is run again)")
         results["wall_time_s"] = round(time.monotonic() - t0, 1)
         results["think"] = cfg["llm"]["think"]
+        results["reasoning"] = reasoning
         results["num_ctx"] = cfg["llm"].get("num_ctx")
         path = run_path(out, model, rep, name)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -227,8 +247,8 @@ def run_model(cfg: dict, model: str, args, out: str, benchmarks: list[str],
         # Out of the GPU whether pulled or not (the next model, or the next phase, finds the
         # server free), then removed if this run pulled it
         if todo:
-            ollama_models.unload(base, model)
-        _remove_pulled(args, base, model, pulled, out)
+            ollama_models.unload(base, server_model)
+        _remove_pulled(args, base, server_model, pulled, out)
 
 
 def _remove_pulled(args, base: str, model: str, pulled: list, out: str) -> None:

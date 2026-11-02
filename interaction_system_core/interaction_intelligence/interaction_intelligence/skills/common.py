@@ -59,6 +59,9 @@ def begin(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
             "wait_timeout": float(goal.get("wait_timeout", 0.0) or 0.0),
             # The request's acknowledgments: -1 the system's (ack_enabled), 0 none, 1 yes
             "acknowledgments": int(goal.get("acknowledgments", -1)),
+            # The request's reasoning: -1 the system's (reasoning), 0 none, 1 on the critical
+            # questions (the main behavior may switch it off, e.g. when turns are too slow)
+            "reasoning": int(goal.get("reasoning", -1)),
             "phase": "",
             "awaiting_cancel": False,
             "user_cancelled": False,

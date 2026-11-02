@@ -180,3 +180,54 @@ def test_only_the_points_not_yet_verified_are_judged():
     assert get_skill("explanation.check")(env, state, SkillInput(
         user_text="And switch to T.")).label == "verified"
     assert "Use the blue counter" not in calls[-1] and "Switch to T" in calls[-1]
+
+
+def test_selective_reasoning_only_on_the_critical_questions():
+    seen = []
+
+    def infer(session, prompt, max_tokens, schema, think=False):
+        seen.append(think)
+        return '{"supported": true}' if "MATERIAL" in prompt else '{"request": "none"}'
+
+    material = [{"name": "information", "content": "Open at 10."}]
+    for reasoning, expected in (("critical", [True, False]), ("none", [False, False])):
+        seen.clear()
+        llm = LLMDialogClient("nlu", "nlg", infer, PromptBuilder(prompts()), reasoning=reasoning)
+        llm.verify_answer("It opens at 10.", material)  # critical: an unsupported answer verified
+        llm.detect_cancel_intent("Hello", task="Desk")  # not critical: a confirmation follows
+        assert seen == expected, reasoning
+    assert "verify_answer" in LLMDialogClient.REASONING_QUESTIONS
+    assert LLMDialogClient.REASONING_QUESTIONS <= LLMDialogClient.questions()
+    import pytest
+    with pytest.raises(ValueError):
+        LLMDialogClient("nlu", "nlg", infer, PromptBuilder(prompts()), reasoning="always")
+
+
+def test_a_request_carries_its_own_reasoning():
+    # DialogTask.reasoning: -1 the system's, 0 no reasoning, 1 on the critical questions; the
+    # main behavior may switch it off when turns are too slow
+    llm, _ = client(["{}"])
+    for value in (-1, 0, 1):
+        env = SkillEnv(llm=llm, ctx=DialogContext())
+        state = {}
+        get_skill("begin")(env, state, SkillInput(args={
+            "dialog_mode": "grounded_qa", "task_description": "Desk", "reasoning": value,
+            "resources_json": json.dumps([{"name": "information", "content": "Open at 10."}])}))
+        assert state["reasoning"] == value
+    env, state = begin(llm, {"dialog_mode": "grounded_qa", "task_description": "Desk",
+                             "resources_json": json.dumps([{"name": "i", "content": "x"}])})
+    assert state["reasoning"] == -1  # a request that leaves it unset: the system's
+
+
+def test_a_reasoning_call_without_an_answer_is_asked_again_without_reasoning():
+    # The model reasons past its allowance and answers nothing: the same question at once
+    # without reasoning (round 8), never a critical question left unanswered
+    seen = []
+
+    def infer(session, prompt, max_tokens, schema, think=False):
+        seen.append(think)
+        return "" if think else '{"supported": true}'
+
+    llm = LLMDialogClient("nlu", "nlg", infer, PromptBuilder(prompts()), reasoning="critical")
+    assert llm.verify_answer("It opens at 10.", [{"name": "i", "content": "Open at 10."}])
+    assert seen == [True, False]

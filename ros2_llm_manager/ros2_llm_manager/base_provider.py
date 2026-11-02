@@ -69,6 +69,7 @@ class BaseProvider(ABC):
         format_schema: Optional[dict] = None,
         stream_callback: Optional[Callable[[str], bool]] = None,
         cache_prefix_len: int = 0,
+        think: str = "",
     ) -> GenerateResult:
         """
         Run inference.
@@ -81,5 +82,8 @@ class BaseProvider(ABC):
         cache_prefix_len is a hint: the first N characters of the last user
         message repeat across calls. Providers with explicit prompt caching
         mark them cacheable; the rest may ignore it.
+
+        think is the request's reasoning setting ("true", "false", a level; "" = the
+        provider's own). Providers that cannot switch reasoning per request ignore it.
         """
         pass

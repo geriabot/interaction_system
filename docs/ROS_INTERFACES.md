@@ -35,6 +35,7 @@ What the behaviors of the robot use.
 | `max_attempts` | `int32` | Attempts per element (explanations of a topic, helps with a step, askings of a slot, repetitions of a quiz question) ([recovery and breakdown](behaviors/no_progress.md)). Default `-1` |
 | `max_off_task` | `int32` | Requests in a row outside the task, in grounded question answering (a question within the task resets the count, a reaction does not), that end the conversation (outcome `breakdown`, reason `Off-task: …`) ([grounded QA](behaviors/grounded_qa.md)); `0`: unlimited. Default `-1` |
 | `filler_repeat_s` | `float64` | After the ladder of fillers (2, 5, 9 and 14 s), seconds between fillers. Default `-1.0` |
+| `reasoning` | `int32` | Whether the model may reason before the critical understanding questions (selective reasoning: more reliable there, slower turns): `-1` the system's value (the intelligence's `reasoning`), `0` no reasoning at all, `1` on the critical questions. The main behavior may switch it off, e.g. when the turns are too slow. Default `-1` |
 | `wait_timeout` | `float64` | Seconds of silence of the user before each prompt that the robot is waiting ([silence](behaviors/silence.md)); `-1.0` or `0`: the system's value. Default `-1.0` |
 | `reply_budget`, `opening_budget` | `float64` | Seconds the intelligence may spend asking the model for a reply (the opening) before it answers with the fallbacks ([the wait for the model](behaviors/endings.md#the-wait-for-the-model)); `0`: no budget. Default `-1.0` |
 | `acknowledgments` | `int32` | Whether the robot prefixes its replies with a short acknowledgment ("Noted."): `1` yes, `0` no. Default `-1` |
@@ -145,7 +146,7 @@ system does not use.
 | `/llm/error` | topic `ros2_llm_interfaces/msg/LlmError` | `/llm_manager_node` | the GUI |
 
 `LlmInference`: goal `session_id`, `prompt`, `max_tokens`, `format_schema` (a JSON schema, empty
-for free text), `cache_prefix_len` (characters of the prompt that repeat across calls, a caching
+for free text), `think` (whether the model may reason before answering this request: `"true"`, `"false"` or a level; `""` = the gateway's `ollama.think`; the intelligence sets it only before its critical questions when `reasoning` is `critical`), `cache_prefix_len` (characters of the prompt that repeat across calls, a caching
 hint; 0 for none); result `success`, `answer`, `total_time`, `prompt_tokens`,
 `completion_tokens`, `status`; feedback `partial_text`, `tokens_generated`.
 

@@ -156,6 +156,8 @@ class InteractionIntelligence(Node):
             # Longest wait for one call to the LLM (s); the time budget of the reply, sent by
             # the tree with each request (budget_s), can make it shorter
             "llm_timeout": 15.0,
+            # "none" or "critical": the model may reason before the critical questions only
+            "reasoning": "none",
             "llm_provider": "",
             "llm_model": "",
             "language": "English",
@@ -189,6 +191,10 @@ class InteractionIntelligence(Node):
         self._transcription_topics = list(p("transcription_topics").value)
         self._user_state_service = p("user_state_service").value
         self._llm_timeout = p("llm_timeout").value
+        # Whether the model may reason before the critical questions (llm_client.py)
+        self._reasoning = (p("reasoning").value or "none").strip() or "none"
+        if self._reasoning not in ("none", "critical"):
+            raise ValueError(f"reasoning must be 'none' or 'critical', not {self._reasoning!r}")
         self._llm_provider = p("llm_provider").value
         self._llm_model = p("llm_model").value
         self._routes: dict[str, str] = {}
@@ -297,13 +303,14 @@ class InteractionIntelligence(Node):
         limits of the request (llm_timeout, its time budget) bound every call to the model."""
         spec = (self.get_parameter("llm_client_factory").value or "").strip()
         if not spec:
-            def make(sessions: dict, dialogue_id: str, limits: CallLimits) -> LLMDialogClient:
+            def make(sessions: dict, dialogue_id: str, limits: CallLimits,
+                     reasoning: str = "none") -> LLMDialogClient:
                 nlu_sid, nlg_sid = sessions[""]
                 return LLMDialogClient(
                     nlu_sid,
                     nlg_sid,
-                    lambda sid, prompt, max_tokens, schema: self._infer_sync(
-                        dialogue_id, sid, prompt, max_tokens, schema, limits.wait
+                    lambda sid, prompt, max_tokens, schema, think=False: self._infer_sync(
+                        dialogue_id, sid, prompt, max_tokens, schema, limits.wait, think
                     ),
                     PromptBuilder(self._templates, language=self._language),
                     language=self._language,
@@ -311,6 +318,7 @@ class InteractionIntelligence(Node):
                     phrase_overrides=self._phrase_overrides,
                     routes={q: sessions[m] for q, m in self._routes.items()},
                     limits=limits,
+                    reasoning=reasoning,
                 )
 
             return make
@@ -318,7 +326,8 @@ class InteractionIntelligence(Node):
         factory = getattr(importlib.import_module(module_name), attr)
         self.get_logger().warning(f"Using the test LLM client {spec}")
 
-        def make_double(sessions: dict, dialogue_id: str, limits: CallLimits):
+        def make_double(sessions: dict, dialogue_id: str, limits: CallLimits,
+                        reasoning: str = "none"):
             client = factory()
             # A double that builds real clients (the injector of model failures) bounds their
             # calls with the limits of the request, and speaks the language of the dialogue
@@ -356,8 +365,11 @@ class InteractionIntelligence(Node):
         try:
             state = json.loads(req.state) if req.state else {}
             args = json.loads(req.args) if req.args else {}
+            # The request's reasoning (DialogTask.reasoning: -1 the system's, 0 no, 1 critical)
+            wanted = int((args if req.skill == "begin" else state).get("reasoning", -1))
+            reasoning = {0: "none", 1: "critical"}.get(wanted, self._reasoning)
             env = SkillEnv(
-                llm=self._llm_for(req.dialogue_id, limits),
+                llm=self._llm_for(req.dialogue_id, limits, reasoning),
                 ctx=self._dialogue_context(state if req.skill != "begin" else {}),
                 ack_phrases=self._ack_phrases,
                 ack_enabled=self._ack_enabled,
@@ -480,7 +492,7 @@ class InteractionIntelligence(Node):
 
     # ==== LLM SESSIONS ====
 
-    def _llm_for(self, dialogue_id: str, limits: CallLimits):
+    def _llm_for(self, dialogue_id: str, limits: CallLimits, reasoning: str | None = None):
         """The LLM client of a request of a dialogue, with the dialogue's NLU and NLG sessions
         (created on first use: one pair for llm_model ("") and one for each model of the routes)
         and the time limits of the request."""
@@ -500,7 +512,7 @@ class InteractionIntelligence(Node):
                 sessions[model] = (nlu, nlg)
             with self._lock:
                 self._sessions[dialogue_id] = sessions
-        return self._make_llm(sessions, dialogue_id, limits)
+        return self._make_llm(sessions, dialogue_id, limits, reasoning or self._reasoning)
 
     def _fake(self) -> bool:
         return bool((self.get_parameter("llm_client_factory").value or "").strip())
@@ -534,7 +546,7 @@ class InteractionIntelligence(Node):
 
     def _infer_sync(
         self, dialogue_id: str, session_id: str, prompt: str, max_tokens: int,
-        schema: dict | None, timeout: float | None = None,
+        schema: dict | None, timeout: float | None = None, think: bool = False,
     ) -> str | None:
         """One call to the LLM gateway; nothing after `timeout` seconds (the wait the client
         allows this call: llm_timeout or what is left of the budget; None: no limit)."""
@@ -552,6 +564,7 @@ class InteractionIntelligence(Node):
             max_tokens=max_tokens or 0,
             format_schema=json.dumps(schema) if schema else "",
             cache_prefix_len=getattr(prompt, "cache_prefix_len", 0),
+            think="true" if think else "",
         )
         result = self._action_call_sync(
             self._llm_action,

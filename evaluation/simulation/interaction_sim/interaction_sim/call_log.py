@@ -187,20 +187,22 @@ def question_of(questions: set[str]) -> str:
 
 
 def recorded_infer(infer, recorder: Recorder, questions: set[str]):
-    """The client's call to the model (sid, prompt, max_tokens, schema) -> text | None,
-    recorded with the turn of the marker, the skill in progress and the question."""
+    """The client's call to the model (sid, prompt, max_tokens, schema[, think]) -> text | None,
+    recorded with the turn of the marker, the skill in progress, the question and whether the
+    model could reason (think: selective reasoning)."""
 
-    def recorded_call(session_id, prompt, max_tokens, schema):
+    def recorded_call(session_id, prompt, max_tokens, schema, **kwargs):
         mark = recorder.marker()
         question = question_of(questions)
         entry = {"seq": mark.get("seq", ""), "turn": mark.get("turn"),
                  "skill": current_skill() or ("choose_behavior"
                                               if question == "choose_dialogue_behavior" else ""),
                  "question": question, "prompt": str(prompt), "schema": schema,
-                 "max_tokens": max_tokens, "answer": None, "error": None, "t": time.time()}
+                 "max_tokens": max_tokens, "think": bool(kwargs.get("think")), "answer": None,
+                 "error": None, "t": time.time()}
         started = time.monotonic()
         try:
-            answer = infer(session_id, prompt, max_tokens, schema)
+            answer = infer(session_id, prompt, max_tokens, schema, **kwargs)
             entry["answer"] = answer
             return answer
         except Exception as exc:

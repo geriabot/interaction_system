@@ -79,3 +79,15 @@ def test_the_model_is_loaded_with_the_context_of_the_requests():
     assert p.ensure_model_ready("qwen3:8b")[0]
     assert p._http.payloads[0] == {"model": "qwen3:8b", "prompt": "", "keep_alive": -1,
                                    "options": {"num_ctx": 8192}}
+
+
+def test_a_request_may_switch_reasoning_on_for_itself():
+    # Selective reasoning: the provider keeps reasoning off, one request turns it on
+    p = OllamaProvider("127.0.0.1", 11434, 5.0, "qwen3:14b")
+    p._http = FakeHttp()
+    p.generate("qwen3:14b", [{"role": "user", "content": "x"}], max_tokens=50, think="true")
+    p.generate("qwen3:14b", [{"role": "user", "content": "x"}], max_tokens=50)
+    first, second = p._http.payloads
+    assert first["think"] is True
+    assert first["options"]["num_predict"] == 50 + REASONING_ALLOWANCE
+    assert second["think"] is False and second["options"]["num_predict"] == 50

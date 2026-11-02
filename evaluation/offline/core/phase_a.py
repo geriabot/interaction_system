@@ -97,11 +97,11 @@ class CountingInfer:
         self.no_answer = 0
         self.transport_errors = 0
 
-    def __call__(self, session_id, prompt, max_tokens, schema):
+    def __call__(self, session_id, prompt, max_tokens, schema, **kwargs):
         from .llm_adapter import TransportError
 
         try:
-            out = self._infer(session_id, prompt, max_tokens, schema)
+            out = self._infer(session_id, prompt, max_tokens, schema, **kwargs)
         except TransportError:
             self.transport_errors += 1
             return None
@@ -134,6 +134,7 @@ def make_clients(cfg: dict, infer_fn: Callable | None = None,
             prompt_builder=PromptBuilder(templates, language=language),
             language=language,
             history_max_turns=history_max,
+            reasoning=cfg.get("llm", {}).get("reasoning", "none"),
         )
     return clients, transport
 
