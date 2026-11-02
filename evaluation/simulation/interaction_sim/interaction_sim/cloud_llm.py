@@ -168,7 +168,9 @@ def ask_json(provider: str, model: str, prompt: str, schema: dict, *,
         if not key:
             raise RuntimeError("No Gemini API key: set GEMINI_API_KEY or GOOGLE_API_KEY")
         thinking_config, thinks = gemini_thinking(model, thinking)
-        config = {"seed": seed,
+        # Gemini takes a 32-bit seed: the per-turn seed of the simulated user (its dialogue's seed
+        # x 1000 + the turn) is folded into that range (phase B of E0a, 2026-11-02: HTTP 400)
+        config = {"seed": seed % 2**31,
                   "maxOutputTokens": max_tokens + (GEMINI_REASONING_ALLOWANCE if thinks else 0),
                   "responseMimeType": "application/json",
                   "responseSchema": gemini_schema(schema)}

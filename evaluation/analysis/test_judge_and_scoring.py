@@ -362,6 +362,21 @@ def test_gemini_3_uses_a_thinking_level_and_room_for_it(monkeypatch):
     assert pro["maxOutputTokens"] == 400 + cloud_llm.GEMINI_REASONING_ALLOWANCE
 
 
+def test_gemini_gets_a_32_bit_seed(monkeypatch):
+    # The simulated user's per-turn seed (the dialogue's seed x 1000 + the turn) exceeds the
+    # 32-bit seed Gemini takes (HTTP 400 in the first dialogues of E0a phase B, 2026-11-02)
+    sent = []
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    body = {"candidates": [{"content": {"parts": [{"text": "{}"}]}}], "usageMetadata": {}}
+    monkeypatch.setattr(cloud_llm.requests, "post",
+                        lambda url, json=None, headers=None, timeout=None:
+                        sent.append(json) or _Resp(200, body))
+    for seed in (7, 1111806263001, 1111806263002):
+        cloud_llm.ask_json("gemini", "gemini-2.5-flash-lite", "p", {"type": "object"}, seed=seed)
+    seeds = [s["generationConfig"]["seed"] for s in sent]
+    assert seeds[0] == 7 and all(0 <= x < 2**31 for x in seeds) and seeds[1] != seeds[2]
+
+
 def test_a_gemini_answer_without_parts_is_a_recorded_error(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "k")
     body = {"candidates": [{"content": {"role": "model"}, "finishReason": "MAX_TOKENS"}],
