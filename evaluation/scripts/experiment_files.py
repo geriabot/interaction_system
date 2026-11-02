@@ -173,11 +173,13 @@ MODEL_WAIT_NODES = {
     "reply_budget": "interaction_orchestrator",          # 0: no budget for a reply
     "opening_budget": "interaction_orchestrator",        # 0: no budget for the opening
     "intelligence_timeout": "interaction_orchestrator",  # the hard limit of a request (> 0)
+    # the same when the model may reason (> 0)
+    "reasoning_intelligence_timeout": "interaction_orchestrator",
     "llm_timeout": "interaction_intelligence",           # 0: no limit of its own per call
-    "reasoning_timeout": "interaction_intelligence",     # 0: a reasoning call waits llm_timeout
+    "reasoning_timeout": "interaction_intelligence",     # 0: a reasoning call is never cut
 }
-# The one that cannot be 0: the tree waits for each request at most this long
-MODEL_WAIT_POSITIVE = {"intelligence_timeout"}
+# The ones that cannot be 0: the tree waits for each request at most this long
+MODEL_WAIT_POSITIVE = {"intelligence_timeout", "reasoning_intelligence_timeout"}
 
 
 def model_wait(exp: dict) -> dict:

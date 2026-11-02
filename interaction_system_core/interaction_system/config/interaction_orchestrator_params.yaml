@@ -16,6 +16,9 @@
     tts_timeout: 60.0           # longest utterance (s)
     intelligence_timeout: 30.0  # longest wait for a skill of the intelligence (s): the hard
                                 # limit; past it, the error closing (outcome error)
+    reasoning_intelligence_timeout: 300.0  # the same when the model may reason (DialogTask
+                                # reasoning not 0): reasoning is not cut, only a hung model
+                                # (reasoning_timeout, at most two such calls in one skill)
     reply_budget: 20.0          # time the intelligence may spend asking the model for the reply
                                 # to a user turn, from the end of the turn (s); once spent, the
                                 # pending questions fall back, so that the robot answers within

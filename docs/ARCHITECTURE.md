@@ -296,7 +296,7 @@ The orchestrator writes before activating the runner; the trees read and write t
 | `dialogue` | The intelligence, through `AskIntelligence` | The state of the conversation (JSON): the request, the frame or the bank or the steps or the scene, the history, the counters of the strategy |
 | `behavior`, `skip_intro` | Orchestrator | From the request |
 | `max_turns`, `max_silent_waits`, `max_stalled` | Orchestrator | The limits of the request, or the orchestrator's parameters when it leaves them unset; `max_silent_waits` is `max_silence` counted in waits of `wait_timeout` (0 = never) |
-| `wait_timeout`, `max_attempts`, `tts_timeout`, `intelligence_timeout`, `reply_budget`, `opening_budget`, `user_speaking_topic` | Orchestrator | The other limits and the barge-in topic (parameters of the orchestrator) |
+| `wait_timeout`, `max_attempts`, `tts_timeout`, `intelligence_timeout`, `reasoning_intelligence_timeout`, `reply_budget`, `opening_budget`, `user_speaking_topic` | Orchestrator | The other limits and the barge-in topic (parameters of the orchestrator) |
 | `reply_deadline` | Orchestrator (0), `WithFillers` | When the time budget of the reply being prepared ends (steady clock, s; 0 while none is): each `AskIntelligence` sends what is left of it with its request |
 | `filler_after_s`, `filler_repeat_s` | Orchestrator | When the conversational fillers are said: `filler_after_s` from the request, or the orchestrator's parameter when it leaves it unset (0 = none) |
 | `turns`, `timeouts`, `stalled`, `attempts`, `help`, `done`, `progress` | Orchestrator (zero, `false`, `true`), trees | The counters of the conversation (user turns, silent waits in a row, turns without progress in a row, per-element attempts, helps with a step), whether it is done, and whether the last turn made progress |
@@ -401,12 +401,13 @@ understanding question ships a JSON schema that the provider enforces (Ollama al
 temperature 0), and its answer is validated, retried and, if still unusable, replaced by a safe
 default (e.g. "not understood"); every utterance falls back to a fixed phrase of the
 conversation's language ([PROMPTS.md](PROMPTS.md#understanding-and-generation)). The wait for the
-model is bounded: each call waits at most `llm_timeout` (`reasoning_timeout` when it may reason,
-after which it is asked again without reasoning) and is not repeated if it times out (the
+model is bounded: each call waits at most `llm_timeout` (a call that may reason is not cut: only
+a hung model is, at `reasoning_timeout`) and is not repeated if it times out (the
 other calls of the same skill then fail at once), and all the calls that prepare one reply share
 its time budget (`reply_budget` from the end of the user's turn; `opening_budget` for the
 opening), after which they fall back without asking the model; `intelligence_timeout` is the
-hard limit of a request to the intelligence
+hard limit of a request to the intelligence (`reasoning_intelligence_timeout` when the model may
+reason)
 ([The wait for the model](behaviors/endings.md#the-wait-for-the-model)). A sustained failure
 therefore ends in one of the shared endings (`breakdown` or `error`) rather than in a loop or in
 silence ([Endings and outcome](behaviors/endings.md)).

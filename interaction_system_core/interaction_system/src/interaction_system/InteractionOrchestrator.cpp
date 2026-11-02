@@ -70,6 +70,7 @@ InteractionOrchestrator::InteractionOrchestrator(BT::Blackboard::Ptr blackboard)
   declare_parameter<int>("max_off_task", 6);
   declare_parameter<double>("tts_timeout", 60.0);
   declare_parameter<double>("intelligence_timeout", 30.0);
+  declare_parameter<double>("reasoning_intelligence_timeout", 300.0);
   declare_parameter<double>("reply_budget", 20.0);
   declare_parameter<double>("opening_budget", 30.0);
   declare_parameter<std::string>("user_speaking_topic", "/user_speaking");
@@ -391,6 +392,13 @@ InteractionOrchestrator::write_request_to_blackboard()
   blackboard_->set("max_off_task", max_off_task);
   blackboard_->set("tts_timeout", get_parameter("tts_timeout").as_double());
   blackboard_->set("intelligence_timeout", get_parameter("intelligence_timeout").as_double());
+  // The hard limit when the dialogue's model may reason (the Begin tree asks the intelligence
+  // and uses it): a call that reasons is not cut, only a hung model is (the intelligence's
+  // reasoning_timeout, twice in the skill that reasons most: the answer from the material and
+  // its verification)
+  blackboard_->set(
+    "reasoning_intelligence_timeout",
+    get_parameter("reasoning_intelligence_timeout").as_double());
   // The time the intelligence may spend asking the model for one reply (WithFillers starts it;
   // reply_deadline is when it ends, 0 while no reply is being prepared)
   blackboard_->set("reply_budget", reply_budget);

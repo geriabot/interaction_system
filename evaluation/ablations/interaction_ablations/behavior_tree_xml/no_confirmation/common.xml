@@ -18,7 +18,8 @@
        a turn and changes no counter; and the wait for the model is bounded: the intelligence may
        spend reply_budget seconds (opening_budget for the opening) asking it for the reply, then
        answers with the skills' fallbacks (each AskIntelligence sends what is left of the budget,
-       until reply_deadline). intelligence_timeout is the hard limit of every request. The
+       until reply_deadline). intelligence_timeout is the hard limit of every request
+       (reasoning_intelligence_timeout when the dialogue's model may reason). The
        state of the dialogue (dialogue, JSON) is filled by the interaction intelligence, which
        keeps none: every AskIntelligence sends it and gets it back updated, with the reply, the
        label, the phase and the data of the dialogue. -->
@@ -32,6 +33,11 @@
       <AskIntelligence skill="begin" args="{goal}"/>
       <AskIntelligence skill="closing" option="error" reply="{error_closing}"/>
       <AskIntelligence skill="fillers" reply="{fillers}"/>
+      <!-- A dialogue whose model may reason waits longer for the intelligence: reasoning is
+           not cut, only a hung model is -->
+      <AskIntelligence skill="reasoning" label="{reasoning_mode}"/>
+      <Script code="intelligence_timeout := reasoning_intelligence_timeout"
+              _skipIf="reasoning_mode != 'critical'"/>
     </Sequence>
   </BehaviorTree>
 

@@ -96,7 +96,7 @@ cycle (the voice and the listening are halted) and returns `canceled` with outco
 | `/behavior_status` | topic `std_msgs/String` | behavior runners | `/interaction_orchestrator` | `RUNNING`, `SUCCESS`, `FAILURE`, `DEACTIVATED` |
 | `/interaction/user_utterance` | topic `std_msgs/String` | `/interaction_intelligence` | `Listen` | The transcriptions that are not noise |
 | `/interaction/user_turn` | topic `std_msgs/String` | `Listen` | `/interaction_intelligence` (transcript) | The utterances taken as turns |
-| `/interaction/skill_trace` | topic `std_msgs/String` (JSON) | `/interaction_intelligence` | tools, evaluation | Every skill asked: `dialogue_id`, `skill`, `label`, `success`, `time_s`, `message`, `budget_s` (the time budget it got; 0: none), `llm_timeouts` and `llm_skipped` (its calls to the model that timed out, and those not made), `reasoning_cuts` (its calls that may reason and ran out of `reasoning_timeout`, asked again without reasoning) |
+| `/interaction/skill_trace` | topic `std_msgs/String` (JSON) | `/interaction_intelligence` | tools, evaluation | Every skill asked: `dialogue_id`, `skill`, `label`, `success`, `time_s`, `message`, `budget_s` (the time budget it got; 0: none), `llm_timeouts` and `llm_skipped` (its calls to the model that timed out, and those not made) |
 | lifecycle services of `/interaction_orchestrator` and the runners | `lifecycle_msgs` | | `mission_executor` | Activation |
 
 `AskForDialogueBehavior`: request `task_description`, `domain`, `resources_json`, `behaviors`

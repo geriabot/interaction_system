@@ -82,9 +82,9 @@ down, ends as a `breakdown`). Three limits, from the innermost:
 | Limit (default) | Where | What it bounds |
 |---|---|---|
 | `llm_timeout` (15 s) | Intelligence | One call to the model. A call that times out is not asked again, and the other calls of the same skill fail at once: the model is taken as unresponsive for the rest of that request. A call that fails fast (an error) or answers something invalid is asked again while there is time |
-| `reasoning_timeout` (10 s) | Intelligence | One call that may reason (selective reasoning, `reasoning: critical`). Past it the same question is asked at once without reasoning, and the model is not taken as unresponsive: a long reasoning is not a hung model (a model that does not answer that second call either is) |
+| `reasoning_timeout` (120 s) | Intelligence | One call that may reason (selective reasoning, `reasoning: critical`). Reasoning is not cut: such a call is bounded neither by `llm_timeout` nor by the reply's budget, and the time it takes is not charged to the budget (the other calls of the reply keep theirs). Only a hung model reaches 120 s; it is then taken as unresponsive, as with `llm_timeout`, and the question falls back to its safe default |
 | `reply_budget` (20 s); `opening_budget` (30 s) for the opening | Orchestrator (`WithFillers`) | All the calls that prepare one reply of the robot, counted from the end of the user's turn (for the opening, from its start). Each skill request carries what is left of it (`budget_s`); once it is spent, no call is made and the questions fall back to their safe defaults (a fixed phrase, "not understood"), so the robot speaks its fallback instead of waiting |
-| `intelligence_timeout` (30 s) | Orchestrator (`AskIntelligence`) | One request to the intelligence: the hard limit. Past it the conversation ends with the `error_closing` line and the outcome `error`. A request never gets more budget than `intelligence_timeout` minus 2 s, so a skill that spends its budget still answers in time |
+| `intelligence_timeout` (30 s); `reasoning_intelligence_timeout` (300 s) when the model may reason | Orchestrator (`AskIntelligence`) | One request to the intelligence: the hard limit. Past it the conversation ends with the `error_closing` line and the outcome `error`. A request never gets more budget than `intelligence_timeout` minus 2 s, so a skill that spends its budget still answers in time. A conversation whose model may reason (`DialogTask.reasoning` not 0) gets the longer limit, which leaves room for the two reasoning calls of the skill that makes most (the answer from the material and its verification, 120 s each) |
 
 With a hung model, a turn goes: the user stops speaking; the fillers come at 2 s and 6 s
 ([Conversational fillers](fillers.md)); the first call waits 15 s and times out, so the rest of
@@ -105,6 +105,13 @@ its normal latency is several times a turn's; `intelligence_timeout` (30 s) is a
 and is reached only when the intelligence itself does not answer. Until 2026-10-30 each call
 waited 120 s and was asked twice, and `intelligence_timeout` was 300 s, so a turn with a hung
 model could last about ten minutes.
+
+Reasoning is not cut (decided by the author, 2026-11-02): a call that reasons runs to its end,
+with the fillers said meanwhile, and its latency is measured; whether that wait is acceptable is
+decided from the measurements, not by a limit set before them. Only a model that hangs is
+bounded, at 120 s, the same wait the model calls had before the bounded wait. A reasoning call
+that answers nothing usable (its reasoning ran past the token allowance, or no JSON) is asked
+again at once without reasoning, within the usual limits.
 
 When the model is down, the user can still stop: an exact stop command of the language ends
 the conversation at once, without the confirmation question whose answer the model could not

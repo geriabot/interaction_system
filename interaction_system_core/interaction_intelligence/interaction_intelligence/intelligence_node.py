@@ -158,9 +158,9 @@ class InteractionIntelligence(Node):
             "llm_timeout": 15.0,
             # "none" or "critical": the model may reason before the critical questions only
             "reasoning": "none",
-            # Longest wait for a call that may reason (s); past it the question is asked again
-            # without reasoning (llm_client.CallLimits); 0: only llm_timeout
-            "reasoning_timeout": 10.0,
+            # Longest wait for a call that may reason (s): only a hung model reaches it; neither
+            # llm_timeout nor the budget cut reasoning (llm_client.CallLimits); 0: no limit
+            "reasoning_timeout": 120.0,
             "llm_provider": "",
             "llm_model": "",
             "language": "English",
@@ -358,7 +358,6 @@ class InteractionIntelligence(Node):
             "success": res.success, "time_s": round(time.monotonic() - t0, 3),
             "message": res.message, "budget_s": round(req.budget_s, 3),
             "llm_timeouts": limits.timeouts, "llm_skipped": limits.skipped,
-            "reasoning_cuts": limits.reasoning_cuts,
         })))
         return res
 
@@ -374,6 +373,13 @@ class InteractionIntelligence(Node):
             # The request's reasoning (DialogTask.reasoning: -1 the system's, 0 no, 1 critical)
             wanted = int((args if req.skill == "begin" else state).get("reasoning", -1))
             reasoning = {0: "none", 1: "critical"}.get(wanted, self._reasoning)
+            if req.skill == "reasoning":
+                # Whether this dialogue's model may reason ("none" or "critical"), for the tree's
+                # hard limit (reasoning_intelligence_timeout); no call to the model
+                res.success = True
+                res.state = req.state
+                res.label = reasoning
+                return res
             env = SkillEnv(
                 llm=self._llm_for(req.dialogue_id, limits, reasoning),
                 ctx=self._dialogue_context(state if req.skill != "begin" else {}),
