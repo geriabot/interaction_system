@@ -12,9 +12,45 @@ tasks, who does each one, when, and how long it takes, and links to a page with 
 instructions. Why each review exists, and how much is reviewed:
 [doc/EXPERIMENTS.md, "Hand reviews"](doc/EXPERIMENTS.md#hand-reviews).
 
-Contents: [The tasks](#the-tasks) · [Before any task](#before-any-task) ·
+Contents: [Quick start](#quick-start) · [The tasks](#the-tasks) · [Before any task](#before-any-task) ·
 [Rules for everyone](#rules-for-everyone) · [For the coordinator](#for-the-coordinator) ·
 [What is not supported yet](#what-is-not-supported-yet)
+
+## Quick start
+
+If you were told "do task N", this is all you need; the page of your task (last column of
+[the tasks](#the-tasks)) has the details, the screens and what to do if something goes wrong.
+
+1. **Get the repository and Python 3.** Either the coordinator's computer, already prepared, or
+   your own: clone the repository (`git clone <repository URL>`) and check that `python3
+   --version` prints 3.10 or newer. The panel needs nothing else: no ROS, no pixi, no network.
+2. **Put your material in place**, if your task has any (table below). The coordinator sends it
+   to you: the results of the evaluation are not in the repository.
+3. **Open a terminal at the root of the repository** (the folder that holds `evaluation/`) and
+   run the command of your task, with your name (always written the same way) and, for task 4,
+   the letter and language of your sheet:
+
+| Task | Material (place it inside the repository) | Command |
+|---|---|---|
+| 1. E0a, review the trap cases (an author) | None: the cases are in the repository | `python3 evaluation/panels/review_panel.py dataset --reviewer "Your Name"` |
+| 2. E0a, blind adjudication (an author) | `evaluation/results/e0a_phase_a/gate.json` | `python3 evaluation/panels/review_panel.py dataset --adjudicate --reviewer "Your Name"` |
+| 3. E0a phase B, E1 and the E4 twin: adherence audit | The results folder of the experiment, e.g. `evaluation/results/e1_bounded_vs_llm_led/` | `python3 evaluation/panels/review_panel.py adherence evaluation/results/<experiment> --auditor "Your Name" --n 20` |
+| 4. E0b, annotate robot sentences | Your sheet, `evaluation/results/e0b/<en\|es>/e0/sheet_<a\|b>.csv` | `python3 evaluation/panels/review_panel.py annotate --annotator "Your Name" --sheet a --lang en` (your letter: `a` or `b`; your language: `en` or `es`) |
+| 5b, 6b. Confirm the judge | A spreadsheet from the coordinator (not in the panel yet) | None: see [judge_confirmation.md](doc/human_review/judge_confirmation.md) |
+| 6a. E4, review the real transcripts (team only) | Never leaves the team's computer | In the terminal: see [e4_transcript_review.md](doc/human_review/e4_transcript_review.md) |
+
+4. **Open the address the terminal prints** (`Open http://localhost:8098`, or another number) in
+   a browser. Keep the terminal open while you work.
+5. **Follow the screens**: check that your name, task and number of items are right (if not, stop
+   and tell the coordinator), do the short practice, then answer item by item. Every answer is
+   saved at once; to stop, close the browser and press `Ctrl+C` in the terminal; to go on later,
+   run the same command again.
+6. **At the end**, "Review and finish" (top right), then "Finish". If you worked on your own
+   computer, send the coordinator the files listed on the final screen.
+
+On the coordinator's computer, where the workspace is installed with pixi, the same commands run
+from the root of the workspace as `pixi run python src/interaction_system/<path from step 3>`
+([Before any task](#before-any-task)).
 
 ## The tasks
 
