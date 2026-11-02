@@ -151,8 +151,13 @@ class LlmUser:
 
         text, action = self._ask_llm(robot_utterance, transcript)
         if action == "end":
+            # The user leaves, but what it says on leaving ("No, thanks. Goodbye!", even a "yes" to
+            # "do you want to stop?") reaches the robot like any other line: dropped, the robot
+            # heard a silence and closed on it (E0a phase 2, 2026-11-02: 18 of 160 dialogues). If
+            # the robot has closed already, nobody listens and the line is not recorded
             self._ended = True
-            return None
+            if not text.strip():
+                return None
         spoken = self.noise.apply(text, self._rng) if self.noise else text
         if spoken != text:
             self.log[-1]["heard"] = spoken

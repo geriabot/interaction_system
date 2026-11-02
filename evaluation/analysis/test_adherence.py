@@ -206,6 +206,19 @@ def test_without_goal_items_the_prompt_and_the_log_are_as_before(llm_user):
     assert "revealed" not in user.log[0]
 
 
+def test_the_line_said_on_leaving_reaches_the_robot(llm_user):
+    # E0a phase 2, 2026-11-02: the simulated user answered "anything else?" with action "end" and
+    # "No, thank you. Goodbye!"; the line was dropped and the robot closed on a silence
+    make, lu = llm_user
+    user, calls = make(['{"action": "end", "text": "No, thank you. Goodbye!"}',
+                        '{"action": "say", "text": "never asked"}'])
+    turn = user("Anything else?", [{"role": "robot", "text": "Hello"}])
+    assert turn.text == "No, thank you. Goodbye!"
+    assert user("Goodbye!", []) is None and len(calls) == 1   # gone: no further line
+    user, _ = make(['{"action": "end", "text": ""}'])
+    assert user("Goodbye!", []) is None                       # nothing said: just gone
+
+
 def test_with_goal_items_the_simulated_user_only_speaks(llm_user):
     # Decided by the author, 2026-10-31: nothing to declare (a local annotator marks its lines
     # after the dialogue: annotate_turns.py); its goal items come back as a script to follow,
