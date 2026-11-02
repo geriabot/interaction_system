@@ -90,7 +90,7 @@ that cannot be pulled or loaded is skipped (it shows as incomplete in the gate).
 Every request uses the context window `num_ctx` of the configuration (8k in
 `config_ollama.yaml`) and the reasoning off (`think: false`), as the system asks. A model that
 cannot switch its reasoning off in Ollama (`gpt-oss`, or one that rejects `think: false`) runs
-at the lowest level, `"low"`, with 2048 tokens more than the cap of each request (its reasoning
+at the lowest level, `"low"`, with 4096 tokens more than the cap of each request (its reasoning
 tokens count toward the cap; the production provider adds the same); what each model used is
 recorded in `model_info.json`, in every run and in the gate, with whether the model is entirely in
 GPU memory with that context (`gpu`: `size`, `size_vram`, `fits`, from `/api/ps`). Each model is

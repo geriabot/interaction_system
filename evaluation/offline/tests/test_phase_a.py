@@ -499,7 +499,7 @@ def test_the_benchmark_requests_carry_think_and_the_context(monkeypatch):
     # A model that thinks gets the reasoning allowance on top of the cap (its reasoning tokens
     # count toward num_predict)
     assert sent[0]["think"] == "low" and sent[0]["options"] == {
-        "num_predict": 30 + 2048, "num_ctx": 8192, "temperature": 0}
+        "num_predict": 30 + 4096, "num_ctx": 8192, "temperature": 0}
 
 
 def test_registered_candidates_are_the_default():

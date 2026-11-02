@@ -19,8 +19,9 @@ InferFn = Callable[[str, str, Optional[int], Optional[dict]], Optional[str]]
 # The reasoning tokens of a model that thinks (think true or a level: gpt-oss cannot switch it
 # off) count toward num_predict: a cap of 30-80 tokens would be spent thinking and the answer
 # would come back empty. Such a model gets this many tokens more; the same allowance as the
-# production OllamaProvider, so that phase A, phase B and E1 ask alike.
-REASONING_ALLOWANCE = 2048
+# production OllamaProvider, so that phase A, phase B and E1 ask alike (4096: measured with no
+# allowance, 2026-11-02; ros2_llm_manager/providers/ollama_provider.py).
+REASONING_ALLOWANCE = 4096
 
 
 def thinks(think) -> bool:

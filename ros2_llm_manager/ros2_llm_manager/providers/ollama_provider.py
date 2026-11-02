@@ -37,10 +37,11 @@ import httpx
 from ..base_provider import BaseProvider, GenerateResult
 
 # Tokens added to num_predict when the model may think (see the module docstring). Measured on
-# the offline benchmarks with selective reasoning: with 1024 a reasoning model still ran out of
-# tokens on some critical questions and answered nothing; 2048 left almost none, and 4096 changed
-# no answer and only lengthened the slowest calls.
-REASONING_ALLOWANCE = 2048
+# the critical questions of the offline benchmarks, with no allowance at all (2026-11-02): no
+# reasoning call of the models that reason needed more than about half of this, and from 3072 up
+# no answer changed; 4096 leaves room for a model that reasons longer, and costs nothing (it only
+# acts on a call that would exceed it).
+REASONING_ALLOWANCE = 4096
 DEFAULT_NUM_CTX = 8192
 
 
