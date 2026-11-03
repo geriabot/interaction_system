@@ -176,23 +176,28 @@ def _rules(state: dict) -> str:
     return rules
 
 
-def _ask(env: SkillEnv, state: dict, now: str) -> dict:
+def prompt_fields(env: SkillEnv, state: dict, now: str) -> dict:
+    """The values of the slots of PROMPT for this turn."""
     history = "\n".join(
         f"{'Robot' if t['role'] == 'assistant' else 'User'}: {t['content']}"
         for t in state["mono_history"]
     ) or "(nothing yet: the robot speaks first)"
-    prompt = PROMPT.format(
-        task=state["task"],
-        domain=f"DOMAIN: {state['domain']}\n" if state.get("domain") else "",
-        rules=_rules(state),
-        language=getattr(env.llm, "_pb", None) and env.llm._pb._language or "English",
+    return {
+        "task": state["task"],
+        "domain": f"DOMAIN: {state['domain']}\n" if state.get("domain") else "",
+        "rules": _rules(state),
+        "language": getattr(env.llm, "_pb", None) and env.llm._pb._language or "English",
         # The method's own rule on how a spoken line addresses the user (direct, informal second
         # person): the baseline differs from the method only in the decision ablated
-        address=getattr(getattr(env.llm, "_pb", None), "address", ""),
-        material=_material(state),
-        history=history,
-        now=now,
-    )
+        "address": getattr(getattr(env.llm, "_pb", None), "address", ""),
+        "material": _material(state),
+        "history": history,
+        "now": now,
+    }
+
+
+def _ask(env: SkillEnv, state: dict, now: str) -> dict:
+    prompt = PROMPT.format(**prompt_fields(env, state, now))
     for _ in range(2):
         raw = env.llm._call_nlu(prompt, SCHEMA, max_tokens=600)
         if not raw:

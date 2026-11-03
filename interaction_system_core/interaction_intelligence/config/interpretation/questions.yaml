@@ -1,0 +1,285 @@
+# The questions of the interaction system to the model, for behavior_architecture's
+# interpretation server (its parameter questions_file). Each one is a method of LLMDialogClient
+# that asks the model; the server builds its prompt and schema with PromptBuilder, from the
+# templates of prompts.yaml (the server's templates_file) and the arguments that the client
+# sends in the context (interaction_intelligence/interpretation_context.py), in the class
+# DialogueQuestion of the question module interaction_intelligence.interpretation_questions.
+#
+#   template    the template of prompts.yaml that the prompt fills (PromptBuilder also inserts
+#               the shared rules, address_rule and list_slot_rule, and the [CONTEXT] block)
+#   max_tokens  the token cap of the answer (judge_teach_back: 120 + 60 per key point, set by
+#               the class)
+#   validate    object: the parsed answer is returned as it is, without checking fields (the
+#               client checks it, as it checked the former gateway's answers)
+#   variants    reasoning: the questions on which the model may reason (the client's
+#               REASONING_QUESTIONS, with reasoning "critical"), answered on the route
+#               `reasoning` (the same model, with think on)
+#
+# Every question has no retry and no fallback in the server: the client retries and falls
+# back as it did with the former gateway.
+
+questions:
+
+  # ==== Task level ====
+
+  classify_task_mode:
+    class: DialogueQuestion
+    template: classify_task_mode
+    max_tokens: 50
+    validate: object
+  choose_dialogue_behavior:
+    class: DialogueQuestion
+    template: choose_dialogue_behavior
+    max_tokens: 50
+    validate: object
+  create_frame:
+    class: DialogueQuestion
+    template: create_frame
+    max_tokens: 500
+    validate: object
+  audit_frame:
+    class: DialogueQuestion
+    template: audit_frame
+    max_tokens: 300
+    validate: object
+
+  # ==== Slot filling ====
+
+  get_opening:
+    class: DialogueQuestion
+    template: opening
+    max_tokens: 100
+  get_opening_direct:
+    class: DialogueQuestion
+    template: opening_direct
+    max_tokens: 100
+  get_resume_opening:
+    class: DialogueQuestion
+    template: resume_opening
+    max_tokens: 100
+  extract_turn:
+    class: DialogueQuestion
+    template: extract_slots
+    max_tokens: 300
+    validate: object
+  generate_response:
+    class: DialogueQuestion
+    template: generate_response
+    max_tokens: 120
+  get_confirmation_question:
+    class: DialogueQuestion
+    template: ask_confirmation
+    max_tokens: 150
+  classify_intent:
+    class: DialogueQuestion
+    template: classify_intent
+    max_tokens: 200
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  answer_confirmation_question:
+    class: DialogueQuestion
+    template: answer_confirmation_question
+    max_tokens: 80
+  response_to_intent:
+    class: DialogueQuestion
+    template: response_to_intent
+    max_tokens: 100
+
+  # ==== Explanation ====
+
+  generate_explanation:
+    class: DialogueQuestion
+    template: explanation_opening
+    max_tokens: 300
+  generate_explanation_direct:
+    class: DialogueQuestion
+    template: explanation_opening_direct
+    max_tokens: 300
+  extract_key_points:
+    class: DialogueQuestion
+    template: extract_key_points
+    max_tokens: 400
+    validate: object
+  judge_teach_back:
+    class: DialogueQuestion
+    template: judge_teach_back
+    max_tokens: 120
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  repair_explanation:
+    class: DialogueQuestion
+    template: repair_explanation
+    max_tokens: 200
+  targeted_question:
+    class: DialogueQuestion
+    template: targeted_question
+    max_tokens: 60
+  ask_missing_points:
+    class: DialogueQuestion
+    template: ask_missing_points
+    max_tokens: 80
+  answer_explanation_question:
+    class: DialogueQuestion
+    template: answer_explanation_question
+    max_tokens: 150
+  rephrase_explanation:
+    class: DialogueQuestion
+    template: rephrase_explanation
+    max_tokens: 300
+  understanding_confirmed_response:
+    class: DialogueQuestion
+    template: understanding_confirmed
+    max_tokens: 80
+
+  # ==== Grounded question answering ====
+
+  qa_opening:
+    class: DialogueQuestion
+    template: qa_opening
+    max_tokens: 80
+  answer_from_material:
+    class: DialogueQuestion
+    template: answer_from_material
+    max_tokens: 300
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  verify_finished:
+    class: DialogueQuestion
+    template: verify_finished
+    max_tokens: 20
+    validate: object
+  verify_answer:
+    class: DialogueQuestion
+    template: verify_answer
+    max_tokens: 200
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+
+  # ==== Questionnaire ====
+
+  map_scale_answer:
+    class: DialogueQuestion
+    template: map_scale_answer
+    max_tokens: 80
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+
+  # ==== Quiz ====
+
+  quiz_opening:
+    class: DialogueQuestion
+    template: quiz_opening
+    max_tokens: 80
+  evaluate_quiz_answer:
+    class: DialogueQuestion
+    template: evaluate_quiz_answer
+    max_tokens: 120
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  quiz_rephrase_question:
+    class: DialogueQuestion
+    template: quiz_rephrase_question
+    max_tokens: 60
+  quiz_next_question:
+    class: DialogueQuestion
+    template: quiz_next_question
+    max_tokens: 100
+  quiz_summary:
+    class: DialogueQuestion
+    template: quiz_summary
+    max_tokens: 80
+
+  # ==== Procedure ====
+
+  procedure_opening:
+    class: DialogueQuestion
+    template: procedure_opening
+    max_tokens: 80
+  procedure_step:
+    class: DialogueQuestion
+    template: procedure_step
+    max_tokens: 150
+  classify_step_turn:
+    class: DialogueQuestion
+    template: classify_step_turn
+    max_tokens: 60
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  procedure_answer_question:
+    class: DialogueQuestion
+    template: procedure_answer_question
+    max_tokens: 150
+  procedure_help_step:
+    class: DialogueQuestion
+    template: procedure_help_step
+    max_tokens: 200
+  procedure_remind:
+    class: DialogueQuestion
+    template: procedure_remind
+    max_tokens: 60
+  procedure_summary:
+    class: DialogueQuestion
+    template: procedure_summary
+    max_tokens: 80
+
+  # ==== Roleplay ====
+
+  roleplay_intro:
+    class: DialogueQuestion
+    template: roleplay_intro
+    max_tokens: 100
+  roleplay_reply:
+    class: DialogueQuestion
+    template: roleplay_reply
+    max_tokens: 120
+  classify_roleplay_turn:
+    class: DialogueQuestion
+    template: classify_roleplay_turn
+    max_tokens: 40
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  roleplay_coach:
+    class: DialogueQuestion
+    template: roleplay_coach
+    max_tokens: 120
+  evaluate_roleplay:
+    class: DialogueQuestion
+    template: evaluate_roleplay
+    max_tokens: 200
+    validate: object
+  roleplay_feedback:
+    class: DialogueQuestion
+    template: roleplay_feedback
+    max_tokens: 200
+    validate: object
+
+  # ==== Cancellation ====
+
+  detect_cancel_intent:
+    class: DialogueQuestion
+    template: detect_cancel_intent
+    max_tokens: 30
+    validate: object
+  classify_cancel_reply:
+    class: DialogueQuestion
+    template: classify_cancel_reply
+    max_tokens: 30
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  ask_cancel_confirmation:
+    class: DialogueQuestion
+    template: ask_cancel_confirmation
+    max_tokens: 60
+  cancel_confirmed_response:
+    class: DialogueQuestion
+    template: cancel_confirmed_response
+    max_tokens: 60
