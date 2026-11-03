@@ -73,8 +73,8 @@ prepare and collect them are in [HUMAN_REVIEW.md](../HUMAN_REVIEW.md).
    - export the API keys: `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and `OPENAI_API_KEY`;
    - replace every `<pin>` of the experiment file with the dated version of the model (e.g.
      `openai/<model>-<date>`); the runner refuses to start while one is left;
-   - for a Gemini system model (the role swap), install the `google-genai` package in the
-     environment of the LLM gateway.
+   - a Gemini system model (the role swap) needs no SDK: the interpretation server calls its
+     HTTP API.
 
    Every command that calls a cloud provider needs `--allow-cloud`
    ([README](../README.md#cloud-models)).

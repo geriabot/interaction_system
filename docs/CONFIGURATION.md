@@ -10,11 +10,12 @@ node of the system and of the subsystems around it, with their types and shipped
 
 | File | Read by | Defines |
 | --- | --- | --- |
-| `interaction_system_core/interaction_system/config/app_params.yaml` | The LLM gateway, the intelligence and the orchestrator of `main.launch.py` (launch argument `params_file`) | Their parameters (below). simple_hri's nodes take theirs from the launch arguments |
+| `interaction_system_core/interaction_system/config/app_params.yaml` | The intelligence and the orchestrator of `main.launch.py` (launch argument `params_file`), and the launch file, which writes the interpretation server's parameters from it | Their parameters (below), and the model binding (`llm_manager_node`). simple_hri's nodes take theirs from the launch arguments |
 | `interaction_system_core/interaction_system/config/interaction_orchestrator_params.yaml` | `/interaction_orchestrator` (launch argument `catalog_file`, applied before `params_file`) | The [catalog of dialogue behaviors](#the-catalog-of-dialogue-behaviors) and the default limits |
 | `interaction_system_core/interaction_system/config/interaction_behaviors_config.yaml` | `mission_executor` (positional argument; launch argument `config_file`) | The [behavior_architecture runtime](#the-behavior-tree-runtime): the orchestrator and the runner of each tree |
-| `interaction_system_core/interaction_intelligence/config/prompts.yaml` | `/interaction_intelligence` (launch argument `prompts_file`) | The prompt templates, parameters `prompts.*` ([PROMPTS.md](PROMPTS.md)) |
-| `ros2_llm_manager/config/params.yaml` | `llm_manager_node` when started by its own launch file | The gateway's parameters (the same values as `app_params.yaml`) |
+| `interaction_system_core/interaction_intelligence/config/prompts.yaml` | `/interaction_intelligence` and the interpretation server (launch argument `prompts_file`) | The prompt templates, parameters `prompts.*` ([PROMPTS.md](PROMPTS.md)) |
+| `interaction_system_core/interaction_intelligence/config/interpretation/questions.yaml` | The interpretation server | The questions to the model ([below](#the-interpretation-server)) |
+| `ros2_llm_manager/config/params.yaml` | `llm_manager_node` when started by its own launch file | The former gateway's parameters (the same values as `app_params.yaml`); the interaction system does not start it |
 | `interaction_perception/interaction_perception/config/params.yaml` | `emotion_detector` | Its parameters |
 | `interaction_perception/interaction_perception/config/lip_activity_params.yaml` | `lip_activity_detector_node` | Its parameters |
 | `robots/nao/nao_pose_manager/config/nao_saved_poses.yaml` | The gesture managers | The saved arm poses (not a parameter file) |
@@ -170,14 +171,16 @@ are declared from the files.
 | `reasoning` | string | `"none"` | Whether the LLM may reason before answering: `none` (never) or `critical` (only before the understanding questions whose wrong answer is a critical error). |
 | `reasoning_timeout` | float | `120.0` | Seconds that a call that may reason waits for the LLM; `0` = no limit. |
 | `timeout_prompt` | string | `""` (language default) | The first phrase spoken when the user stays silent for `wait_timeout`. Empty: the phrase of the language file (`phrases.timeout`; English: `Take your time, I'm still here.`). |
-| `llm_provider` | string | `""` | Provider of the conversation's LLM sessions. Empty: the gateway's `default_provider`. |
-| `llm_model` | string | `""` | Model of the sessions. Empty: the provider's default (`ollama.model`). |
-| `routes` | string[] | `[""]` | Questions sent to a model other than `llm_model`, as `question=model`. `[""]`: every question goes to `llm_model`. |
+| `llm_provider` | string | `""` | Provider of the model of the questions. Empty: the model binding's `default_provider`. Read by the launch file ([below](#the-interpretation-server)). |
+| `llm_model` | string | `""` | Model of the questions. Empty: the binding's default (`default_model` for the default provider, else `<provider>.model`). Read by the launch file. |
+| `routes` | string[] | `[""]` | Questions sent to a model other than `llm_model`, as `question=model`. `[""]`: every question goes to `llm_model`. Checked by the node; the launch file gives each routed question its route. |
+| `interpretation_service` | string | `/interaction/interpretation/interpret` | The interpretation server's service, which every question to the model is asked to. |
+| `interpretation_cancel_service` | string | `""` | Its cancel service. Empty: `cancel` next to `interpretation_service`. |
 | `silent_mode` | bool | `false` | Disable informational logs when true. |
 | `conversation_log_path` | string | `/tmp/dialog_conversations.log` | Transcript of every conversation. `""` disables it. |
 | `conversation_log_max_mb` | float | `10.0` | Rotate the transcript when it exceeds this size in MB. `0` = never rotate. |
 | `skill_modules` | string[] | `[""]` | Python modules with additional skills (and dialogue modes) to register at startup, e.g. those of a new dialogue behavior ([ADDING_DIALOGUE_BEHAVIORS.md](ADDING_DIALOGUE_BEHAVIORS.md)). |
-| `llm_client_factory` | string | `""` | Tests only: `<module>:<callable>` returning an object with the methods of `LLMDialogClient`, used instead of the LLM gateway (e.g. `interaction_sim.scripted_llm:make`). |
+| `llm_client_factory` | string | `""` | Tests only: `<module>:<callable>` returning an object with the methods of `LLMDialogClient`, used instead of the interpretation server (e.g. `interaction_sim.scripted_llm:make`); the launch file then starts no server. |
 | `prompts.*` | string | `prompts.yaml` | The prompt templates ([PROMPTS.md](PROMPTS.md)). |
 | `phrases.*` | string | `""` | Overrides of the fixed phrases of the active language, over those of its language file, written by the GUI's Strategies page ([below](#notes-on-the-intelligence-parameters)). |
 
@@ -202,13 +205,15 @@ are declared from the files.
 - `llm_timeout`: a call that times out is not asked again, and the other calls of the same skill
   fail at once, because the LLM is taken as unresponsive for the rest of that request. The
   reply's time budget (`reply_budget`, sent with each request) can make the wait shorter
-  ([the wait for the model](behaviors/endings.md#the-wait-for-the-model)). `llm_timeout` is
-  independent of the gateway's `<provider>.timeout`, which limits one request to the server.
+  ([the wait for the model](behaviors/endings.md#the-wait-for-the-model)). The wait of each call
+  is sent to the interpretation server as the request's budget, which cuts the call there too.
+  `llm_timeout` is independent of the binding's `<provider>.timeout`, the route's limit of one
+  request to the model's server.
 - `reasoning: critical` lets the LLM reason before these questions: the answer to a confirmation,
   quiz grading, teach-back, the answer from the material and its verification, the answer to "do
   you want to stop?", the questionnaire option, the procedure step and the role-play turn. It
-  never reasons when a line is generated. The setting is sent with each of those requests (`think`
-  of `LlmInference`), and a model that cannot reason ignores it. The evaluation decides it per
+  never reasons when a line is generated. Each of those requests asks the variant `reasoning` of
+  its question, answered on the route with `think` on; a model that cannot reason ignores it. The evaluation decides it per
   model in E0a (the `@critical` candidates), and a request may switch it on or off
   (`DialogTask.reasoning`). A reasoning call that returns nothing usable (past its token
   allowance, or without JSON) is asked again at once without reasoning.
@@ -219,8 +224,9 @@ are declared from the files.
 - `routes`: each question is named by the method of `LLMDialogClient` that asks it, or
   `extract_slots` for `extract_turn`, e.g. `["extract_turn=qwen3:14b",
   "evaluate_quiz_answer=qwen3:14b"]`. An unknown question stops the node at startup
-  ([MODELS.md](MODELS.md#one-model-per-question-routes)). Each conversation then gets one more
-  pair of sessions per routed model.
+  ([MODELS.md](MODELS.md#one-model-per-question-routes)). The launch file gives the interpretation
+  server two routes per routed model (with `think` off and on) and the routed questions those
+  routes.
 - `phrases.*` has these keys:
   - `ack` (a list), `filler` (a list, over `filler_phrases`) and `timeout`;
   - the lines said without the LLM: `silence_ready`, `cancel_no`, the closing lines
@@ -234,31 +240,38 @@ are declared from the files.
 
 ## llm_manager_node
 
-The parameters are declared in `ros2_llm_manager/ros2_llm_manager/llm_manager_node.py`. The
-values below are the shipped ones: `ros2_llm_manager/config/params.yaml` (the gateway's own
-launch) and the `llm_manager_node` section of `app_params.yaml` (`main.launch.py`) ship the same
-values, with Ollama as the only enabled provider. Some differ from the code
+The section `llm_manager_node` of the parameter files is the *model binding*: which provider and
+model answer the questions, and their options. It keeps the parameters of the former LLM gateway
+(`ros2_llm_manager`), whose node the interaction system no longer starts: the launch file reads
+them, with the intelligence's `llm_provider`, `llm_model` and `routes`, and writes the routes of
+the interpretation server ([below](#the-interpretation-server)). The values below are the shipped
+ones: `ros2_llm_manager/config/params.yaml` and the `llm_manager_node` section of `app_params.yaml`
+ship the same values, with Ollama as the only enabled provider. Some differ from the code
 ([discrepancies](#code-vs-yaml-discrepancies)). The model of the conversations is `ollama.model`
-unless the intelligence's `llm_model` names another.
+unless the intelligence's `llm_model` names another. `max_concurrent`, `silent_mode` and the
+`enable` of the cloud providers are not used; `ollama.enable` makes the launch file load
+`ollama.model` into the server's memory at the start, as the gateway did.
 
 The cloud providers read their API key from the environment when `<provider>.api_key` is left
-empty, which is the recommended setup. The variables are `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`
+empty, which is the recommended setup; a key given here is passed to the interpretation server in
+that variable of its environment, never as a parameter. The variables are `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`
 (a key of the Claude API, which a Claude.ai subscription does not include) and `OPENAI_API_KEY`.
-Their Python SDKs are listed in the [gateway's README](../ros2_llm_manager/README.md#providers).
+The interpretation server's backends need no SDK; the former gateway's are listed in its
+[README](../ros2_llm_manager/README.md#providers).
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `default_provider` | string | `ollama` | Provider used when a session request does not specify one. Must be an enabled provider (`gemini`, `ollama`, `claude` or `openai`). |
-| `default_model` | string | `""` | Model of the sessions that name neither a model nor a provider other than `default_provider`. Empty: the `<provider>.model` of the default provider. |
+| `default_provider` | string | `ollama` | Provider of the questions when the intelligence's `llm_provider` names none (`gemini`, `ollama`, `claude` or `openai`). |
+| `default_model` | string | `""` | Model of the questions of `default_provider` when the intelligence's `llm_model` names none. Empty: the `<provider>.model` of the default provider. |
 | `max_concurrent` | int | `4` | Maximum number of concurrent inference threads. |
 | `silent_mode` | bool | `false` | Disable informational logs when true. |
 | `ollama.enable` | bool | `true` | Enable the Ollama provider and connect at startup. |
 | `ollama.host` | string | `127.0.0.1` | Ollama server host. |
 | `ollama.port` | int | `11434` | Ollama server port. |
-| `ollama.model` | string | `qwen2.5:7b` | Model to pre-load into VRAM on startup, and the model of the sessions that do not name one. Pull it, or set the model you serve. |
-| `ollama.timeout` | float | `120.0` | Request timeout in seconds for Ollama inference calls: the gateway's own limit. The interaction intelligence stops waiting earlier, at its `llm_timeout`, and cancels the call. |
+| `ollama.model` | string | `qwen2.5:7b` | Model loaded into the Ollama server's memory at the start, and the model of the questions when neither `llm_model` nor `default_model` names another. Pull it, or set the model you serve. |
+| `ollama.timeout` | float | `120.0` | Request timeout in seconds for Ollama inference calls: the route's own limit (`timeout_s`). The interaction intelligence stops waiting earlier, at its `llm_timeout`, which the request carries as its budget. |
 | `ollama.think` | bool or string | `false` | Lets reasoning models (`qwen3.5`, `deepseek-r1`…) think before answering; `false` keeps spoken replies fast. A level (`low`, `medium`, `high`) is for models that cannot switch reasoning off (`gpt-oss`). |
-| `ollama.num_ctx` | int | `8192` | Context window of every request, in tokens, sent with each request ([below](#notes-on-the-gateway-parameters)). |
+| `ollama.num_ctx` | int | `8192` | Context window of every request, in tokens, sent with each request ([below](#notes-on-the-model-binding)). |
 | `gemini.enable` | bool | `false` | Enable the Gemini provider and connect at startup. |
 | `gemini.api_key` | string | `""` | Google Gemini API key. Prefer the `GEMINI_API_KEY` environment variable and leave this empty. |
 | `gemini.model` | string | `gemini-2.5-flash` | Gemini model name. |
@@ -276,9 +289,10 @@ Their Python SDKs are listed in the [gateway's README](../ros2_llm_manager/READM
 | `openai.reasoning_effort` | string | `none` | `none`, `low`, `medium`, `high`, `xhigh` or `max`. `none` keeps spoken replies fast. Empty omits it (models without reasoning). |
 | `openai.base_url` | string | `""` | Optional OpenAI-compatible server (vLLM, LM Studio, OpenRouter…), e.g. `http://127.0.0.1:1234/v1`. Empty: api.openai.com. |
 
-### Notes on the gateway parameters
+### Notes on the model binding
 
-- `ollama.think`: models without thinking ignore it, and thinking makes replies slower. When the
+- `ollama.think` is the `think` of the route `dialogue` (the route `reasoning` has it on): models
+  without thinking ignore it, and thinking makes replies slower. When the
   model may think, each request gets 4096 tokens more than its cap, because the reasoning tokens
   count toward the cap and a short cap would leave the answer empty; in the measurements, no
   reasoning call of the critical questions needed that many. The evaluation sets the value per
@@ -287,6 +301,38 @@ Their Python SDKs are listed in the [gateway's README](../ros2_llm_manager/READM
 - `ollama.num_ctx` is sent with each request so that the context window does not depend on the
   server's default, which changes with its version and configuration; a longer prompt is cut
   silently. Both phases of E0a, the judges and E1 use the same 8192.
+
+## The interpretation server
+
+`interaction_system.launch.py` starts behavior_architecture's `interpretation_server` in the
+namespace `interaction` (launch argument `interpretation`, `true` by default), with these
+parameters, written from the parameter files by `interaction_intelligence`'s
+`interpretation_config.py`:
+
+| Parameter | Value |
+| --- | --- |
+| `questions_file` | `config/interpretation/questions.yaml` of `interaction_intelligence`, or a copy with the routed questions' routes and, when the intelligence loads `interaction_ablations.skills`, the LLM-led baseline's question (`interaction_ablations`'s `config/interpretation/questions.yaml`) |
+| `templates_file`, `templates_files` | `prompts.yaml` (launch argument `prompts_file`), then each parameter file with `prompts.*` (the GUI's Prompts page), in the order the intelligence reads them |
+| `question_modules` | `interaction_intelligence.interpretation_questions` (and `interaction_ablations.interpretation_questions` with the baseline) |
+| `default_route` | `dialogue` |
+| `routes.dialogue` | The binding's provider and model (`llm_provider`, `llm_model`, or the binding's defaults) |
+| `routes.reasoning` | The same, with `think` on: the variant `reasoning` of the questions that may reason |
+| `routes.model_<i>`, `routes.model_<i>_reasoning` | The same for each model of the intelligence's `routes` |
+| `log_dir` | Launch argument `interpretation_log_dir` (empty: no call log) |
+
+Each route has the `llm_manager` dialect of its backend, which sends the request of the former
+gateway's provider:
+
+| Provider | Backend | Options of the route |
+| --- | --- | --- |
+| `ollama` | `ollama` | `url` `http://<ollama.host>:<ollama.port>`, `timeout_s` (`ollama.timeout`), `num_ctx` (`ollama.num_ctx`), `think` (`ollama.think`; `true` on the reasoning routes), `keep_alive` `-1` |
+| `openai` | `openai` | `timeout_s` (`openai.timeout`), `reasoning_effort`, `url` (`openai.base_url`, when set); key `OPENAI_API_KEY` |
+| `gemini` | `gemini` | `timeout_s`, `url` (`gemini.base_url`, when set); key `GEMINI_API_KEY` |
+| `claude` | `anthropic` | `timeout_s`, `effort` (`claude.effort`); key `ANTHROPIC_API_KEY` |
+
+With a test double (`llm_client_factory`), or without a provider, no server is started. Another
+server can serve the questions with `interpretation:=false` and the intelligence's
+`interpretation_service`.
 
 ## simple_hri's speech nodes
 
@@ -417,7 +463,7 @@ These are the differences between the defaults declared in the code (`declare_pa
 the shipped YAML or launch values. A node started without its YAML file runs with the code
 defaults.
 
-### LLM gateway
+### Model binding
 
 `ros2_llm_manager/config/params.yaml` and `app_params.yaml` ship the same values:
 

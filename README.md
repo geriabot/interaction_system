@@ -86,7 +86,8 @@ inside:
 | Coordination | An FSM, the task plan | An FSM, the life of a request: `IDLE`, `SETTING_BEHAVIOR_ACTION`, `SETTING_BEHAVIOR_INPUT`, `ACTING` |
 | Action | The behavior forest | One tree per dialogue behavior; only the chosen one is active |
 | Capabilities | Perception, navigation, interaction... | Speech (speech-to-text, text-to-speech), user perception (lip activity for barge-in, experimental; emotion, preliminary) |
-| External service | — | The LLM, asked by the FSM (which dialogue behavior) and by the trees (understanding, phrasing) |
+| Interpretation | Narrow questions about unstructured input, beside the layers that ask them | behavior_architecture's interpretation server, with the system's questions: asked for the FSM (which dialogue behavior) and for the trees (understanding, phrasing); it asks the LLM |
+| External service | — | The LLM behind the interpretation server |
 
 The next figure shows the nodes of the interaction system and, around them, the behavioral
 control architecture, speech, user perception, the embodiment and the models:
@@ -97,7 +98,8 @@ For the rest of the robot, the interaction system is one more capability. `missi
 configures and activates it through the lifecycle of `/interaction_orchestrator`. The system
 receives the task as the goal of an action, reports every utterance as feedback, and returns the
 result of the conversation ([Using it from robot behaviors](#using-it-from-robot-behaviors)).
-The LLM is served by Ollama, locally or on a GPU server, or by a cloud provider
+The questions reach the LLM through behavior_architecture's interpretation server, which the
+system launches; the LLM is served by Ollama, locally or on a GPU server, or by a cloud provider
 ([MODELS.md](docs/MODELS.md)). [ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the design and
 the reasons for it.
 
@@ -127,7 +129,7 @@ each turn.
    and back to the blackboard, so the intelligence keeps no state.
 5. Feedback. Every utterance is reported in the action's feedback before it is spoken.
 6. Result. When the tree ends, the FSM returns the result and the intelligence closes the
-   dialogue (its LLM sessions and its transcript). `/interaction_system/status` shows `IDLE`
+   dialogue (its questions in progress and its transcript). `/interaction_system/status` shows `IDLE`
    again, or `FAILED` if the conversation did not achieve its goal.
 
 ## The dialogue behaviors
@@ -271,10 +273,10 @@ Reference pages:
 |---|---|
 | `interaction_system_core/interaction_system` | The orchestrator (the FSM of a request, a `behavior_architecture` plugin), the catalog of dialogue behaviors, the configuration and the launch files |
 | `interaction_system_core/interaction_system_interfaces` | Status, and the requests that the orchestrator and the trees send to the intelligence |
-| `interaction_system_core/interaction_intelligence` | The interaction intelligence: the skills (the questions to the LLM), the dialogue frame, the prompts |
+| `interaction_system_core/interaction_intelligence` | The interaction intelligence: the skills (the questions to the LLM and what is done with their answers), the dialogue frame, the prompts, and the questions and question module of the interpretation server (`config/interpretation/`) |
 | `interaction_system_behaviors` | The Behavior Trees of the dialogue behaviors (XML) and their nodes (`AskIntelligence`, `Speak`, `Listen`, `WithFillers`) |
 | `ros2_dialog_interfaces` | The public interface: the `DialogTask` action and the `BargeIn` message |
-| `ros2_llm_manager`, `ros2_llm_interfaces` | The LLM gateway: one inference action and session services for Ollama and cloud providers |
+| `ros2_llm_manager`, `ros2_llm_interfaces` | The former LLM gateway, no longer started: the questions are asked to behavior_architecture's interpretation server |
 | `interaction_perception/*` | User perception: lip activity (barge-in, experimental), facial emotion (preliminary, not validated), and the user-state service |
 | `dialostack_gui` | Web GUI to configure, launch and monitor conversations |
 | `dialostack_bt_client` | BehaviorTree.CPP node that runs a conversation as a step of a robot's tree |
@@ -347,8 +349,8 @@ Run pixi from `<workspace>`, not from inside the repository
    ```sh
    ollama pull qwen2.5:7b
    ```
-2. In a prepared terminal, start the whole stack (speech with simple_hri, the LLM gateway and the
-   interaction system). The first run downloads the speech models into `models/` of the current
+2. In a prepared terminal, start the whole stack (speech with simple_hri and the interaction
+   system, with its interpretation server). The first run downloads the speech models into `models/` of the current
    directory:
    ```sh
    ros2 launch interaction_system main.launch.py            # language:=es for Spanish
@@ -368,8 +370,7 @@ every utterance; `ros2 topic echo /interaction_system/status` shows the state of
 | What | Command |
 |---|---|
 | The whole stack | `ros2 launch interaction_system main.launch.py [speech:=simple_hri\|none] [stt:=faster_whisper\|whisper] [tts:=piper\|mms] [language:=en\|es]` ([languages](#languages)) |
-| Only the interaction system (speech and LLM started separately) | `ros2 launch interaction_system interaction_system.launch.py` |
-| The LLM gateway alone | `ros2 launch ros2_llm_manager llm_manager.launch.py` |
+| Only the interaction system (speech started separately) | `ros2 launch interaction_system interaction_system.launch.py` |
 | User perception (optional) | `ros2 launch interaction_perception interaction_perception.launch.py image_topic:=<camera>` |
 | The web GUI | `./src/interaction_system/gui.sh`, then open <http://localhost:5173> ([INSTALLATION.md](docs/INSTALLATION.md#the-web-gui)) |
 

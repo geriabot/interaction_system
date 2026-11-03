@@ -7,10 +7,10 @@ a model, and the causes and fixes of common runtime problems. Build problems are
 ## Basic checks
 
 ```sh
-ros2 node list                                    # /interaction_orchestrator, /interaction_intelligence, the runners, /llm_manager_node, the speech nodes
+ros2 node list                                    # /interaction_orchestrator, /interaction_intelligence, the runners, /interaction/interpretation_server, the speech nodes
 ros2 lifecycle get /interaction_orchestrator      # active
-ros2 action list                                  # /dialog/execute_task, /llm/inference, /stt_action and /tts_action (simple_hri)
-ros2 service list | grep -E "interaction|llm"     # /interaction/ask_intelligence, /interaction/ask_intelligence_for_behavior, /llm/session/*
+ros2 action list                                  # /dialog/execute_task, /stt_action and /tts_action (simple_hri)
+ros2 service list | grep interaction              # /interaction/ask_intelligence, /interaction/ask_intelligence_for_behavior, /interaction/interpretation/interpret and cancel
 ros2 topic echo /interaction_system/status        # 0 IDLE, 1 REASONING, 2 RUNNING, 3 FAILED
 curl -s localhost:11434/api/version               # Ollama answers (local or through a tunnel)
 ```
@@ -56,7 +56,7 @@ Two tools test the system without audio and without a model:
 | Aborted with a message about the resources (`The quiz requires...`) | The dialogue behavior needs a resource that the request does not have or that does not parse ([ROS_INTERFACES.md](ROS_INTERFACES.md#dialogtask-goal)) |
 | Aborted with `The interaction intelligence is not available` | `/interaction_intelligence` is not running (check its log: a malformed prompt template stops it at startup) |
 | The robot speaks the fixed phrases ("Could you repeat that?") | The LLM does not answer: Ollama is not reachable, the model is not pulled (`ollama.model`), or the calls time out (`llm_timeout`, or the reply's `reply_budget`). See [below](#notes-on-the-common-problems) |
-| `LLM Manager connection failed` | `/llm_manager_node` is not running or its provider did not connect at startup |
+| `The interpretation server is not available` | `/interaction/interpretation_server` is not running: started with `interpretation:=false`, no provider configured (the launch log says so), or it stopped at startup with a configuration error (its log names the cause) |
 | The robot never hears the user | Check that `/stt_action` exists (`speech:=simple_hri`) and the microphone is the default input of the computer running simple_hri ([SPEECH.md](SPEECH.md)) |
 | Every utterance is ignored | The transcriptions are taken as noise (empty, fillers, subtitle credits), or they arrive on a topic not in `transcription_topics` |
 | The conversation ends with outcome `user_silent` | The user stayed silent for `max_silence` seconds, or speech-to-text is not running (`/stt_action`). Raise `max_silence`, or give a long procedure step a `duration_s` ([silence](behaviors/silence.md)) |
@@ -74,7 +74,8 @@ Two tools test the system without audio and without a model:
 
 When the LLM calls time out, the warnings of `/interaction_intelligence` say "did not answer" or "no
 call to the model", and the skill trace counts them in `llm_timeouts` and `llm_skipped`. The log
-of `/llm_manager_node` says which cause applies. A model that is just slow (a large model, or a
+of `/interaction/interpretation_server` says which cause applies (`model_down`, `timeout`, `budget`), and
+`interpretation_log_dir:=<dir>` records every call with its error. A model that is just slow (a large model, or a
 cloud model that reasons) can spend the budget in normal turns: use a faster one, or raise
 `reply_budget`.
 
@@ -88,7 +89,7 @@ leave its nodes running, and two instances of the system then answer the same ac
 and stop them by their process id:
 
 ```sh
-ps -eo pid,cmd | grep -E "mission_executor|interaction_intelligence|llm_manager_node|stt_faster_whisper|stt_whisper|tts_piper|tts_mms" | grep -v grep
+ps -eo pid,cmd | grep -E "mission_executor|interaction_intelligence|interpretation_server|stt_faster_whisper|stt_whisper|tts_piper|tts_mms" | grep -v grep
 kill <pid> ...
 ```
 

@@ -12,7 +12,7 @@ optionally with embodiment and user perception ([ADDING_A_ROBOT.md](ADDING_A_ROB
 ## 1. Launch
 
 ```sh
-ros2 launch interaction_system main.launch.py                 # speech (simple_hri), LLM gateway, interaction system
+ros2 launch interaction_system main.launch.py                 # speech (simple_hri), interaction system
 ros2 launch interaction_perception interaction_perception.launch.py image_topic:=<your camera>   # optional
 ```
 

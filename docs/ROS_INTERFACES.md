@@ -162,29 +162,42 @@ system does not use.
 
 `UserState`: `stamp`, `emotion`, `confidence` (`float32`), `source`, `speaking` (`bool`).
 
-## The LLM gateway
+## The interpretation server
+
+Every question of the interaction intelligence to the model is a request to
+behavior_architecture's interpretation server, which the interaction system launches in the
+namespace `interaction` ([CONFIGURATION.md](CONFIGURATION.md#the-interpretation-server)).
 
 | Name | Type | Server | Client |
 |---|---|---|---|
-| `/llm/inference` | action `ros2_llm_interfaces/action/LlmInference` | `/llm_manager_node` | `/interaction_intelligence` |
-| `/llm/session/create`, `/llm/session/delete`, `/llm/session/list` | services `ros2_llm_interfaces/srv/CreateSession`, `DeleteSession`, `ListSessions` | `/llm_manager_node` | `/interaction_intelligence` |
-| `/llm/error` | topic `ros2_llm_interfaces/msg/LlmError` | `/llm_manager_node` | the GUI |
+| `/interaction/interpretation/interpret` | service `behavior_architecture/srv/Interpret` | `/interaction/interpretation_server` | `/interaction_intelligence` |
+| `/interaction/interpretation/cancel` | service `behavior_architecture/srv/CancelInterpretation` | `/interaction/interpretation_server` | `/interaction_intelligence`, when a dialogue ends |
 
-`LlmInference`: goal `session_id`, `prompt`, `max_tokens`, `format_schema` (a JSON schema, empty
-for free text), `think`, `cache_prefix_len`; result `success`, `answer`, `total_time`,
-`prompt_tokens`, `completion_tokens`, `status`; feedback `partial_text`, `tokens_generated`.
-`think` says whether the model may reason before answering this request: `"true"`, `"false"` or
-a level, and `""` takes the gateway's `ollama.think`. The intelligence sets it only before its
-critical questions, when `reasoning` is `critical`. `cache_prefix_len` is a caching hint: the
-number of characters of the prompt that repeat across calls (0 for none).
+`Interpret` (behavior_architecture's
+[INTERPRETATION.md](https://github.com/geriabot/behavior_architecture/blob/devel/docs/INTERPRETATION.md#the-service)):
+request `question`, `request_id`, `context`, `text`, `images`, `budget_s`, `variant`,
+`max_tokens`; response `success`, `answer`, `source`, `fallback_reason`, `message`. The
+intelligence sends:
 
-`CreateSession`: request `session_id`, `provider`, `model`, `system_prompt`, `stateful`;
-response `success`, `session_id`, `message`. `DeleteSession`: request `session_id`; response
-`success`, `deleted_count`, `message`. `ListSessions`: response `session_ids`, `providers`,
-`models`, `stateful`, `history_turns`.
+| Field | Value |
+|---|---|
+| `question` | The method of `LLMDialogClient` that asks (`extract_turn`, `classify_intent`, `get_opening`...; `roleplay_reply`; `monolithic_turn` for the LLM-led baseline), a question of `config/interpretation/questions.yaml`. |
+| `request_id` | The dialogue's id (`select_<n>` for the choice of the dialogue behavior). |
+| `context` | `{"language": ..., "args": {...}}`: the dialogue's language and the arguments of the PromptBuilder method that writes the prompt (`interpretation_context.py`), from which the server builds it. |
+| `budget_s` | The time the client waits for this call: `llm_timeout`, or what is left of the reply's budget if that is shorter; `reasoning_timeout` for a call that may reason. |
+| `variant` | `reasoning` for a call on which the model may reason (`reasoning: critical`), else empty. |
+| `max_tokens` | The token cap of the call. |
 
-`LlmError` (every failed inference): `provider`, `model`, `session_id`, `code` (HTTP or status
-code, 0 if unknown), `error_type` (`http`, `timeout`, `connection`, `api`, `unknown`), `message`.
+The answer is `{"text": <the model's text>}`; the intelligence reads it as it read the former
+gateway's answers. Source `invalid` (the model did not answer in time, could not be reached,
+or the call was cancelled) is no answer.
+
+`CancelInterpretation`: request `request_id`; response `success`, `cancelled`, `message`. The
+intelligence cancels the questions in progress of a dialogue when it ends (skill `finish`).
+
+The former LLM gateway (`ros2_llm_manager`: the action `/llm/inference` and the services
+`/llm/session/*`) is still in the repository, but the interaction system does not start or use
+it.
 
 ## The embodiment (NAO)
 

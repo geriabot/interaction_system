@@ -126,7 +126,7 @@ python3 offline/run_models.py --config offline/config_ollama.yaml --models <m1>,
 ## Simulation: whole conversations without audio
 
 `simulation/interaction_sim` stands for the speech capability and the user, so that the real
-system (orchestrator, trees, intelligence, LLM gateway) holds whole conversations without
+system (orchestrator, trees, intelligence, interpretation server) holds whole conversations without
 microphones. Its modules:
 
 - `harness.py`: `DialogueHarness`, one node that serves simple_hri's actions (`/tts_action`,
@@ -161,7 +161,7 @@ microphones. Its modules:
 - `call_log.py`, `call_recording.py`: the recorder of every call of the system's model, for the
   debugging ([doc/DEBUGGING.md](doc/DEBUGGING.md)). `CallLog` marks the user turn from the harness
   side and returns the calls of the dialogue; the skill module `interaction_sim.call_recording`
-  wraps `LLMDialogClient`'s call to the gateway and the skills, like the injector.
+  wraps `LLMDialogClient`'s call to the model and the skills, like the injector.
   `run_experiment.py` loads it last for a file with `record_model_calls: true`.
 - `fault_injection.py`: the injector inside the interaction intelligence with the real model. It
   is a skill module (`skill_modules`, no skill registered) whose import wraps `LLMDialogClient`
@@ -423,9 +423,9 @@ refuses a `<pin>` placeholder. Cloud calls are paid, so they are refused unless 
 `--allow-cloud`; `--dry-run` tells how many dialogues go to each cloud model. The API keys are read
 from the environment: `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and `OPENAI_API_KEY`. The version that
 answered and the tokens are recorded for the simulated user and the judge; a cloud system model is
-identified by its dated name, since the LLM gateway does not report them to the runner. A Gemini
-system model needs the `google-genai` package in the environment of the LLM gateway (the simulated
-user and the judge call the HTTP API directly). The conditions with a cloud system model need no
+identified by its dated name, since the system's model calls are not reported to the runner
+(the interpretation server's call log, `interpretation_log_dir`, has them). The system's
+interpretation server, the simulated user and the judge call the HTTP APIs directly. The conditions with a cloud system model need no
 GPU.
 
 ## Scoring and judging

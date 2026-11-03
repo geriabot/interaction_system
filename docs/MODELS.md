@@ -9,7 +9,7 @@ serve the models from a shared GPU server in [GPU_SERVER.md](GPU_SERVER.md).
 
 | Model | Node | What it does | How it is chosen |
 |---|---|---|---|
-| The LLM | `/llm_manager_node` (the gateway), asked by `/interaction_intelligence` | Every question of the conversation: the choice of the strategy, the understanding of each turn, the phrasing of each utterance | `ollama.model` of `llm_manager_node`, or `llm_provider` and `llm_model` of `interaction_intelligence` ([below](#the-local-model)) |
+| The LLM | `/interaction/interpretation_server`, asked by `/interaction_intelligence` | Every question of the conversation: the choice of the strategy, the understanding of each turn, the phrasing of each utterance | `ollama.model` of the model binding (`llm_manager_node`), or `llm_provider` and `llm_model` of `interaction_intelligence` ([below](#the-local-model)) |
 | A second LLM (optional) | The same | The questions routed to it, e.g. the slot extraction | `routes` of `interaction_intelligence` ([below](#one-model-per-question-routes)) |
 | Speech-to-text | simple_hri `stt_service_node` | Transcribes the user: faster-whisper with Silero VAD (default) or Whisper | `stt:=`, `whisper_model:=` of `main.launch.py` ([SPEECH.md](SPEECH.md)) |
 | Text-to-speech | simple_hri `tts_service_node` | Says the robot's utterances: a Piper voice of the language (default) or MMS-TTS | `tts:=`, `language:=` ([SPEECH.md](SPEECH.md)) |
@@ -21,23 +21,25 @@ the experiment files ([EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#who-play
 ## How a question reaches a model
 
 ```text
-/interaction_intelligence ──/llm/session/create──▶ /llm_manager_node ──▶ provider of the session
-                          ──/llm/inference──────▶                       ├─ ollama  → HTTP → Ollama (local or remote)
-                                                                        ├─ gemini  → Gemini API
-                                                                        ├─ claude  → Claude API
-                                                                        └─ openai  → OpenAI API, or an OpenAI-compatible server
+/interaction_intelligence ──/interaction/interpretation/interpret──▶ /interaction/interpretation_server
+   (question, context: the arguments of its prompt)                    builds the prompt, route of the question
+                                                                       ├─ ollama    → HTTP → Ollama (local or remote)
+                                                                       ├─ gemini    → Gemini API
+                                                                       ├─ anthropic → Claude API
+                                                                       └─ openai    → OpenAI API, or an OpenAI-compatible server
 ```
 
-- At the start of a conversation, the intelligence creates two stateless sessions in the gateway:
-  one for understanding and one for generation
-  ([ARCHITECTURE.md](ARCHITECTURE.md#the-interaction-intelligence)). Each session fixes a provider
-  and a model: `llm_provider` and `llm_model` of `interaction_intelligence`; when they are empty,
-  the gateway's `default_provider` and that provider's `model`.
-- Each routed model adds one more pair of sessions, with the same provider.
-- The sessions are deleted when the conversation ends.
+- Each question names its route: `dialogue`, the model of the questions (`llm_provider` and
+  `llm_model` of `interaction_intelligence`; when they are empty, the binding's
+  `default_provider` and that provider's `model`), or the route of a routed model. A question on
+  which the model may reason uses the route's twin with `think` on (`reasoning`).
+- `interaction_system.launch.py` writes the routes from the parameter files when it starts the
+  server ([CONFIGURATION.md](CONFIGURATION.md#the-interpretation-server)).
+- Nothing is kept between questions: each request carries everything its prompt needs.
 
-The gateway logs every answer with its provider and model (`[ollama/qwen2.5:7b] session=...
-tokens=... time=...`), and `/llm/session/list` lists the open sessions with theirs.
+The server logs every answer with its question and source (`get_opening: llm {"text": ...}`), and
+with `interpretation_log_dir:=<dir>` writes every call (prompt, raw answer, latency, tokens,
+model version) to `<dir>/calls.jsonl`.
 
 ## The local model
 
@@ -54,10 +56,10 @@ To use another model:
    `params_file:=<file>` to `main.launch.py`. A `--symlink-install` build links the installed file
    to the source, so an edit needs no rebuild; restart the stack.
 
-At startup the gateway loads `ollama.model` into memory, and every request asks Ollama to keep it
-there (`keep_alive: -1`): the model stays loaded until Ollama stops or it is unloaded
-(`ollama stop <model>`). `ollama.think: false` keeps reasoning models from thinking before they
-answer, which keeps the spoken replies fast.
+At startup the launch file loads `ollama.model` into memory (`interpretation_warmup`, as the former
+gateway did), and every request asks Ollama to keep it there (`keep_alive: -1`): the model stays
+loaded until Ollama stops or it is unloaded (`ollama stop <model>`). `ollama.think: false` keeps
+reasoning models from thinking before they answer, which keeps the spoken replies fast.
 
 The Ollama server must be reachable at `ollama.host` and `ollama.port`. For a server on another
 computer, open an SSH tunnel so that it answers at `localhost:11434`
@@ -92,13 +94,12 @@ questions, which are the usual candidates:
 | Questionnaire | `map_scale_answer` |
 | Cancellation (every strategy) | `detect_cancel_intent`, `classify_cancel_reply` |
 
-A generation method (e.g. `generate_response`) can be routed too; it then uses the generation
-session of the routed model. `extract_slots` is accepted as another name of `extract_turn`. An
+A generation method (e.g. `generate_response`) can be routed too. `extract_slots` is accepted as another name of `extract_turn`. An
 entry that names no question stops `interaction_intelligence` at startup, with the list of the
 valid names.
 
-Every routed model must be on the same server as the main one, and pulled. The gateway loads only
-`ollama.model` at startup, so the first question to a routed model also waits for it to load.
+Every routed model must be on the same server as the main one, and pulled. Only `ollama.model` is
+loaded at startup, so the first question to a routed model also waits for it to load.
 Both models then stay loaded if they fit together in the GPU memory and the server allows two
 loaded models (`OLLAMA_MAX_LOADED_MODELS`); otherwise Ollama swaps them at every change of model,
 which works but adds the load time to the latency ([GPU_SERVER.md](GPU_SERVER.md)).
@@ -110,28 +111,24 @@ because the LLM-led condition they compare against has a single prompt and canno
 
 ## Cloud providers
 
-The gateway also has Gemini, Claude and OpenAI (or any OpenAI-compatible server, such as vLLM or
+The interpretation server also has Gemini, Claude and OpenAI (or any OpenAI-compatible server, such as vLLM or
 LM Studio, through `openai.base_url`). They are paid per token. To hold the conversations with one
 of them:
 
 1. Put its API key in the environment of the terminal that starts the stack: `GEMINI_API_KEY`,
    `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
-2. In `app_params.yaml`, enable it in `llm_manager_node` (`gemini.enable: true`, ...) and set its
-   `model` if needed.
+2. In `app_params.yaml`, set its `model` in `llm_manager_node` if needed (`gemini.model`, ...).
 3. Set `llm_provider` of `interaction_intelligence` to `gemini`, `claude` or `openai`
    (`llm_model` empty: the provider's `model`).
 
-Routes then name models of that provider. Ollama can stay enabled: a provider that does not
-connect at startup is left out with a warning.
-
-The providers' Python packages are in `ros2_llm_manager/config/requirements.txt`. The pixi
-environment includes `openai` and `google-genai`; for Claude, add `anthropic`
-(`pixi add --pypi anthropic`, [PIXI.md](PIXI.md#what-the-configuration-contains)).
+Routes then name models of that provider. With `ollama.enable: false` no local model is loaded
+at the start. The server's backends speak HTTP with the standard library: no SDK is needed.
 
 ## Structured output
 
-Every understanding question carries a JSON schema of its answer, and the gateway passes it to
-the provider so that the answer has the fields and types the question expects:
+Every understanding question carries a JSON schema of its answer, and the interpretation server
+passes it to the provider (the `llm_manager` dialect of its backends, the request of the former
+gateway) so that the answer has the fields and types the question expects:
 
 | Provider | How the schema is enforced |
 |---|---|

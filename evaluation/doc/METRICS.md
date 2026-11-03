@@ -449,5 +449,5 @@ script of the repository computes them yet.
 
 In the twin of E4, `judge_runs.py --summary` computes the response to each detour.
 
-The token use of a cloud system model is not stored in the dialogue records: the LLM gateway does
-not report it to the runner.
+The token use of a cloud system model is not stored in the dialogue records: the system does not
+report it to the runner (the interpretation server's call log has it).

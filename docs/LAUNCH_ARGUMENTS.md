@@ -8,8 +8,9 @@ and [CONFIGURATION.md](CONFIGURATION.md) lists the parameters of the nodes.
 
 ### The whole stack: `interaction_system main.launch.py`
 
-This launch file starts the speech capability, the LLM gateway (`llm_manager_node`) and the
-interaction system (`interaction_system.launch.py`), all with the same parameter file. The GUI
+This launch file starts the speech capability and the interaction system
+(`interaction_system.launch.py`, with its interpretation server), all with the same parameter
+file. The GUI
 starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `tts` and
 `whisper_model` of its Configuration page.
 
@@ -21,7 +22,7 @@ starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `
 | `whisper_model` | `small` | Whisper model of simple_hri: `tiny`, `base`, `small`, `medium`, `large-v3` |
 | `input_device` | `''` | The microphone of `stt_faster_whisper` (its `input_device`): a sounddevice device name; empty: PortAudio's default. `stt_whisper` ignores it |
 | `language` | `''` | The language of the conversation: a language file, by code or name (`en`, `es`, `English`, `Spanish`). Empty: the intelligence's `language` of the parameter files, or English if none |
-| `params_file` | `''` (`config/app_params.yaml` of `interaction_system`) | The parameters of the LLM gateway, the intelligence and the orchestrator |
+| `params_file` | `''` (`config/app_params.yaml` of `interaction_system`) | The parameters of the intelligence and the orchestrator, and the model binding of the interpretation server |
 | `config_file` | `''` (`config/interaction_behaviors_config.yaml`) | The behavior_architecture runtime: the orchestrator and the runners (e.g. the trees of an ablation) |
 | `catalog_file` | `''` (`config/interaction_orchestrator_params.yaml`) | The catalog of dialogue behaviors and the default limits |
 
@@ -46,8 +47,12 @@ sets the intelligence's `language` whatever the files say.
 ### Only the interaction system: `interaction_system interaction_system.launch.py`
 
 This launch file starts `mission_executor` (the orchestrator and the runners of the dialogue
-behaviors, in one process) and `/interaction_intelligence`. The speech capability and the LLM
-gateway are started separately.
+behaviors, in one process), `/interaction_intelligence` and behavior_architecture's
+`/interaction/interpretation_server`, which asks the model the intelligence's questions, with
+its parameters written from the parameter files
+([CONFIGURATION.md](CONFIGURATION.md#the-interpretation-server)). When the Ollama provider is
+enabled, `interpretation_warmup` loads `ollama.model` into the server's memory and exits. The
+speech capability is started separately.
 
 | Argument | Default value | Description |
 |---|---|---|
@@ -56,8 +61,15 @@ gateway are started separately.
 | `catalog_file` | `config/interaction_orchestrator_params.yaml` | The catalog and the default limits of the orchestrator; `params_file` is applied after it |
 | `prompts_file` | `config/prompts.yaml` of `interaction_intelligence` | The prompt templates ([PROMPTS.md](PROMPTS.md)) |
 | `language` | `''` | The language of the conversation for the LLM, e.g. `English`, `Spanish` (empty: `language` of the parameter files) |
+| `interpretation` | `true` | Start the interpretation server (`false`: another one serves the questions, at the intelligence's `interpretation_service`) |
+| `interpretation_log_dir` | `''` | Directory of the server's call log, `calls.jsonl` (empty: none) |
 
-## The LLM gateway: `ros2_llm_manager llm_manager.launch.py`
+No server is started when the intelligence uses a test double (`llm_client_factory`) or no
+provider is configured.
+
+## The former LLM gateway: `ros2_llm_manager llm_manager.launch.py`
+
+The interaction system no longer starts or uses it.
 
 | Argument | Default value | Description |
 |---|---|---|

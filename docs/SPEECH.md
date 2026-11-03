@@ -61,7 +61,7 @@ the intelligence also listens to (`transcription_topics`).
 ## Using your robot's own speech
 
 Start the interaction system without speech nodes (`main.launch.py speech:=none`, or
-`interaction_system.launch.py` and the gateway) and let your robot serve simple_hri's interface:
+or `interaction_system.launch.py`) and let your robot serve simple_hri's interface:
 the actions `/stt_action` (`simple_hri_interfaces/action/Listen`) and `/tts_action`
 (`simple_hri_interfaces/action/Say`), and the transcriptions on a topic of the intelligence's
 `transcription_topics` (`/listened_text` by default).

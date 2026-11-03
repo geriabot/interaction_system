@@ -44,7 +44,6 @@ the documents it links to.
 | Other speech engines (Whisper, MMS-TTS) | `ros2 launch interaction_system main.launch.py stt:=whisper tts:=mms whisper_model:=medium` |
 | Without speech nodes (simulation, or the robot's own speech) | `ros2 launch interaction_system main.launch.py speech:=none` |
 | Only the interaction system | `ros2 launch interaction_system interaction_system.launch.py` |
-| The LLM gateway alone | `ros2 launch ros2_llm_manager llm_manager.launch.py` |
 | The LLM-led conversation (the baseline of the evaluation) | `ros2 launch interaction_ablations llm_led.launch.py` |
 | User perception | `ros2 launch interaction_perception interaction_perception.launch.py image_topic:=<camera topic>` |
 | The web GUI | `./src/interaction_system/gui.sh` (<http://localhost:5173>) |
@@ -118,7 +117,7 @@ ros2 lifecycle get /interaction_orchestrator           # active
 ros2 action list | grep -E "execute_task|stt_action|tts_action"
 ros2 service list | grep -E "interaction|llm"
 curl -s localhost:11434/api/version                    # Ollama answers
-ps -eo pid,cmd | grep -E "mission_executor|interaction_intelligence|llm_manager"   # leftovers of a previous run
+ps -eo pid,cmd | grep -E "mission_executor|interaction_intelligence|interpretation_server"   # leftovers of a previous run
 ```
 
 [VALIDATION_AND_TROUBLESHOOTING.md](docs/VALIDATION_AND_TROUBLESHOOTING.md) lists symptoms and

@@ -1,22 +1,24 @@
 # The questions to the LLM
 
 This page describes the questions the interaction system asks the LLM: the template of each,
-the skill that asks it, how its answer is handled, and how to change them. Every question is built from a template of
-`interaction_system_core/interaction_intelligence/config/prompts.yaml` (parameters `prompts.*` of
-`/interaction_intelligence`) by `PromptBuilder`, and asked by `LLMDialogClient` in the
-conversation's understanding or generation session. The trees never write prompts: they ask the
+the skill that asks it, how its answer is handled, and how to change them. Every question is
+built from a template of `interaction_system_core/interaction_intelligence/config/prompts.yaml`
+(parameters `prompts.*` of `/interaction_intelligence`) by `PromptBuilder`, asked by
+`LLMDialogClient` and answered by the interaction system's interpretation server, which builds
+the same prompt with `PromptBuilder` from the arguments that the client sends
+([ARCHITECTURE.md](ARCHITECTURE.md#the-interpretation-server)). The trees never write prompts: they ask the
 intelligence a skill, and the skill asks the questions below
 ([ARCHITECTURE.md](ARCHITECTURE.md#the-interaction-intelligence)). Which model answers each
 question is in [MODELS.md](MODELS.md).
 
 ## Understanding and generation
 
-- **Understanding** questions are classifications or extractions. They go to the understanding
-  session with a JSON schema (enforced by the provider; with Ollama, at temperature 0, so the same
+- **Understanding** questions are classifications or extractions. They are asked with a JSON
+  schema (enforced by the provider; with Ollama, at temperature 0, so the same
   utterance always gets the same answer), are parsed tolerantly, validated (the slot exists, the
   value has the slot's type, is allowed and within range), retried once on an unusable answer, and
   fall back to a safe answer.
-- **Generation** questions ask for one utterance. They go to the generation session (the model's
+- **Generation** questions ask for one utterance. They are asked without a schema (at the model's
   temperature), are retried when the answer is too short, and fall back to a fixed phrase of the
   conversation's language (the `phrases` of its language file,
   [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md); editable in the GUI's Strategies page, or as
@@ -139,8 +141,8 @@ Templates that use the context get the `[CONTEXT]` block after their fixed instr
 domain, the resources that are not hidden (a role play's scene is hidden), and the user's emotion
 only when `user_state_service` is set (off by default) and the emotion is notable (not neutral,
 confident enough and recent). Each template puts its fixed instructions first and the data of the
-turn last, so that the leading part is the same across turns: its length is sent as
-`cache_prefix_len` on `/llm/inference`, and providers that cache prompt prefixes reuse it. Keep
+turn last, so that the leading part is the same across turns: providers that cache
+prompt prefixes (Ollama, OpenAI) reuse it. Keep
 new templates in that order.
 
 ## Changing the questions

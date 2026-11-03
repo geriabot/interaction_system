@@ -2,7 +2,8 @@
 
 This page explains how the interaction system is built and why: the layers of the capability,
 the state machine of a request, the nodes, the processing of one request node by node, how the
-Behavior Trees and the interaction intelligence divide the work, and the LLM gateway. Each
+Behavior Trees and the interaction intelligence divide the work, and the interpretation server
+that asks the model. Each
 dialogue behavior and each shared mechanism has its own page in
 [docs/behaviors](behaviors/README.md). The parameters and configuration files are described in
 [CONFIGURATION.md](CONFIGURATION.md), and every topic, service and action in
@@ -39,7 +40,8 @@ that is going nowhere instead of prolonging it.
 | Coordination | An FSM, the task plan | An FSM, the life of a request (below) | `/interaction_orchestrator`, a `BaseOrchestrator` |
 | Action | The behavior forest: one tree per phase of the task | One tree per dialogue behavior, each in its own `BehaviorRunner` (a lifecycle node); only the chosen one is active | `interaction_system_behaviors/behavior_tree_xml/*.xml` |
 | Capabilities | Perception, navigation, interaction, attention | Speech (speech-to-text and text-to-speech) and user perception (lip activity; emotion, preliminary); the embodiment follows the conversation's signals | simple_hri, `interaction_perception`, `robots/nao` |
-| External service | — | The LLM, asked which dialogue behavior fits a request (by the FSM) and the narrow questions of the dialogue behaviors (by the trees). The LLM is interchangeable | `/interaction_intelligence`, `ros2_llm_manager` |
+| Interpretation | A column beside the layers that consult it: it answers narrow questions about unstructured input and commands nothing | behavior_architecture's interpretation server, configured with the system's questions: which dialogue behavior fits a request (asked for the FSM) and the narrow questions of the dialogue behaviors (asked for the trees). It asks the model; what to do with the answer is decided by the skill that asked | `/interaction/interpretation_server`, `config/interpretation/` of `interaction_intelligence` |
+| External service | — | The LLM behind the interpretation server, interchangeable (Ollama, OpenAI-compatible APIs, Gemini, Claude) | — |
 
 For the rest of the robot, the interaction system is one more capability, with the same
 interface as any other:
@@ -83,8 +85,8 @@ One conversation runs at a time, because the robot has one microphone and one vo
 arrives while another is being prepared or run is rejected. Canceling the goal deactivates the
 runner, which halts the tree (and with it the voice and the listening) and returns `canceled`.
 Deactivating the orchestrator aborts the running conversation. When a conversation ends, the
-orchestrator asks the intelligence for the skill `finish`, which cancels the pending LLM calls of
-the conversation, deletes its LLM sessions and closes its transcript.
+orchestrator asks the intelligence for the skill `finish`, which cancels the questions of the
+conversation still in progress in the interpretation server and closes its transcript.
 
 ### Why this design
 
@@ -124,8 +126,8 @@ or in VS Code with the Draw.io Integration extension, and save it to the same fi
 |---|---|---|
 | Interaction system (`interaction_system`) | `/interaction_orchestrator` | Serves `/dialog/execute_task`, chooses the dialogue behavior, activates its runner, writes the request to the blackboard, sends the feedback and the result, and publishes `/interaction_system/status` |
 | | Behavior runners (`/interaction_slot_filling`, `/interaction_explanation`, `/interaction_quiz`, `/interaction_procedure`, `/interaction_roleplay`, `/interaction_grounded_qa`, `/interaction_questionnaire`) | One lifecycle node per dialogue behavior, which ticks its Behavior Tree while active |
-| | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior with the LLM, applies what was understood to the state of the conversation, and writes the transcript |
-| LLM gateway (`ros2_llm_manager`) | `/llm_manager_node` | One inference action and session services in front of Ollama and cloud providers |
+| | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior: asks their questions to the interpretation server, applies the answers to the state of the conversation, and writes the transcript. It talks to no model itself |
+| | `/interaction/interpretation_server` (behavior_architecture) | Builds the prompt of each question from the system's templates and the arguments it receives, asks the model of the question's route, and returns its text |
 | Speech capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and speaks on request ([SPEECH.md](SPEECH.md)) |
 | Perception (`interaction_perception`) | `/user_state_server`, `/emotion_detector`, `/lip_activity_detector_node` | The state of the user, served on request; the lip activity as a stream for barge-in |
 
@@ -134,10 +136,11 @@ is a plugin of `behavior_architecture` (`mission_executor`), loaded from
 `libinteraction_system.so`. Each behavior runner ticks its tree every 50 ms
 (`control_period_ms`) and reports the result on `/behavior_status`; the tree nodes
 (`libinteraction_system_behaviors_bt_plugins.so`) share one ROS node,
-`/interaction_system_bt_node`. For each skill, the intelligence builds the question from the
-prompt templates, sends it to the LLM gateway in the conversation's understanding or generation
-session, parses and validates the answer, and falls back to a safe answer when the LLM fails. It
-also cleans the transcriptions (drops noise).
+`/interaction_system_bt_node`. For each question of a skill, the intelligence sends the
+interpretation server the question's name and the arguments of its prompt; the server builds the
+prompt from the prompt templates, asks the model and returns its text, which the intelligence
+parses and validates, falling back to a safe answer when the LLM fails. It also cleans the
+transcriptions (drops noise).
 
 ## A request, node by node
 
@@ -161,13 +164,12 @@ sequenceDiagram
   participant O as /interaction_orchestrator
   participant T as runner + Behavior Tree
   participant I as /interaction_intelligence
-  participant M as LLM (/llm/inference)
+  participant M as interpretation server and LLM
   participant S as speech capability
   C->>O: /dialog/execute_task (task, dialog_mode)
   O->>O: the behavior of the mode (SlotFilling)
   O->>T: the request in the blackboard, activate the runner
   T->>I: begin (the request); closing (error: the line kept for a failure)
-  I->>M: create the understanding and generation sessions
   T->>I: slot_filling.prepare
   I->>M: create_frame (understanding), audit_frame
   T->>I: slot_filling.opening
@@ -187,7 +189,7 @@ sequenceDiagram
   T->>I: result (the outcome and its reason)
   T-->>O: SUCCESS (/behavior_status)
   O-->>C: result (success, outcome, final_frame_json, total_turns)
-  O->>I: finish (sessions deleted, transcript closed)
+  O->>I: finish (questions in progress cancelled, transcript closed)
 ```
 
 Along the way:
@@ -342,7 +344,8 @@ decides by parsing the resources, without the LLM (`interaction_intelligence/sel
 
 Slot filling and explanation need nothing, so they are always offered. If one dialogue behavior
 is offered, it is chosen; if several are, the LLM chooses among them from their explanations
-(prompt `choose_dialogue_behavior`). An answer that is not an offered dialogue behavior falls
+(the question `choose_dialogue_behavior` of the interpretation server, with the system's
+template and its answer field `behavior_id`). An answer that is not an offered dialogue behavior falls
 back to slot filling (or to the first offered one). If none is offered, the request is aborted.
 The orchestrator only accepts an offered dialogue behavior. The catalog is configured as
 described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behaviors).
@@ -353,7 +356,8 @@ described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behavio
 
 - `/interaction/ask_intelligence_for_behavior`: the choice above.
 - `/interaction/ask_intelligence`: one *skill* of a tree, which is either one narrow question to
-  the LLM or one deterministic operation on the data of the conversation. It receives the state
+  the LLM (asked to the interpretation server) or one deterministic operation on the data of the
+  conversation. It receives the state
   of the conversation and returns it updated, with the reply, a label, the phase and the data.
 
 | Skills | Described in |
@@ -369,20 +373,19 @@ described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behavio
 | `roleplay.open`, `.open_direct`, `.classify`, `.reply`, `.repeat`, `.coach`, `.finish` | [Role play](behaviors/roleplay.md) |
 | `grounded_qa.open`, `.open_direct`, `.answer` | [Grounded question answering](behaviors/grounded_qa.md) |
 | `questionnaire.open`, `.ask`, `.record`, `.clarify`, `.options`, `.unanswered`, `.finish` | [Questionnaire](behaviors/questionnaire.md) |
-| `finish` | Asked by the orchestrator when a conversation ends: cancel its LLM calls, delete its sessions, close its transcript |
+| `finish` | Asked by the orchestrator when a conversation ends: cancel its questions in progress, close its transcript |
 
 The skills live in `interaction_intelligence/skills/`, one module per dialogue behavior and
 `common.py` for the shared ones. [PROMPTS.md](PROMPTS.md) lists the prompt that each skill uses.
 Additional skills (for a new dialogue behavior or an ablation) are loaded from Python modules
 with the parameter `skill_modules` ([ADDING_DIALOGUE_BEHAVIORS.md](ADDING_DIALOGUE_BEHAVIORS.md)).
 
-### LLM sessions
+### Questions to the model
 
-Each conversation has two LLM sessions, created at `begin` and deleted at `finish`: one for
-understanding (stateless, every call with a JSON schema) and one for generation (utterances). As
-a result, extraction prompts never enter the generation context. The parameter `routes` sends
-some questions to a different model (e.g. the extraction to a stronger one); the conversation
-then has one more pair of sessions per routed model
+Every question is asked on its own, with everything its prompt needs: no conversation history is
+kept in the model, so extraction prompts never enter the context of a generated line. The
+understanding questions carry a JSON schema; the generated lines carry none. The parameter
+`routes` sends some questions to a different model (e.g. the extraction to a stronger one)
 ([MODELS.md](MODELS.md#one-model-per-question-routes)).
 
 ### Context
@@ -444,21 +447,32 @@ The wait for the LLM is bounded in three ways
 A sustained failure therefore ends in one of the shared endings (`breakdown` or `error`) rather
 than in a loop or in silence ([Endings and outcome](behaviors/endings.md)).
 
-## The LLM gateway (`ros2_llm_manager`)
+## The interpretation server
 
-One node hides every provider behind `/llm/inference` (an action, with token streaming in its
-feedback) and the session services. A session pins a provider, a model, a system prompt and
-whether it keeps history. The interaction system uses stateless sessions with Ollama; Gemini,
-Claude, OpenAI and any OpenAI-compatible server remain available. [MODELS.md](MODELS.md)
-explains which model answers each question and how to change it.
+The questions to the model are answered by behavior_architecture's interpretation server
+([INTERPRETATION.md](https://github.com/geriabot/behavior_architecture/blob/devel/docs/INTERPRETATION.md)),
+which `interaction_system.launch.py` starts in the namespace `interaction` with the interaction
+system's own configuration:
 
-| Provider | Type | Constrained JSON | Notes |
-|---|---|---|---|
-| Ollama | Local or a GPU server | `format` | HTTP keep-alive pool; model pre-warming on startup; `think: false` for reasoning models |
-| Gemini, Claude, OpenAI | Cloud | Server-side | API keys from the environment ([CONFIGURATION.md](CONFIGURATION.md#llm_manager_node)) |
+| Part | Where | What it holds |
+|---|---|---|
+| Questions | `interaction_intelligence/config/interpretation/questions.yaml` | One question per method of `LLMDialogClient` that asks the model: its template, its token cap, whether it is a spoken line (`parse: text`, no schema) or an understanding question (with its JSON schema), and the variant `reasoning` of the questions on which the model may reason |
+| Question module | `interaction_intelligence/interpretation_questions.py` | `DialogueQuestion`: the prompt and the schema written by `PromptBuilder` from the arguments in the request's context, and the model's text returned as it is |
+| Context | `interaction_intelligence/interpretation_context.py` | How the client sends the arguments of a prompt (the frame, the context of the dialogue, the histories...) and how the server reads them |
+| Templates | `interaction_intelligence/config/prompts.yaml`, and the `prompts.*` of the parameter files | The prompt templates ([PROMPTS.md](PROMPTS.md)) |
+| Routes | written by the launch file (`interpretation_config.py`) | The model of each question, from the model binding ([CONFIGURATION.md](CONFIGURATION.md#the-interpretation-server)) |
 
-Adding a provider means implementing `BaseProvider` (`connect`, `ensure_model_ready`, `generate`)
-and registering it in the node's startup ([ros2_llm_manager](../ros2_llm_manager/README.md)).
+What the skills do with an answer stays in the intelligence: `LLMDialogClient` reads the
+model's text, validates it, retries, falls back and keeps the limits of the reply's time budget,
+and the skills apply the result to the state of the conversation. The server keeps no state and
+decides nothing. The choice of the dialogue behavior is one more question
+(`choose_dialogue_behavior`, with the system's template and its field `behavior_id`); the filter
+of the catalog by the material of the request stays in the intelligence (`selection.py`).
+
+The server's backends cover Ollama (local or on a GPU server), OpenAI and any OpenAI-compatible
+server, Gemini and Claude; API keys are read from the environment.
+[MODELS.md](MODELS.md) explains which model answers each question and how to change it. The
+former LLM gateway (`ros2_llm_manager`) is still in the repository, but it is no longer started.
 
 ## Speech, perception and embodiment
 
@@ -477,8 +491,8 @@ and registering it in the node's startup ([ros2_llm_manager](../ros2_llm_manager
 ## The web GUI (`dialostack_gui`)
 
 The GUI is a React single-page app with a small Python server (`server.py`). The server turns the
-GUI configuration into a ROS parameter file (the parameters of the LLM gateway, the intelligence
-and the orchestrator) and the speech choices into launch arguments, starts and stops the whole
+GUI configuration into a ROS parameter file (the model binding, the intelligence and the
+orchestrator) and the speech choices into launch arguments, starts and stops the whole
 stack (`main.launch.py`), and serves the default prompts and phrases. The page talks to ROS
 through rosbridge.
 
