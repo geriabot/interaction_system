@@ -3,8 +3,8 @@
 #
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
-"""The whole stack: the speech capability, the LLM gateway and the interaction system, with
-the shared app_params.yaml. This is what the GUI starts.
+"""The whole stack: the speech capability and the interaction system (with its interpretation
+server, which asks the model), with the shared app_params.yaml. This is what the GUI starts.
 
   ros2 launch interaction_system main.launch.py                     # simple_hri, English
   ros2 launch interaction_system main.launch.py language:=es        # Spanish
@@ -115,14 +115,10 @@ def launch_setup(context):
         raise RuntimeError(
             f"Unknown speech capability '{speech}': simple_hri or none")
 
+    # The model binding (llm_manager_node's parameters of app_params.yaml) configures the
+    # interpretation server that interaction_system.launch.py starts; the former gateway
+    # (ros2_llm_manager) is not started
     return speech_nodes + [
-        Node(
-            package='ros2_llm_manager',
-            executable='llm_manager_node',
-            name='llm_manager_node',
-            output='screen',
-            parameters=[app_params] + extra,
-        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(pkg_dir, 'launch', 'interaction_system.launch.py')),

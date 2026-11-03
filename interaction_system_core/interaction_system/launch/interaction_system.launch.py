@@ -3,19 +3,72 @@
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
 """The interaction system: the orchestrator and the dialogue behaviors (one process,
-behavior_architecture's mission_executor) and the interaction intelligence.
+behavior_architecture's mission_executor), the interaction intelligence and the interpretation
+server that asks the model its questions (behavior_architecture's interpretation_server, in the
+namespace `interaction`: /interaction/interpretation/interpret).
 
-The speech capability (simple_hri) and the LLM gateway
-(llm_manager_node) are started apart: main.launch.py starts everything.
+The server is configured from the same parameter files (interaction_intelligence's
+interpretation_config.py): its routes from the model binding (llm_manager_node's parameters)
+and the intelligence's llm_provider, llm_model and routes, its questions and question module
+from interaction_intelligence (and interaction_ablations, for the LLM-led baseline), its
+templates from prompts.yaml. interpretation:=false starts no server (another one serves the
+questions, or the intelligence uses a test double: llm_client_factory).
+
+The speech capability (simple_hri) is started apart: main.launch.py starts everything.
 """
 
 import os
 
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+from interaction_intelligence.interpretation_config import server_parameters, warmup_of
+
+
+def interpretation_server(context, params_files: list[str]) -> list:
+    """The interpretation server of the interaction system, with its parameters written from
+    the parameter files (and a log line per warning)."""
+    intelligence_dir = get_package_share_directory('interaction_intelligence')
+    try:
+        ablation = os.path.join(get_package_share_directory('interaction_ablations'),
+                                'config', 'interpretation', 'questions.yaml')
+    except PackageNotFoundError:
+        ablation = ''
+    parameters, warnings = server_parameters(
+        params_files,
+        questions_file=os.path.join(intelligence_dir, 'config', 'interpretation',
+                                    'questions.yaml'),
+        prompts_file=LaunchConfiguration('prompts_file').perform(context),
+        ablation_questions_file=ablation,
+        log_dir=LaunchConfiguration('interpretation_log_dir').perform(context))
+    messages = [LogInfo(msg=f'[interpretation] {w}') for w in warnings]
+    if parameters is None:
+        return messages
+    server = Node(
+        package='behavior_architecture',
+        executable='interpretation_server',
+        name='interpretation_server',
+        namespace='interaction',
+        output='screen',
+        emulate_tty=True,
+        parameters=[parameters],
+    )
+    nodes = messages + [server]
+    # The model loaded into the Ollama server's memory at the start, as the former gateway did
+    warmup = warmup_of(params_files)
+    if warmup:
+        nodes.append(Node(
+            package='interaction_intelligence',
+            executable='interpretation_warmup',
+            name='interpretation_warmup',
+            output='screen',
+            arguments=['--url', warmup['url'], '--model', warmup['model'],
+                       '--num-ctx', str(warmup['num_ctx'])],
+        ))
+    return nodes
 
 
 def launch_setup(context):
@@ -46,7 +99,10 @@ def launch_setup(context):
         parameters=[LaunchConfiguration('prompts_file').perform(context)] + params
         + intelligence_override,
     )
-    return [mission_executor, intelligence]
+    nodes = [mission_executor, intelligence]
+    if LaunchConfiguration('interpretation').perform(context).lower() in ('true', '1', 'yes'):
+        nodes += interpretation_server(context, params)
+    return nodes
 
 
 def generate_launch_description():
@@ -69,6 +125,13 @@ def generate_launch_description():
             'prompts_file',
             default_value=os.path.join(intelligence_dir, 'config', 'prompts.yaml'),
             description='Templates of the questions to the LLM (prompts.*)'),
+        DeclareLaunchArgument(
+            'interpretation', default_value='true',
+            description='Start the interpretation server that asks the model the questions of '
+                        'the intelligence (false: another one serves them)'),
+        DeclareLaunchArgument(
+            'interpretation_log_dir', default_value='',
+            description="Directory of the interpretation server's call log (empty: none)"),
         DeclareLaunchArgument(
             'language', default_value='',
             description='Language of the conversation for the LLM, e.g. English, Spanish '

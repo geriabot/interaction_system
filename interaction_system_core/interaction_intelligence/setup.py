@@ -32,6 +32,7 @@ setup(
     entry_points={
         "console_scripts": [
             "interaction_intelligence = interaction_intelligence.intelligence_node:main",
+            "interpretation_warmup = interaction_intelligence.interpretation_warmup:main",
         ],
     },
 )

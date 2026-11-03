@@ -22,7 +22,6 @@
 
   <exec_depend>interaction_system_behaviors</exec_depend>
   <exec_depend>interaction_intelligence</exec_depend>
-  <exec_depend>ros2_llm_manager</exec_depend>
   <exec_depend>simple_hri</exec_depend>
 
   <export>
