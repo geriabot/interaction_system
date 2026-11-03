@@ -12,7 +12,7 @@ exactly as before. These tools check it.
 | 1 | The workspace builds. | `colcon build` |
 | 2 | The existing tests pass unchanged: the unit tests of the interaction intelligence, the light evaluation tests and the system tests. | `pytest` |
 | 3 | For every question, the HTTP body that reaches the model's server is the same through both paths, in English and Spanish. | `bodies.py`, `test_bodies.py` |
-| 4 | Replaying recorded model answers through both paths gives the same decisions (labels, data, endings), decision by decision. | |
+| 4 | Replaying recorded model answers through both paths gives the same decisions (labels, data, endings), decision by decision. | `answers.py` (how the answers read) |
 | 5 | Under model failures (errors, wrong answers, hangs, time limits, the reply's budget) the behavior is the same. | |
 | 6 | The latency added with an instant model is not appreciably higher (median, p95). | |
 
@@ -65,3 +65,26 @@ order: the openai SDK writes `model`, `stream`, `messages` and then the other ke
 alphabetical order (`max_completion_tokens`, `reasoning_effort`, `response_format`,
 `stream_options`), while the server's `llm_manager` dialect writes them in the order it builds
 them. The Gemini and Claude providers of the former gateway are not compared.
+
+## Criterion 4: how the recorded answers read
+
+The client reads the answer of an understanding question with `utils.parse_loose_json` and a
+spoken line as its text. The interpretation server reads every answer as a JSON object
+(`parse: loose` or `strict`); an answer it cannot read is `invalid`, and the client does not
+receive its text. `answers.py` reads the answers recorded in the dialogue records
+(`model_calls`, written with `record_model_calls`) both ways:
+
+```bash
+python3 answers.py ../results/debug_round1 ../results/debug_round2 ...
+```
+
+On the debugging rounds 1 to 8 (72,624 calls with an answer):
+
+| Answers | Calls | Read the same |
+|---|---|---|
+| Understanding questions (JSON) | 52,189 | all: 51,581 the same object, 608 unreadable by both |
+| Spoken lines (no schema) | 20,435 | none: the server rejects every one (not a JSON object) |
+
+The spoken lines cannot reach the client through the server as it is: the server needs a way
+to return the model's text without reading it as JSON before the generation questions can move
+to it.
