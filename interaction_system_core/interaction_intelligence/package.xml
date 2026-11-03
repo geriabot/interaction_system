@@ -3,28 +3,27 @@
 <package format="3">
   <name>interaction_intelligence</name>
   <version>0.1.0</version>
-  <description>The interaction intelligence: builds the questions of the interaction system to the LLM (choosing the dialogue behavior, understanding the user, phrasing the replies), parses the answers and falls back when the model fails. Keeps no dialogue state.</description>
+  <description>The interaction intelligence: runs the skills of the interaction system: asks its questions to the model through behavior_architecture's interpretation server (choosing the dialogue behavior, understanding the user, phrasing the replies), reads the answers, applies them and falls back when the model fails. Keeps no dialogue state.</description>
   <maintainer email="rodrigo.perez@urjc.es">Rodrigo Pérez-Rodríguez</maintainer>
   <license>MIT</license>
   <author email="aquintana.camacho@proton.me">Álvaro Quintana</author>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
-  <depend>ros2_llm_interfaces</depend>
+  <!-- The interpretation server's services (Interpret, CancelInterpretation); the server
+       (behavior_interpretation) loads the question module
+       interaction_intelligence.interpretation_questions -->
+  <depend>behavior_architecture</depend>
   <depend>interaction_system_interfaces</depend>
   <depend>interaction_perception_msgs</depend>
   <!-- The language files (config/languages): read with PyYAML, found in the share directory -->
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
-  <!-- The interpretation server (behavior_interpretation) loads the question module
-       interaction_intelligence.interpretation_questions -->
-  <exec_depend>behavior_architecture</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
-  <test_depend>behavior_architecture</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

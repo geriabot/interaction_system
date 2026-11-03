@@ -32,7 +32,7 @@ import time
 
 from .dialog_context import DialogContext, Resource, UserState
 from .dialog_frame import DialogFrame
-from .prompt_builder import PromptBuilder
+from .prompt_builder import Prompt, PromptBuilder
 
 # The questions: name -> (the PromptBuilder method that writes the prompt, the template it
 # fills, whether the answer is JSON (understanding) or a spoken line (generation)). The name is
@@ -239,3 +239,100 @@ def build_prompt(question: str, templates: dict, decoded: dict) -> tuple[str, di
         prompt, schema = out
         return prompt, schema
     return out, None
+
+
+# ==== THE CLIENT'S REQUESTS ====
+
+# The variant of the questions on which the model may reason (questions.yaml)
+REASONING_VARIANT = "reasoning"
+# The field of the server's answer that holds the model's text (parse: text, and the class's
+# parse() of the understanding questions)
+TEXT_FIELD = "text"
+
+
+class AskedPrompt(Prompt):
+    """A prompt that also says which question of the interpretation server asks it, and with
+    which context: what the client's transport sends instead of the prompt."""
+
+    question: str = ""
+    context: dict | None = None
+
+
+def ask_as(prompt: str, question: str, context: dict) -> AskedPrompt:
+    """The prompt, marked with its question and context (the cache prefix is kept)."""
+    asked = AskedPrompt(prompt)
+    asked.cache_prefix_len = getattr(prompt, "cache_prefix_len", 0)
+    asked.question = question
+    asked.context = context
+    return asked
+
+
+def asked_question(prompt) -> tuple[str, dict] | None:
+    """(question, context) of a prompt marked by ask_as(), else None."""
+    question = getattr(prompt, "question", "")
+    context = getattr(prompt, "context", None)
+    if not question or not isinstance(context, dict):
+        return None
+    return question, context
+
+
+class InterpretationPromptBuilder(PromptBuilder):
+    """PromptBuilder whose prompts are marked with the question that asks them and its context
+    (the dialogue's language and the method's arguments, encoded when the prompt is built), so
+    that the client's transport sends the question to the interpretation server. The prompt is
+    still written: the client's checks, the call records and the tests read it; the server
+    writes the same one (evaluation/equivalence)."""
+
+
+def _marking(method: str, question: str):
+    import inspect
+
+    original = getattr(PromptBuilder, method)
+    signature = inspect.signature(original)
+
+    def marked(self, *args, **kwargs):
+        out = original(self, *args, **kwargs)
+        bound = signature.bind(self, *args, **kwargs).arguments
+        bound.pop("self")
+        context = {"language": self._language, "args": encode_args(bound)}
+        if isinstance(out, tuple):
+            return (ask_as(out[0], question, context),) + tuple(out[1:])
+        return ask_as(out, question, context)
+
+    marked.__name__ = method
+    marked.__doc__ = original.__doc__
+    return marked
+
+
+for _question, (_method, _template, _kind) in QUESTIONS.items():
+    setattr(InterpretationPromptBuilder, _method, _marking(_method, _question))
+
+
+def interpret_request(prompt, request_id: str, max_tokens: int, think: bool,
+                      budget_s: float | None) -> dict:
+    """The fields of the Interpret request for a call of the client (the prompt marked by
+    ask_as(); its token cap; whether the model may reason; the time it may take, None for no
+    limit). ContextError for a prompt that is not marked."""
+    asked = asked_question(prompt)
+    if asked is None:
+        raise ContextError("The prompt does not say which question asks it (ask_as)")
+    question, context = asked
+    return {
+        "question": question,
+        "request_id": request_id or "",
+        "context": json.dumps(context, ensure_ascii=False),
+        "variant": REASONING_VARIANT if think else "",
+        "budget_s": float(budget_s) if budget_s is not None and budget_s > 0 else 0.0,
+        "max_tokens": int(max_tokens or 0),
+    }
+
+
+def answer_text(success: bool, answer: str, source: str) -> str | None:
+    """The model's text in the server's response, or None when there is none (a malformed
+    request, no answer in time, the model down, a cancelled call)."""
+    if not success or source == "invalid" or not answer:
+        return None
+    try:
+        return json.loads(answer)[TEXT_FIELD]
+    except (ValueError, KeyError, TypeError):
+        return None

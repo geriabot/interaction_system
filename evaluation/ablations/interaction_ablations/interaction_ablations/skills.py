@@ -19,6 +19,7 @@ skill_modules: ["interaction_ablations.skills"]; the method's code is not modifi
 """
 
 from interaction_intelligence.dialog_frame import DialogFrame
+from interaction_intelligence.interpretation_context import ask_as
 from interaction_intelligence.skills import (
     DialogueMode, SkillEnv, SkillInput, SkillResult, get_mode, register_mode, skill,
 )
@@ -197,7 +198,9 @@ def prompt_fields(env: SkillEnv, state: dict, now: str) -> dict:
 
 
 def _ask(env: SkillEnv, state: dict, now: str) -> dict:
-    prompt = PROMPT.format(**prompt_fields(env, state, now))
+    fields = prompt_fields(env, state, now)
+    # The question of the interpretation server that asks it (interpretation_questions.py)
+    prompt = ask_as(PROMPT.format(**fields), "monolithic_turn", {"fields": fields})
     for _ in range(2):
         raw = env.llm._call_nlu(prompt, SCHEMA, max_tokens=600)
         if not raw:

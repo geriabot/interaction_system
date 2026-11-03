@@ -17,7 +17,8 @@ import yaml
 from interaction_intelligence.dialog_context import DialogContext, Resource, UserState
 from interaction_intelligence.dialog_frame import DialogFrame
 from interaction_intelligence.interpretation_context import (
-    CLIENT_NAMES, QUESTIONS, ContextError, build_prompt, decode_context, encode_context,
+    CLIENT_NAMES, QUESTIONS, ContextError, InterpretationPromptBuilder, answer_text, ask_as,
+    asked_question, build_prompt, decode_context, encode_context, interpret_request,
     max_tokens_of, prompt_templates)
 from interaction_intelligence.llm_client import LLMDialogClient
 from interaction_intelligence.prompt_builder import PromptBuilder
@@ -74,6 +75,8 @@ def test_the_definitions_use_the_module_and_the_templates():
         assert spec["template"] == template and template in prompts, name
         assert spec["max_tokens"] > 0
         assert (spec.get("validate") == "object") == (kind == "json"), name
+        assert (spec.get("parse") == "text") == (kind == "text"), name
+        assert spec.get("allow_empty", False) == (kind == "text"), name
         reasoning = "reasoning" in (spec.get("variants") or {})
         assert reasoning == (name in LLMDialogClient.REASONING_QUESTIONS), name
         assert hasattr(PromptBuilder, method), name
@@ -164,7 +167,7 @@ def test_the_server_asks_with_the_prompt_of_prompt_builder(tmp_path):
     assert (calls[0]["prompt"], calls[0]["schema"]) == pb.classify_intent("yes", f, ctx)
     assert calls[0]["route"] == "reasoning" and calls[0]["source"] == "llm"
     assert calls[1]["prompt"] == pb.opening("order", f, ctx)
-    assert calls[1]["schema"] == {}
+    assert calls[1]["schema"] is None
     assert calls[2]["prompt"] == pb.judge_teach_back("x", [{"point": "a"}] * 2, "?")[0]
 
 
@@ -178,3 +181,38 @@ def test_a_malformed_context_is_a_malformed_request():
     result = server.interpret({"question": "get_opening",
                                "context": json.dumps({"args": {"nothing": 1}})})
     assert not result.success and "get_opening" in result.message
+
+
+def test_the_client_marks_each_prompt_with_its_question_and_context():
+    plain = PromptBuilder(templates(), language="Spanish")
+    marked = InterpretationPromptBuilder(templates(), language="Spanish")
+    f, ctx = frame(), context()
+    prompt, schema = marked.extract_slots("con avena", f, ctx)
+    assert (prompt, schema) == plain.extract_slots("con avena", f, ctx)
+    assert prompt.cache_prefix_len == plain.extract_slots("con avena", f, ctx)[0].cache_prefix_len
+    question, sent = asked_question(prompt)
+    assert question == "extract_turn" and sent["language"] == "Spanish"
+    assert build_prompt(question, templates(), decode_context(sent)) == (prompt, schema)
+    line = marked.roleplay_reply({"scenario": "s", "role": "r"}, [], None, avoid="¿Qué?")
+    assert asked_question(line)[0] == "roleplay_reply"
+    assert asked_question(line)[1]["args"]["avoid"] == "¿Qué?"
+    assert asked_question(plain.qa_opening("t")) is None
+
+
+def test_the_request_carries_the_call_of_the_client():
+    prompt = ask_as("Hi", "classify_intent", {"language": "English", "args": {}})
+    fields = interpret_request(prompt, "dialogue-1", 200, True, 7.5)
+    assert fields == {"question": "classify_intent", "request_id": "dialogue-1",
+                      "context": '{"language": "English", "args": {}}',
+                      "variant": "reasoning", "budget_s": 7.5, "max_tokens": 200}
+    no_limit = interpret_request(prompt, "", 0, False, None)
+    assert no_limit["budget_s"] == 0.0 and no_limit["variant"] == ""
+    with pytest.raises(ContextError):
+        interpret_request("a prompt without its question", "d", 10, False, 1.0)
+
+
+def test_the_answer_is_the_model_text_or_nothing():
+    assert answer_text(True, '{"text": " {\\"a\\": 1} "}', "llm") == ' {"a": 1} '
+    assert answer_text(True, '{"text": ""}', "llm") == ""
+    assert answer_text(True, "", "invalid") is None
+    assert answer_text(False, "", "") is None

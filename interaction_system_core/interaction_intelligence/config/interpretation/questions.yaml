@@ -7,16 +7,19 @@
 #
 #   template    the template of prompts.yaml that the prompt fills (PromptBuilder also inserts
 #               the shared rules, address_rule and list_slot_rule, and the [CONTEXT] block)
-#   max_tokens  the token cap of the answer (judge_teach_back: 120 + 60 per key point, set by
-#               the class)
-#   validate    object: the parsed answer is returned as it is, without checking fields (the
-#               client checks it, as it checked the former gateway's answers)
+#   max_tokens  the token cap of the answer when the request gives none (the client sends its
+#               own with every call; judge_teach_back: 120 + 60 per key point, set by the class)
+#   parse       text: a spoken line, asked without a schema; allow_empty: an empty line is
+#               returned too (the client asks again for a line too short to be said)
+#   validate    object: an understanding question, asked with its schema; the class returns
+#               the model's text without reading it
 #   variants    reasoning: the questions on which the model may reason (the client's
 #               REASONING_QUESTIONS, with reasoning "critical"), answered on the route
 #               `reasoning` (the same model, with think on)
 #
-# Every question has no retry and no fallback in the server: the client retries and falls
-# back as it did with the former gateway.
+# The answer of every question is the model's text, {"text": <the text>}: the client reads it,
+# validates it, retries and falls back as it did with the former gateway's answers. No question
+# has a retry or a fallback in the server: the client keeps its own.
 
 questions:
 
@@ -49,14 +52,20 @@ questions:
     class: DialogueQuestion
     template: opening
     max_tokens: 100
+    parse: text
+    allow_empty: true
   get_opening_direct:
     class: DialogueQuestion
     template: opening_direct
     max_tokens: 100
+    parse: text
+    allow_empty: true
   get_resume_opening:
     class: DialogueQuestion
     template: resume_opening
     max_tokens: 100
+    parse: text
+    allow_empty: true
   extract_turn:
     class: DialogueQuestion
     template: extract_slots
@@ -66,10 +75,14 @@ questions:
     class: DialogueQuestion
     template: generate_response
     max_tokens: 120
+    parse: text
+    allow_empty: true
   get_confirmation_question:
     class: DialogueQuestion
     template: ask_confirmation
     max_tokens: 150
+    parse: text
+    allow_empty: true
   classify_intent:
     class: DialogueQuestion
     template: classify_intent
@@ -81,10 +94,14 @@ questions:
     class: DialogueQuestion
     template: answer_confirmation_question
     max_tokens: 80
+    parse: text
+    allow_empty: true
   response_to_intent:
     class: DialogueQuestion
     template: response_to_intent
     max_tokens: 100
+    parse: text
+    allow_empty: true
 
   # ==== Explanation ====
 
@@ -92,10 +109,14 @@ questions:
     class: DialogueQuestion
     template: explanation_opening
     max_tokens: 300
+    parse: text
+    allow_empty: true
   generate_explanation_direct:
     class: DialogueQuestion
     template: explanation_opening_direct
     max_tokens: 300
+    parse: text
+    allow_empty: true
   extract_key_points:
     class: DialogueQuestion
     template: extract_key_points
@@ -112,26 +133,38 @@ questions:
     class: DialogueQuestion
     template: repair_explanation
     max_tokens: 200
+    parse: text
+    allow_empty: true
   targeted_question:
     class: DialogueQuestion
     template: targeted_question
     max_tokens: 60
+    parse: text
+    allow_empty: true
   ask_missing_points:
     class: DialogueQuestion
     template: ask_missing_points
     max_tokens: 80
+    parse: text
+    allow_empty: true
   answer_explanation_question:
     class: DialogueQuestion
     template: answer_explanation_question
     max_tokens: 150
+    parse: text
+    allow_empty: true
   rephrase_explanation:
     class: DialogueQuestion
     template: rephrase_explanation
     max_tokens: 300
+    parse: text
+    allow_empty: true
   understanding_confirmed_response:
     class: DialogueQuestion
     template: understanding_confirmed
     max_tokens: 80
+    parse: text
+    allow_empty: true
 
   # ==== Grounded question answering ====
 
@@ -139,6 +172,8 @@ questions:
     class: DialogueQuestion
     template: qa_opening
     max_tokens: 80
+    parse: text
+    allow_empty: true
   answer_from_material:
     class: DialogueQuestion
     template: answer_from_material
@@ -175,6 +210,8 @@ questions:
     class: DialogueQuestion
     template: quiz_opening
     max_tokens: 80
+    parse: text
+    allow_empty: true
   evaluate_quiz_answer:
     class: DialogueQuestion
     template: evaluate_quiz_answer
@@ -186,14 +223,20 @@ questions:
     class: DialogueQuestion
     template: quiz_rephrase_question
     max_tokens: 60
+    parse: text
+    allow_empty: true
   quiz_next_question:
     class: DialogueQuestion
     template: quiz_next_question
     max_tokens: 100
+    parse: text
+    allow_empty: true
   quiz_summary:
     class: DialogueQuestion
     template: quiz_summary
     max_tokens: 80
+    parse: text
+    allow_empty: true
 
   # ==== Procedure ====
 
@@ -201,10 +244,14 @@ questions:
     class: DialogueQuestion
     template: procedure_opening
     max_tokens: 80
+    parse: text
+    allow_empty: true
   procedure_step:
     class: DialogueQuestion
     template: procedure_step
     max_tokens: 150
+    parse: text
+    allow_empty: true
   classify_step_turn:
     class: DialogueQuestion
     template: classify_step_turn
@@ -216,18 +263,26 @@ questions:
     class: DialogueQuestion
     template: procedure_answer_question
     max_tokens: 150
+    parse: text
+    allow_empty: true
   procedure_help_step:
     class: DialogueQuestion
     template: procedure_help_step
     max_tokens: 200
+    parse: text
+    allow_empty: true
   procedure_remind:
     class: DialogueQuestion
     template: procedure_remind
     max_tokens: 60
+    parse: text
+    allow_empty: true
   procedure_summary:
     class: DialogueQuestion
     template: procedure_summary
     max_tokens: 80
+    parse: text
+    allow_empty: true
 
   # ==== Roleplay ====
 
@@ -235,10 +290,14 @@ questions:
     class: DialogueQuestion
     template: roleplay_intro
     max_tokens: 100
+    parse: text
+    allow_empty: true
   roleplay_reply:
     class: DialogueQuestion
     template: roleplay_reply
     max_tokens: 120
+    parse: text
+    allow_empty: true
   classify_roleplay_turn:
     class: DialogueQuestion
     template: classify_roleplay_turn
@@ -250,6 +309,8 @@ questions:
     class: DialogueQuestion
     template: roleplay_coach
     max_tokens: 120
+    parse: text
+    allow_empty: true
   evaluate_roleplay:
     class: DialogueQuestion
     template: evaluate_roleplay
@@ -279,7 +340,11 @@ questions:
     class: DialogueQuestion
     template: ask_cancel_confirmation
     max_tokens: 60
+    parse: text
+    allow_empty: true
   cancel_confirmed_response:
     class: DialogueQuestion
     template: cancel_confirmed_response
     max_tokens: 60
+    parse: text
+    allow_empty: true

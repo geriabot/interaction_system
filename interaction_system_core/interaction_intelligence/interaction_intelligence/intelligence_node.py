@@ -4,13 +4,16 @@
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
 """
-InteractionIntelligence: the node that asks the LLM what the interaction system needs.
+InteractionIntelligence: the node that runs the skills of the interaction system.
 
 The orchestrator asks it which dialogue behavior fits a request; the Behavior Trees ask it
 their skills (understand an utterance, phrase a reply, apply what was understood to the data
-of the dialogue). It builds each question from the prompt templates, sends it to the LLM
-gateway (ros2_llm_manager, an external service), parses the answer and falls back to a safe
-deterministic answer when the model fails. It keeps no state of the dialogue between calls.
+of the dialogue). Every question to the model is asked to behavior_architecture's
+interpretation server, which the interaction system launches with its own questions
+(config/interpretation/questions.yaml), templates (prompts.yaml) and question module
+(interpretation_questions.py): the server builds the prompt and asks the model; the node reads
+the model's answer, applies it and falls back to a safe deterministic answer when the model
+fails. It talks to no model itself and keeps no state of the dialogue between calls.
 
 Services:
   /interaction/ask_intelligence              (interaction_system_interfaces/srv/AskIntelligence)
@@ -33,14 +36,16 @@ Topics published:
 Downstream clients:
   /interaction_perception/get_user_state (GetUserState service, optional) — the state of
                          the user (emotion) for the context of the questions
-  /llm/inference         (LlmInference)
-  /llm/session/create    (CreateSession service)
-  /llm/session/delete    (DeleteSession service)
+  /interaction/interpretation/interpret (behavior_architecture/srv/Interpret) — the questions
+                         to the model (parameter interpretation_service)
+  /interaction/interpretation/cancel    (behavior_architecture/srv/CancelInterpretation) — the
+                         questions in progress of a dialogue that has ended
 """
 
 import importlib
 import json
 import logging
+import posixpath
 import string
 import threading
 import time
@@ -50,23 +55,22 @@ from pathlib import Path
 from typing import Callable
 
 import rclpy
-from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.time import Time
 from std_msgs.msg import String
 
-from ros2_llm_interfaces.action import LlmInference
-from ros2_llm_interfaces.srv import CreateSession, DeleteSession
+from behavior_architecture.srv import CancelInterpretation, Interpret
 from interaction_system_interfaces.srv import AskForDialogueBehavior, AskIntelligence
 from interaction_perception_msgs.srv import GetUserState
 
 from .dialog_context import DialogContext, Resource, UserState
 from .languages import LanguageFileError, UnknownLanguageError, load_language
+from .interpretation_context import (ContextError, InterpretationPromptBuilder, answer_text,
+                                     interpret_request)
 from .llm_client import (CallLimits, LLMDialogClient, default_ack_phrases,
                          default_filler_phrases, default_timeout_prompt)
-from .prompt_builder import PromptBuilder
 from .selection import choose_behavior
 from .skills import SkillEnv, SkillInput, get_mode, get_skill
 from .skills.common import parse_resources
@@ -99,20 +103,15 @@ class InteractionIntelligence(Node):
         self._make_llm = self._llm_factory()
 
         self._lock = threading.Lock()
-        self._sessions: dict[str, tuple[str, str]] = {}  # dialogue_id -> (nlu, nlg)
-        self._finished: set[str] = set()  # dialogues ended: their LLM calls are cancelled
+        self._finished: set[str] = set()  # dialogues ended: their questions are cancelled
         self._transcript_dialogue: str | None = None
 
         self._cb = ReentrantCallbackGroup()
-        self._llm_create = self.create_client(
-            CreateSession, "/llm/session/create", callback_group=self._cb
-        )
-        self._llm_delete = self.create_client(
-            DeleteSession, "/llm/session/delete", callback_group=self._cb
-        )
-        self._llm_action = ActionClient(
-            self, LlmInference, "/llm/inference", callback_group=self._cb
-        )
+        service = self.get_parameter("interpretation_service").value
+        cancel = (self.get_parameter("interpretation_cancel_service").value
+                  or posixpath.join(posixpath.dirname(service), "cancel"))
+        self._interpret = self.create_client(Interpret, service, callback_group=self._cb)
+        self._cancel = self.create_client(CancelInterpretation, cancel, callback_group=self._cb)
 
         self.create_service(
             AskIntelligence, "/interaction/ask_intelligence", self._on_ask, callback_group=self._cb
@@ -161,8 +160,15 @@ class InteractionIntelligence(Node):
             # Longest wait for a call that may reason (s): only a hung model reaches it; neither
             # llm_timeout nor the budget cut reasoning (llm_client.CallLimits); 0: no limit
             "reasoning_timeout": 120.0,
+            # The model of the questions (the provider of the model binding, llm_manager_node's
+            # parameters, and its model; empty: that binding's default): read by the launch
+            # file, which configures the interpretation server's routes with them
             "llm_provider": "",
             "llm_model": "",
+            # The interpretation server's services (behavior_architecture/srv/Interpret, and
+            # CancelInterpretation; "": the one next to interpretation_service)
+            "interpretation_service": "/interaction/interpretation/interpret",
+            "interpretation_cancel_service": "",
             "language": "English",
             "history_max_turns": 200,
             "ack_phrases": [""],  # Empty = built-in phrases for `language`; set a list to override
@@ -176,13 +182,14 @@ class InteractionIntelligence(Node):
             "conversation_log_max_mb": 10.0,
             # Questions sent to another model than llm_model, as "question=model" (the question is
             # the method of LLMDialogClient that asks it, e.g. "classify_intent=qwen2.5:14b");
-            # [""] for none: every question goes to llm_model
+            # [""] for none: every question goes to llm_model. Checked here; the launch file
+            # gives each of those questions a route of the interpretation server
             "routes": [""],
             # Python modules with more skills (and dialogue modes) to register, e.g. the skills
             # of a new dialogue behavior; [""] for none
             "skill_modules": [""],
             # Tests only: "<module>:<callable>" returning an object with the methods of
-            # LLMDialogClient, used instead of the LLM gateway
+            # LLMDialogClient, used instead of the interpretation server
             "llm_client_factory": "",
         }
         for name, default in defaults.items():
@@ -302,25 +309,26 @@ class InteractionIntelligence(Node):
             )
         return templates
 
-    def _llm_factory(self) -> Callable[[dict, str, CallLimits], object]:
-        """How the LLM client of a request is built: on the LLM gateway, or (tests) a double. The
-        limits of the request (llm_timeout, its time budget) bound every call to the model."""
+    def _llm_factory(self) -> Callable[[str, CallLimits], object]:
+        """How the LLM client of a request is built: on the interpretation server, or (tests) a
+        double. The limits of the request (llm_timeout, its time budget) bound every call to the
+        model."""
         spec = (self.get_parameter("llm_client_factory").value or "").strip()
         if not spec:
-            def make(sessions: dict, dialogue_id: str, limits: CallLimits,
+            def make(dialogue_id: str, limits: CallLimits,
                      reasoning: str = "none") -> LLMDialogClient:
-                nlu_sid, nlg_sid = sessions[""]
+                # The sessions of the former gateway are gone: the routes of the questions are
+                # the interpretation server's (the launch file writes them)
                 return LLMDialogClient(
-                    nlu_sid,
-                    nlg_sid,
-                    lambda sid, prompt, max_tokens, schema, think=False: self._infer_sync(
-                        dialogue_id, sid, prompt, max_tokens, schema, limits.wait, think
+                    "nlu",
+                    "nlg",
+                    lambda sid, prompt, max_tokens, schema, think=False: self._interpret_sync(
+                        dialogue_id, prompt, max_tokens, limits.wait, think
                     ),
-                    PromptBuilder(self._templates, language=self._language),
+                    InterpretationPromptBuilder(self._templates, language=self._language),
                     language=self._language,
                     history_max_turns=self._history_max_turns,
                     phrase_overrides=self._phrase_overrides,
-                    routes={q: sessions[m] for q, m in self._routes.items()},
                     limits=limits,
                     reasoning=reasoning,
                 )
@@ -330,8 +338,7 @@ class InteractionIntelligence(Node):
         factory = getattr(importlib.import_module(module_name), attr)
         self.get_logger().warning(f"Using the test LLM client {spec}")
 
-        def make_double(sessions: dict, dialogue_id: str, limits: CallLimits,
-                        reasoning: str = "none"):
+        def make_double(dialogue_id: str, limits: CallLimits, reasoning: str = "none"):
             client = factory()
             # A double that builds real clients (the injector of model failures) bounds their
             # calls with the limits of the request, and speaks the language of the dialogue
@@ -448,16 +455,14 @@ class InteractionIntelligence(Node):
             res.behavior_id = -1
             res.message = str(exc)
             self.get_logger().error(f"Choosing the dialogue behavior failed: {exc}")
-        finally:
-            self._release(selection_id)
         return res
 
     def _finish(self, req) -> None:
-        """The dialogue ended (option: its outcome; number: its turns): cancel its pending LLM
-        calls, delete its sessions and close the transcript."""
+        """The dialogue ended (option: its outcome; number: its turns): cancel its questions in
+        progress and close the transcript."""
         with self._lock:
             self._finished.add(req.dialogue_id)
-        self._release(req.dialogue_id)
+        self._cancel_questions(req.dialogue_id)
         data = "{}"
         try:
             state = json.loads(req.state) if req.state else {}
@@ -503,127 +508,78 @@ class InteractionIntelligence(Node):
         if clean:
             self._utterance_pub.publish(String(data=clean))
 
-    # ==== LLM SESSIONS ====
+    # ==== THE MODEL'S QUESTIONS ====
 
     def _llm_for(self, dialogue_id: str, limits: CallLimits, reasoning: str | None = None):
-        """The LLM client of a request of a dialogue, with the dialogue's NLU and NLG sessions
-        (created on first use: one pair for llm_model ("") and one for each model of the routes)
-        and the time limits of the request."""
-        with self._lock:
-            sessions = self._sessions.get(dialogue_id)
-        if sessions is None:
-            sessions = {}
-            tag = dialogue_id[:12] or "dialogue"
-            for i, model in enumerate(["", *sorted(set(self._routes.values()))]):
-                if self._fake():
-                    sessions[model] = ("nlu", "nlg")
-                    continue
-                nlu = self._create_llm_session(f"{tag}_{i}_nlu", model)
-                nlg = self._create_llm_session(f"{tag}_{i}_nlg", model)
-                if not nlu or not nlg:
-                    raise RuntimeError("LLM Manager connection failed")
-                sessions[model] = (nlu, nlg)
-            with self._lock:
-                self._sessions[dialogue_id] = sessions
-        return self._make_llm(sessions, dialogue_id, limits, reasoning or self._reasoning)
+        """The LLM client of a request of a dialogue, with the time limits of the request."""
+        return self._make_llm(dialogue_id, limits, reasoning or self._reasoning)
+
+    def _cancel_questions(self, dialogue_id: str) -> None:
+        """Cancel the questions in progress of a dialogue in the interpretation server (asked
+        with its id as the request_id); nothing is waited for."""
+        if not dialogue_id or self._fake() or not self._cancel.service_is_ready():
+            return
+        self._cancel.call_async(CancelInterpretation.Request(request_id=dialogue_id))
 
     def _fake(self) -> bool:
         return bool((self.get_parameter("llm_client_factory").value or "").strip())
 
-    def _release(self, dialogue_id: str) -> None:
-        with self._lock:
-            sessions = self._sessions.pop(dialogue_id, None)
-        if sessions and not self._fake():
-            for pair in sessions.values():
-                for sid in pair:
-                    self._delete_llm_session(sid)
-
-    def _create_llm_session(self, session_id: str, model: str = "") -> str | None:
-        if not self._llm_create.wait_for_service(timeout_sec=5.0):
-            return None
-        req = CreateSession.Request(
-            session_id=session_id,
-            provider=self._llm_provider,
-            model=model or self._llm_model,
-            stateful=False,
-        )
-        res = self._call_service_sync(self._llm_create, req)
-        return res.session_id if res and res.success else None
-
-    def _delete_llm_session(self, session_id: str) -> None:
-        if not self._llm_delete.wait_for_service(timeout_sec=3.0):
-            return
-        self._call_service_sync(self._llm_delete, DeleteSession.Request(session_id=session_id))
-
-    # ==== INFERENCE ====
-
-    def _infer_sync(
-        self, dialogue_id: str, session_id: str, prompt: str, max_tokens: int,
-        schema: dict | None, timeout: float | None = None, think: bool = False,
+    def _interpret_sync(
+        self, dialogue_id: str, prompt: str, max_tokens: int, timeout: float | None = None,
+        think: bool = False,
     ) -> str | None:
-        """One call to the LLM gateway; nothing after `timeout` seconds (the wait the client
-        allows this call: llm_timeout or what is left of the budget; None: no limit)."""
+        """One question to the interpretation server: the model's text, or nothing after
+        `timeout` seconds (the wait the client allows this call: llm_timeout or what is left of
+        the budget; None: no limit), which the server receives as the call's budget. The prompt
+        says which question asks it and with which context (InterpretationPromptBuilder)."""
         if not prompt or not prompt.strip():
             self.get_logger().error("Empty prompt; aborting inference.")
             return None
         timeout = float("inf") if timeout is None else timeout
         started = time.monotonic()
-        if not self._llm_action.wait_for_server(timeout_sec=min(5.0, timeout)):
-            self.get_logger().error("LLM action server not available.")
+        if not self._interpret.wait_for_service(timeout_sec=min(5.0, timeout)):
+            self.get_logger().error("The interpretation server is not available.")
             return None
-        goal = LlmInference.Goal(
-            session_id=session_id,
-            prompt=prompt,
-            max_tokens=max_tokens or 0,
-            format_schema=json.dumps(schema) if schema else "",
-            cache_prefix_len=getattr(prompt, "cache_prefix_len", 0),
-            think="true" if think else "",
-        )
-        result = self._action_call_sync(
-            self._llm_action,
-            goal,
-            max(timeout - (time.monotonic() - started), 0.0),
+        remaining = max(timeout - (time.monotonic() - started), 0.0)
+        try:
+            fields = interpret_request(prompt, dialogue_id, max_tokens, think,
+                                       None if remaining == float("inf") else remaining)
+        except ContextError as exc:
+            self.get_logger().error(f"No question to ask: {exc}")
+            return None
+        response = self._call_sync(
+            self._interpret, Interpret.Request(**fields), remaining,
             external_cancel=lambda: dialogue_id in self._finished,
         )
-        if result is None:
+        if response is None:
             return None
-        if not result.result.success:
-            self.get_logger().error(f"LLM inference error: {result.result.answer}")
+        if not response.success or response.source == "invalid":
+            self.get_logger().error(
+                f"{fields['question']}: no answer from the model "
+                f"({response.fallback_reason or 'malformed request'}): {response.message}")
             return None
-        return result.result.answer
+        return answer_text(response.success, response.answer, response.source)
 
-    def _action_call_sync(
-        self, client: ActionClient, goal, timeout_secs: float,
-        external_cancel: Callable[[], bool] | None = None,
-    ):
-        """Send goal and block until done, timeout, or external cancel. Cancels the remote goal
-        on timeout or external cancel to avoid server-side leaks."""
+    def _call_sync(self, client, request, timeout_secs: float,
+                   external_cancel: Callable[[], bool] | None = None):
+        """Call a service and block until its response, the timeout, or an external cancel
+        (None for the last two: the server cuts the call at its budget, or by a cancel)."""
         done = threading.Event()
-        goal_handle_box: list = [None]
         result_box: list = [None]
 
-        def on_accepted(future):
-            gh = future.result()
-            if not gh or not gh.accepted:
+        def on_done(future):
+            try:
+                result_box[0] = future.result()
+            finally:
                 done.set()
-                return
-            goal_handle_box[0] = gh
-            gh.get_result_async().add_done_callback(
-                lambda r: (result_box.__setitem__(0, r.result()), done.set())
-            )
 
-        client.send_goal_async(goal).add_done_callback(on_accepted)
+        client.call_async(request).add_done_callback(on_done)
         deadline, poll = time.monotonic() + timeout_secs, 0.05
         while not done.wait(timeout=poll):
             if time.monotonic() >= deadline:
-                if goal_handle_box[0] is not None:
-                    goal_handle_box[0].cancel_goal_async()
                 self.get_logger().warning(f"LLM call timed out after {timeout_secs:.1f}s.")
                 return None
             if external_cancel and external_cancel():
-                if goal_handle_box[0] is not None:
-                    goal_handle_box[0].cancel_goal_async()
-                done.wait(timeout=1.0)
                 return None
         return result_box[0]
 
