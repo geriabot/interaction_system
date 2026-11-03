@@ -24,9 +24,10 @@ When the questions change (routes, the baseline), they are written to a file of 
 The templates are prompts.yaml and the prompts.* of every parameter file that has them (the
 Strategies editor's), in the order the intelligence reads them.
 
-An API key is never a parameter: each backend reads it from its environment variable
-(OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY), as the gateway did when its api_key was
-empty.
+An API key is never a parameter of the server: each backend reads it from its environment
+variable (OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY). A key given in the binding
+(<provider>.api_key, as the GUI writes it) is put in that variable of the server's environment
+(server_environment), as the gateway took it from its parameter.
 """
 
 import copy
@@ -79,6 +80,20 @@ def node_parameters(params_files: list[str], node: str) -> dict:
     return out
 
 
+KEY_VARIABLES = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY",
+                 "claude": "ANTHROPIC_API_KEY"}
+
+
+def server_environment(params_files: list[str]) -> dict:
+    """The environment variables of the server: the API key that the binding gives for the
+    provider of the questions, in the variable its backend reads ({} without one)."""
+    gateway = _merge(GATEWAY_DEFAULTS, node_parameters(params_files, GATEWAY))
+    intelligence = node_parameters(params_files, INTELLIGENCE)
+    provider = (intelligence.get("llm_provider") or "").strip() or gateway["default_provider"]
+    key = (gateway.get(provider) or {}).get("api_key") if provider in KEY_VARIABLES else ""
+    return {KEY_VARIABLES[provider]: key} if key else {}
+
+
 def route_of(provider: str, model: str, options: dict, reasoning: bool) -> dict:
     """The route that sends the gateway's request for this provider and model."""
     if provider == "ollama":
@@ -96,7 +111,7 @@ def route_of(provider: str, model: str, options: dict, reasoning: bool) -> dict:
                  "reasoning_effort": options.get("reasoning_effort", "none")}
         if options.get("base_url"):
             route["url"] = options["base_url"]
-            if os.environ.get("OPENAI_API_KEY"):
+            if os.environ.get("OPENAI_API_KEY") or options.get("api_key"):
                 route["api_key_env"] = "OPENAI_API_KEY"
         return route
     if provider == "gemini":
@@ -138,9 +153,6 @@ def server_parameters(params_files: list[str], questions_file: str, prompts_file
     if gateway_name not in GATEWAY_DEFAULTS:
         raise ConfigurationError(f"Unknown provider '{provider}'")
     options = gateway[gateway_name]
-    if options.get("api_key"):
-        warnings.append(f"llm_manager_node.{provider}.api_key is ignored: the key is read from "
-                        "its environment variable")
     model = ((intelligence.get("llm_model") or "").strip()
              or (gateway["default_model"] if provider == gateway["default_provider"] else "")
              or options["model"])

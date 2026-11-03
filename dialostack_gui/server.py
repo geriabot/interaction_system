@@ -76,7 +76,8 @@ DIALOSTACK_KILL_PATTERNS = (
     # interaction system (orchestrator and behaviors, intelligence)
     "mission_executor", "interaction_intelligence", "interaction_system.launch.py",
     "main.launch.py",
-    # LLM manager
+    # the interpretation server (and the former LLM manager)
+    "interpretation_server", "interpretation_warmup",
     "llm_manager_node", "llm_cli_client", "llm_manager.launch.py",
     # speech capability (simple_hri)
     "stt_faster_whisper", "stt_whisper", "tts_piper", "tts_mms",

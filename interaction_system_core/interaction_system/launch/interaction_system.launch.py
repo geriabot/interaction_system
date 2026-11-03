@@ -25,7 +25,8 @@ from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-from interaction_intelligence.interpretation_config import server_parameters, warmup_of
+from interaction_intelligence.interpretation_config import (server_environment,
+                                                            server_parameters, warmup_of)
 
 
 def interpretation_server(context, params_files: list[str]) -> list:
@@ -55,6 +56,8 @@ def interpretation_server(context, params_files: list[str]) -> list:
         output='screen',
         emulate_tty=True,
         parameters=[parameters],
+        # An API key given in the parameter files, in the variable that its backend reads
+        additional_env=server_environment(params_files),
     )
     nodes = messages + [server]
     # The model loaded into the Ollama server's memory at the start, as the former gateway did

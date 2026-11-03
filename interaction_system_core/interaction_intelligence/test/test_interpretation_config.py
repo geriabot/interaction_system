@@ -76,7 +76,10 @@ def test_a_cloud_binding(tmp_path):
     r = routes(parameters)
     assert r["dialogue"] == {"backend": "openai", "dialect": "llm_manager", "model": "gpt-x",
                              "timeout_s": 30.0, "reasoning_effort": "none"}
-    assert warnings and "api_key" in warnings[0]
+    from interaction_intelligence.interpretation_config import server_environment
+    files = [_APP, write(tmp_path, "cloud.yaml", gateway)]
+    assert server_environment(files) == {"OPENAI_API_KEY": "sk-1"}
+    assert server_environment([_APP]) == {}
     claude = {"llm_manager_node": {"ros__parameters": {"default_provider": "claude"}}}
     assert routes(params(tmp_path, claude)[0])["dialogue"]["backend"] == "anthropic"
 
