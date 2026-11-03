@@ -4,9 +4,7 @@
 
 """Criterion 3: the body that reaches the model's server is the same through the former gateway
 and through the interpretation server, for every question of the corpus (bodies.py), in English
-and Spanish. Ollama: byte for byte. OpenAI-compatible APIs: the same JSON (the openai SDK orders
-the keys of its body in its own way, which the server's llm_manager dialect does not reproduce).
-"""
+and Spanish, byte for byte, for Ollama and for OpenAI-compatible APIs."""
 
 import base64
 import json
@@ -36,13 +34,13 @@ def test_ollama_bodies_are_identical(language):
 
 
 @pytest.mark.parametrize("language", bodies.LANGUAGES)
-def test_openai_bodies_have_the_same_content(language):
+def test_openai_bodies_are_identical(language):
     pytest.importorskip("openai")
     gateway = bodies.run("gateway", "openai", language)
     interpretation = bodies.run("interpretation", "openai", language)
     summary = bodies.compare(gateway, interpretation)
     for question, s in summary.items():
-        assert s["calls"] and s["same_json"] == s["calls"] and not s["missing"], (question, s)
+        assert s["calls"] and s["identical"] == s["calls"], (question, s)
 
 
 def test_the_comparison_sees_a_difference():

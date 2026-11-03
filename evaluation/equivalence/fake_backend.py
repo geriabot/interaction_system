@@ -22,7 +22,8 @@ Endpoints:
 The answer depends only on the request: a request with a schema (Ollama `format`, OpenAI
 `response_format`) gets `json_answer`, any other `text_answer`, so that two implementations that
 send the same requests get the same answers and make the same calls. `answers` (a list) gives
-the answers in order instead (the last one repeated), and `delay_s` delays every answer.
+the answers in order instead (the last one repeated), `delay_s` delays every answer and
+`status` (other than 200) answers every request to the model with that HTTP error.
 """
 
 import json
@@ -43,6 +44,8 @@ class FakeBackend:
         self.text_answer = text_answer
         self.answers: list[str] | None = None
         self.delay_s = delay_s
+        # An HTTP status other than 200 answers every request to the model with an error
+        self.status = 200
         self.label = ""
         self.bodies: list[dict] = []
         self._lock = threading.Lock()
@@ -122,6 +125,9 @@ class FakeBackend:
                     payload = {}
                 if backend.delay_s:
                     time.sleep(backend.delay_s)
+                if backend.status != 200 and self.path.startswith(("/api/chat", "/v1/chat")):
+                    self._send(backend.status, b'{"error": "a failure of the model server"}')
+                    return
                 if self.path.startswith("/api/chat"):
                     answer = backend._answer("format" in payload)
                     entry["answer"] = answer
