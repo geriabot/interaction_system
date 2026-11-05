@@ -583,7 +583,10 @@ every model ran, so that all are compared on the same cases.
 
 **Freeze.** A tagged commit is made right before E0a runs; it identifies the code, prompts, trees
 and data used, in addition to each results folder's `provenance.json`. After E0a only bug fixes are
-allowed; a change of prompts or trees reruns phase 1 for the chosen model and the debugging.
+allowed; a change of prompts or trees reruns phase 1 for the chosen model and the debugging. That
+rerun, and phase 1 of a narrow question added after E0a, check the chosen model: they are measured
+and reported, and they do not reopen the choice. E0b is repeated in a language only if its chosen
+model changes, since the judge it validates does not depend on the method's version.
 
 **If few models pass the gate.** If fewer than 5 models (about 30% of the candidates) pass the
 safety gate in a language, 5 go to phase 2: those that passed, then those with the fewest distinct

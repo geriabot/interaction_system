@@ -207,5 +207,13 @@ NeMo alone is the model's (M) and changes no prompt, so that the check stays ind
 simulated user stays Gemma 3 12B for all three, since changing it as well would change two things
 at once. Every C or P fix gets a regression test in layer 1, and the affected scenarios are run
 again (delete their records and resume). Then come the freeze commit, the review of the trap
-cases of phase 1, and E0a. When E0a chooses the
-final model, the validation and this debugging are repeated with it, before E0b.
+cases of phase 1, and E0a.
+
+After E0a, the development file in English (`debug_dev_en.yaml`) is run once more with the model
+chosen for English, before E0b: the prompts were fixed with other families, and a prompt failure
+that only this model provokes would bias the experiments that use it. The model chosen for Spanish
+is not debugged again. The method is the same in both languages (the same trees, code and prompts,
+which ask for the reply in `{language}`); what depends on the language is program (the fixed
+phrases, the stop words), which the scripted tests of layer 1 already run in Spanish; and what a
+pass in Spanish with that model could add are its own failures (M), which change no prompt. Its
+Spanish dialogues of E0a are the check that the method works with it.
