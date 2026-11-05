@@ -77,7 +77,7 @@ the wording of every card; the cards are adjusted after the pilot and then froze
 | `model_params` | Parameter overrides for one system model, e.g. the `routes` of the local model's questions to a second model; a cloud model does not use them |
 | `conditions` | Each with its `control` (`bounded` or `llm_led`) and its `model`; `enabled: false` leaves a condition out of the plans |
 | `trials_per_condition` | Scenarios per condition and participant (4: the four conversations of each participant, all with the method) |
-| `launch` | The speech capability: `speech: simple_hri`, `language: es`, `stt`, `tts` (as `main.launch.py`) |
+| `launch` | Speech: `speech: simple_hri`, `language: es`, `stt`, `tts` (as `main.launch.py`) |
 | `ollama`, `limits`, `max_turns`, `dialogue_timeout` | The LLM server, the orchestrator's parameters, the turn limit and the longest conversation, as in the experiments |
 | `scenarios` | The pool: `id` (of `e4_es.yaml`), `title`, `card` (the lines the participant reads) and `detour` (`kind`, `text`) |
 | `card_footer`, `detour_label`, `check_phrase` | The lines under every card, the label before the detour, and the phrase of the Speak check and of the pre-session check |
@@ -227,7 +227,7 @@ Every session needs:
 | What | Why |
 |---|---|
 | The computer that runs the stack, on mains power, with the workspace built | The stack, the speech recognition and the voice run on it |
-| A microphone and a speaker (those of the robot, or of the computer next to the robot), set to the level checked in the checks | The speech capability (simple_hri) listens and speaks through them |
+| A microphone and a speaker (those of the robot, or of the computer next to the robot), set to the level checked in the checks | Speech (simple_hri) listens and speaks through them |
 | The robot on the network, with its `ROS_DOMAIN_ID` (and DDS) | The checks and the trials use them |
 | Only with barge-in: a camera facing the participant, publishing its image (`camera_topic` of `sessions_es.yaml`) | The lip activity detector (live and local, no images stored, no emotion) tells the robot to stop talking when the participant starts speaking |
 | The LLM server (Ollama) answering, with the local model, and nothing else running on its GPU | A busy GPU slows the robot down: the runner refuses to start a trial when the server holds models of other work |
@@ -289,7 +289,7 @@ The runner of the checks needs the prepared terminal of a trial ([Running a tria
 
 Once, in the technical test with the microphone and the robot (step 2 of the procedure of E4,
 [EXPERIMENTS.md](EXPERIMENTS.md#e4-validation-with-real-users)), not before every session: what the
-system does when the speech capability fails ([endings](../../docs/behaviors/endings.md#edge-cases),
+system does when speech (simple_hri) fails ([endings](../../docs/behaviors/endings.md#edge-cases),
 [SPEECH.md](../../docs/SPEECH.md#how-the-trees-use-it)). It is a check of the setup, not an
 experiment and not a measure of the study: the simulation serves the speech actions itself, so no
 simulated experiment can provoke these failures, and they are not provoked with participants.

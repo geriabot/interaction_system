@@ -6,7 +6,7 @@ interaction system is one more subsystem, like navigation, with the
 [same contract](ARCHITECTURE.md#interaction-as-a-capability-with-the-robots-layers-inside).
 
 Before reading this page, you need a built workspace ([INSTALLATION.md](INSTALLATION.md)), an LLM
-served by Ollama ([MODELS.md](MODELS.md)), and the speech capability that the robot provides,
+served by Ollama ([MODELS.md](MODELS.md)), and the speech package that the robot provides,
 optionally with embodiment and user perception ([ADDING_A_ROBOT.md](ADDING_A_ROBOT.md)).
 
 ## 1. Launch

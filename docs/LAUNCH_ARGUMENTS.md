@@ -8,14 +8,14 @@ and [CONFIGURATION.md](CONFIGURATION.md) lists the parameters of the nodes.
 
 ### The whole stack: `interaction_system main.launch.py`
 
-This launch file starts the speech capability, the LLM gateway (`llm_manager_node`) and the
+This launch file starts speech (simple_hri), the LLM gateway (`llm_manager_node`) and the
 interaction system (`interaction_system.launch.py`), all with the same parameter file. The GUI
 starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `tts` and
 `whisper_model` of its Configuration page.
 
 | Argument | Default value | Description |
 |---|---|---|
-| `speech` | `simple_hri` | The speech capability: `simple_hri` or `none` (no speech nodes; see below) |
+| `speech` | `simple_hri` | The speech package: `simple_hri` or `none` (no speech nodes; see below) |
 | `stt` | `faster_whisper` | simple_hri's speech-to-text: `faster_whisper` (`stt_faster_whisper`: faster-whisper with Silero VAD) or `whisper` (`stt_whisper`: Whisper with WebRTC VAD) |
 | `tts` | `piper` | simple_hri's text-to-speech: `piper` (`tts_piper`: the Piper voice of the language) or `mms` (`tts_mms`: MMS-TTS) |
 | `whisper_model` | `small` | Whisper model of simple_hri: `tiny`, `base`, `small`, `medium`, `large-v3` |
@@ -27,7 +27,7 @@ starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `
 
 With `speech:=simple_hri`, the launch file starts simple_hri's speech-to-text node as
 `stt_service_node` and its text-to-speech node as `tts_service_node`. With `speech:=none`, another
-node provides the capability, e.g. the simulation of `interaction_sim` or your robot.
+node provides speech, e.g. the simulation of `interaction_sim` or your robot.
 
 `input_device:=default` goes through the system's sound server, which converts the sample rate.
 Use it when the default device is a raw ALSA device that does not record at 16 kHz ("Invalid
@@ -46,7 +46,7 @@ sets the intelligence's `language` whatever the files say.
 ### Only the interaction system: `interaction_system interaction_system.launch.py`
 
 This launch file starts `mission_executor` (the orchestrator and the runners of the dialogue
-behaviors, in one process) and `/interaction_intelligence`. The speech capability and the LLM
+behaviors, in one process) and `/interaction_intelligence`. Speech (simple_hri) and the LLM
 gateway are started separately.
 
 | Argument | Default value | Description |

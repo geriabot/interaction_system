@@ -62,7 +62,8 @@ The system rests on five design decisions.
 5. Dialogue is a robot capability. The interaction system has the same layers as the robot's
    behavioral control architecture: a finite state machine (FSM) coordinates each request and
    activates the tree of the chosen dialogue behavior. The rest of the robot sees one action and
-   one status topic. Speech recognition, speech synthesis, user perception and the LLM are
+   one status topic. Interpretation, beside the layers, answers the narrow questions they ask; it
+   commands nothing. Speech recognition, speech synthesis, user perception and the LLM are
    services that the system uses, and each can be replaced.
 
 The interaction system only holds the conversation. Other robot capabilities move, point or
@@ -85,8 +86,23 @@ inside:
 | Deliberation, planning | Decide the goals, when needed | Not needed: the goal comes in the request |
 | Coordination | An FSM, the task plan | An FSM, the life of a request: `IDLE`, `SETTING_BEHAVIOR_ACTION`, `SETTING_BEHAVIOR_INPUT`, `ACTING` |
 | Action | The behavior forest | One tree per dialogue behavior; only the chosen one is active |
-| Capabilities | Perception, navigation, interaction... | Speech (speech-to-text, text-to-speech), user perception (lip activity for barge-in, experimental; emotion, preliminary) |
-| External service | — | The LLM, asked by the FSM (which dialogue behavior) and by the trees (understanding, phrasing) |
+| Interpretation (beside the layers) | Optional, consulted by any layer | Consulted by the FSM (which dialogue behavior) and by the trees (understanding, phrasing); it asks the LLM and controls nothing |
+| Capabilities | Perception, navigation, attention, interaction... | User perception (lip activity for barge-in, experimental; emotion, preliminary) and, planned, emotion expression; speaking and listening go through speech (simple_hri), a low-level sub-capability that the trees call |
+| External service | — | The LLM, behind interpretation; it can be replaced |
+
+Beside the layers, and outside their chain of control, is **interpretation**. It turns what
+arrives without structure (the request in natural language, a line of the user) into a validated
+answer to a narrow question that a layer asks: which dialogue behavior fits the request, which
+values of the form a line gives, whether a line asks to stop. It is not a layer: the layers form
+the chain of control, each with authority over the one below, whereas interpretation commands
+nothing; the layers consult it and it answers, and what to do with the answer is always decided by
+the coordination or the action. Nor is it a capability, since it does not have a capability's
+structure (its own coordination and action, and the standard interface). It keeps no state: the
+state of the conversation travels with each question, so every question can be logged, replayed
+and tested on its own. The figure draws it as a column beside the layers that consult it, at each
+level of the architecture that needs one, optional like deliberation (dashed at the robot's
+level, where it would serve deliberation, planning, coordination and action alike). Behind it is
+the LLM, which can be replaced.
 
 The next figure shows the nodes of the interaction system and, around them, the behavioral
 control architecture, speech, user perception, the embodiment and the models:
@@ -228,7 +244,7 @@ Read the guides in this order to go from what the system does to how to extend i
    the configuration files.
 3. [docs/behaviors](docs/behaviors/README.md): each dialogue behavior and shared mechanism in
    detail, with a drawing of its Behavior Tree.
-4. [SPEECH.md](docs/SPEECH.md): the speech capability (simple_hri), how the trees listen and
+4. [SPEECH.md](docs/SPEECH.md): the speech sub-capability (simple_hri), how the trees listen and
    speak, and barge-in (experimental).
 5. [MODELS.md](docs/MODELS.md): which model answers each question, and how to change it.
 6. [PROMPTS.md](docs/PROMPTS.md): the questions to the LLM, which skill asks each one, and how to

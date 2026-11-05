@@ -5,7 +5,7 @@ and the pose, gesture and eye LED tooling (`nao_pose_manager`). It only consumes
 the conversation (`/is_speaking`, `/target_pose`, and `/user_vad` if something publishes it), so
 the interaction system has no NAO dependency and runs unchanged without it. The interaction
 system's `Speak` and `WithFillers` nodes publish `/is_speaking` while the robot speaks (its lines
-and its fillers), whatever the speech capability, so the gestures and the eye LEDs follow the
+and its fillers), whatever the speech package, so the gestures and the eye LEDs follow the
 conversation. [ADDING_A_ROBOT.md](../../docs/ADDING_A_ROBOT.md) explains how a robot connects to
 the interaction system, with the NAO as the worked example.
 

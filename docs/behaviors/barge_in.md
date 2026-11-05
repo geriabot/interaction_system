@@ -22,7 +22,7 @@ the user is speaking while the robot speaks, such as the lip activity detected b
 | `/user_speaking` turns true (the user started talking) | `Speak` cancels the utterance at once, publishes `/barge_in` (the utterance and how long it had been spoken, in ms) and the tree goes on to `Listen`: what the user says is the next turn |
 | Nothing publishes `/user_speaking` (no user perception) | The robot finishes every utterance, then listens |
 
-The barge-in is visual, not acoustic: the speech capability does not listen while the robot
+The barge-in is visual, not acoustic: speech (simple_hri) does not listen while the robot
 speaks, since it would hear the robot itself (an acoustic barge-in needs echo cancellation or a
 headset). Without user perception, therefore, the person has to wait until the robot ends its
 utterance.

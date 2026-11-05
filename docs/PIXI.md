@@ -53,7 +53,7 @@ environment created by mistake can be removed with `rm -rf src/interaction_syste
 
 | Task | What it does |
 |---|---|
-| `build` | `colcon build --symlink-install --packages-up-to` the interaction system, its capabilities, the perception, the BT client and the evaluation packages, into `build/` and `install/` (ROS 2 Jazzy, the `default` environment) |
+| `build` | `colcon build --symlink-install --packages-up-to` the interaction system, `ros2_llm_manager`, simple_hri (speech), the perception, the BT client and the evaluation packages, into `build/` and `install/` (ROS 2 Jazzy, the `default` environment) |
 | `build-lyrical` | The same in the `lyrical` environment, into `build_lyrical/` and `install_lyrical/` |
 | `test` | The unit tests of the interaction intelligence (no ROS), with pytest |
 

@@ -1,8 +1,8 @@
 # The Tests tab: try a scenario as the user
 
 The **Tests** tab of the [control panel](CONTROL_PANEL.md) (its code: `evaluation/scripts/test_panel.py`)
-tries any scenario of the experiments by voice, with a person as the user, through the speech
-capability (simple_hri: the microphone and speaker of this computer, or those of the robot).
+tries any scenario of the experiments by voice, with a person as the user, through speech
+(simple_hri: the microphone and speaker of this computer, or those of the robot).
 Nothing is stored, nothing is changed, and no measure comes from it: it is not part of the
 evaluation. The experiments and the sessions with real participants run from the other tabs of
 the same page.

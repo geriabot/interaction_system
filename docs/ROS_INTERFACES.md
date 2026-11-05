@@ -135,9 +135,10 @@ response `success`, `message`, `behavior_id` (`int8`, `-1` if none can be offere
 prepared; once it is spent, the skill's questions fall back without asking the LLM. With 0 there
 is no budget, and each call waits at most `llm_timeout`.
 
-## The speech capability
+## Speech (simple_hri)
 
-The speech capability is provided by simple_hri ([SPEECH.md](SPEECH.md)).
+Speech, the low-level sub-capability that the trees call to listen and to speak, is provided by
+simple_hri ([SPEECH.md](SPEECH.md)).
 
 | Name | Type | Server / publisher | Used by |
 |---|---|---|---|

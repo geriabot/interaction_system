@@ -75,7 +75,7 @@ Every strategy wraps the two places where the robot prepares a reply in `WithFil
 opening subtree, and the reply to a user turn (the spoken cancellation check and the strategy's
 turn). `WithFillers` is a decorator: it ticks its child (the questions to the interaction
 intelligence) and, while the child is still running, says the fillers when they are due, through
-the same speech capability as `Speak`; when the child ends, it returns the child's result once
+the same speech package as `Speak`; when the child ends, it returns the child's result once
 the filler being said has finished. The `Speak` that follows says the reply.
 
 The alternatives were to let each `AskIntelligence` node say the fillers, or to build them in the
