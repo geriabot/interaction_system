@@ -22,7 +22,7 @@ personas: [cooperative, boundary_testing, mild_cognitive_impairment]
 repetitions: 1
 language: Spanish
 # The local model (provisional until E0a chooses the model (one model for every question, no routes))
-models: [qwen3:8b]
+models: [gpt-oss:20b]
 conditions:
   # The method: the Behavior Trees with the default parameters (no routes: one model)
   bounded: {}

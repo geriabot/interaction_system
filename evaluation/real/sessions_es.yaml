@@ -59,14 +59,14 @@ camera_topic: /camera/image_raw
 conditions:
   bounded:
     control: bounded
-    model: "qwen3:8b"          # the local model: provisional until E0a chooses it
+    model: "gpt-oss:20b"          # the local model: provisional until E0a chooses it
   llm_led:
     control: llm_led
     model: "openai/<pin>"         # the large cloud model of E1: write its dated version
     enabled: false                # E4 tries only the method with the local model
   llm_led_local:                  # optional: separates the effect of the control from the model's
     control: llm_led
-    model: "qwen3:8b"
+    model: "gpt-oss:20b"
     enabled: false
 trials_per_condition: 4         # four conversations per participant, all with the method
 

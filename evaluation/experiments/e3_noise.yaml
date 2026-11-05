@@ -20,7 +20,7 @@ personas: [cooperative, terse, older_adult]
 repetitions: 1
 language: English
 # The local model (provisional until E0a chooses the model (one model for every question, no routes))
-models: [qwen3:8b]
+models: [gpt-oss:20b]
 conditions:
   bounded_wer00: {}
   bounded_wer10: {asr_noise: {wer: 0.10}}

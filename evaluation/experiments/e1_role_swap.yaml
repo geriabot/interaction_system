@@ -31,7 +31,7 @@ repetitions: 1
 language: English
 # The local model of E1 (provisional until E0a chooses it), and the large cloud model (write the dated versions before running;
 # the run refuses an unpinned <pin>)
-models: [qwen3:8b, "gemini/<pin>"]
+models: [gpt-oss:20b, "gemini/<pin>"]
 conditions:
   # The method: the Behavior Trees with the default parameters (no routes: one model)
   bounded: {}

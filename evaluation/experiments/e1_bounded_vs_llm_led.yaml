@@ -23,11 +23,11 @@ personas: [cooperative, terse, self_correcting, older_adult, non_native,
            mild_cognitive_impairment, uncooperative, boundary_testing]
 repetitions: 1
 language: English
-# The local model (qwen3:8b, thinking off: provisional, for debugging, until E0a chooses the model (one model for every question, no routes)),
+# The local model (gpt-oss:20b, thinking off: provisional, for debugging, until E0a chooses the model (one model for every question, no routes)),
 # and the large cloud model
 # (provider/model: write the dated version of the current large model before running, e.g.
 # openai/gpt-...-YYYY-MM-DD; the run refuses an unpinned <pin>)
-models: [qwen3:8b, "openai/<pin>"]
+models: [gpt-oss:20b, "openai/<pin>"]
 conditions:
   # The method: the Behavior Trees with the default parameters (no routes: one model). With the
   # cloud model (condition C) only three personas: C answers only whether bounding also helps a

@@ -20,6 +20,7 @@ import textwrap
 import time
 
 import pytest
+import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = os.path.dirname(HERE)
@@ -118,13 +119,24 @@ def test_the_steps_follow_the_order_of_reproducing_and_its_commands():
             assert not any("--allow-cloud" in c["argv"] for c in step["commands"](ctx)), step["id"]
 
 
+def local_model(rel: str) -> str:
+    """The local model an experiment file of the repository names now (the provisional one
+    before run_e0a.py apply, E0a's choice after it)."""
+    with open(os.path.join(we.EVAL, rel), encoding="utf-8") as f:
+        return next(m for m in yaml.safe_load(f)["models"] if "/" not in m)
+
+
 def test_an_experiment_with_the_provisional_model_or_a_pin_waits(root, monkeypatch):
+    # Whatever the file holds now plays the provisional model, so that the test does not
+    # depend on whether E0a has been applied to the repository
+    model = local_model("experiments/e3_noise.yaml")
+    monkeypatch.setattr(we, "PROVISIONAL", model)
     ctx = we.Ctx(root)
     why = we.requires_experiment("experiments/e3_noise.yaml", ctx)
     assert "provisional local model" in why                    # E0a has not decided
     os.makedirs(os.path.join(we.RESULTS, "e0a"))
     with open(os.path.join(we.RESULTS, "e0a", "decision.json"), "w") as f:
-        json.dump({"languages": {"en": {"chosen": "qwen3:8b"}}}, f)
+        json.dump({"languages": {"en": {"chosen": model}}}, f)
     monkeypatch.setenv("GEMINI_API_KEY", "x")
     assert we.requires_experiment("experiments/e3_noise.yaml", ctx) == ""
     assert "dated version" in we.requires_experiment(we.SWAP, ctx)   # gemini/<pin>
@@ -454,8 +466,10 @@ def test_the_smoke_check_lists_every_cloud_model_and_the_cloud_judge(root, monke
     argv = " ".join(we.by_id()["e1_smoke"]["commands"](ctx)[0]["argv"])
     assert "--judge gemini/gemini-2.5-flash-lite" in argv
     # It waits for what the campaign waits for: E0a's model, then the dated versions
+    model = local_model("experiments/e1_bounded_vs_llm_led.yaml")
+    monkeypatch.setattr(we, "PROVISIONAL", model)
     assert "provisional" in we.by_id()["e1_smoke"]["requires"](ctx)
     os.makedirs(os.path.join(we.RESULTS, "e0a"))
     with open(os.path.join(we.RESULTS, "e0a", "decision.json"), "w") as f:
-        json.dump({"languages": {"en": {"chosen": "qwen3:8b"}}}, f)
+        json.dump({"languages": {"en": {"chosen": model}}}, f)
     assert "dated version" in we.by_id()["e1_smoke"]["requires"](ctx)

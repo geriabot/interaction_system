@@ -32,7 +32,7 @@ personas: [cooperative, terse, older_adult]
 repetitions: 3
 language: English
 # The local model (provisional until E0a chooses the model (one model for every question, no routes))
-models: [qwen3:8b]
+models: [gpt-oss:20b]
 conditions:
   # The method: the Behavior Trees with the default parameters (no routes: one model)
   bounded: {}
