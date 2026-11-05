@@ -86,7 +86,12 @@ Notes on some of the templates:
   `reacts`). Only `asks` can be answered, and the code enforces it: `finished` becomes `done` and
   `reacts` becomes `comment`. It then says what a request is (`answerable`, `not_in_material`,
   `off_task`, `repeat`, `other`) and, if it is answerable, gives the answer with only facts of the
-  material.
+  material. A check that repeats the last answer back is a reaction only when its value matches;
+  with another value the person has misunderstood, and the turn is a request to repeat, so that
+  the robot gives the answer again instead of letting the mistake pass (models of three families
+  answered a wrong check with only the invitation to ask more). Its limit: a wrong check followed
+  by a comment ("Seven o'clock? Oh dear, that's late." after 17:00) is still read as a reaction by
+  the models tried, whatever the wording; the plain check is corrected.
 - `verify_answer`: an immediate inference (17:00 is in the afternoon) and an answer with only the
   part asked for count as supported.
 - `detect_cancel_intent` is asked for every utterance that is not exactly a stop command of the
