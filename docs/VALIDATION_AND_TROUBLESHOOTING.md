@@ -31,12 +31,12 @@ The active tree can be watched in Groot2 (port 5555).
 
 Two tools test the system without audio and without a model:
 
-- To type as the user, run any speech capability and publish what the user says where a
+- To type as the user, run any speech package and publish what the user says where a
   transcription would arrive: `ros2 topic pub --once /transcription std_msgs/msg/String "{data:
   'a large latte'}"`. The intelligence cleans it and `Listen` takes it as the next turn. (With
   simple_hri the robot also keeps asking its `/stt_action` to listen.)
 - To run without speech and without a model, use the simulation and the scripted LLM:
-  `evaluation/simulation/interaction_sim` replaces the speech capability and the user, and
+  `evaluation/simulation/interaction_sim` replaces speech (simple_hri) and the user, and
   `scripted_llm` replaces the LLM with fixed rules. This command
 
   ```sh

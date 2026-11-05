@@ -39,9 +39,16 @@ that is going nowhere instead of prolonging it.
 | Deliberation, planning | Decide the goals and provide the FSM, when needed | Not needed: the goal comes in `/dialog/execute_task`, and the FSM is fixed | — |
 | Coordination | An FSM, the task plan | An FSM, the life of a request (below) | `/interaction_orchestrator`, a `BaseOrchestrator` |
 | Action | The behavior forest: one tree per phase of the task | One tree per dialogue behavior, each in its own `BehaviorRunner` (a lifecycle node); only the chosen one is active | `interaction_system_behaviors/behavior_tree_xml/*.xml` |
-| Capabilities | Perception, navigation, interaction, attention | Speech (speech-to-text and text-to-speech) and user perception (lip activity; emotion, preliminary); the embodiment follows the conversation's signals | simple_hri, `interaction_perception`, `robots/nao` |
+| Capabilities | Perception, navigation, attention, interaction; a task tree such as finding a person uses several of them | User perception (lip activity; emotion, preliminary) and, planned, emotion expression while the robot talks. Speaking and listening go through speech (simple_hri: speech-to-text and text-to-speech), a low-level sub-capability that the trees' own nodes call | simple_hri, `interaction_perception`, `robots/nao` |
 | Interpretation | A column beside the layers that consult it: it answers narrow questions about unstructured input and commands nothing | behavior_architecture's interpretation server, configured with the system's questions: which dialogue behavior fits a request (asked for the FSM) and the narrow questions of the dialogue behaviors (asked for the trees). It asks the model; what to do with the answer is decided by the skill that asked | `/interaction/interpretation_server`, `config/interpretation/` of `interaction_intelligence` |
 | External service | — | The LLM behind the interpretation server, interchangeable (Ollama, OpenAI-compatible APIs, Gemini, Claude) | — |
+
+A capability, in this sense, is a high-level, orchestrated subsystem of the robot, built with
+the same pattern (its own coordination and action layers): perception, navigation, attention,
+interaction and, planned, emotion expression. Speech (simple_hri: speech-to-text and
+text-to-speech) is not one of them but a low-level sub-capability: a package that the trees of the
+interaction system call to speak and to listen, and that another capability, such as emotion
+expression, could also use.
 
 For the rest of the robot, the interaction system is one more capability, with the same
 interface as any other:
@@ -107,8 +114,8 @@ conversation still in progress in the interpretation server and closes its trans
   tree, so every question can be logged, replayed and tested on its own, and the intelligence can
   be restarted without losing a conversation.
 - Any client of `/dialog/execute_task` can play the role of the requesting behavior, so the
-  interaction system can be developed, tested and replaced on its own; the same holds for its
-  capabilities (speech, perception) and the LLM.
+  interaction system can be developed, tested and replaced on its own; the same holds for speech
+  (simple_hri), user perception and the LLM.
 - Only the runner of the chosen dialogue behavior is active, so no two trees compete for the
   voice or the microphone.
 
@@ -128,7 +135,7 @@ or in VS Code with the Draw.io Integration extension, and save it to the same fi
 | | Behavior runners (`/interaction_slot_filling`, `/interaction_explanation`, `/interaction_quiz`, `/interaction_procedure`, `/interaction_roleplay`, `/interaction_grounded_qa`, `/interaction_questionnaire`) | One lifecycle node per dialogue behavior, which ticks its Behavior Tree while active |
 | | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior: asks their questions to the interpretation server, applies the answers to the state of the conversation, and writes the transcript. It talks to no model itself |
 | | `/interaction/interpretation_server` (behavior_architecture) | Builds the prompt of each question from the system's templates and the arguments it receives, asks the model of the question's route, and returns its text |
-| Speech capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and speaks on request ([SPEECH.md](SPEECH.md)) |
+| Speech sub-capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and speaks on request ([SPEECH.md](SPEECH.md)) |
 | Perception (`interaction_perception`) | `/user_state_server`, `/emotion_detector`, `/lip_activity_detector_node` | The state of the user, served on request; the lip activity as a stream for barge-in |
 
 The orchestrator chooses the dialogue behavior from the request or by asking the intelligence. It
@@ -154,8 +161,8 @@ more than one dialogue behavior passes, asks question 1
 the chosen dialogue behavior: one user turn per cycle, with question 2, the narrow question of
 the dialogue behavior, at its center.
 
-The example below is "Take a coffee order", with `dialog_mode: slot_filling` and simple_hri as
-the speech capability:
+The example below is "Take a coffee order", with `dialog_mode: slot_filling` and simple_hri for
+speech:
 
 ```mermaid
 sequenceDiagram
@@ -165,7 +172,7 @@ sequenceDiagram
   participant T as runner + Behavior Tree
   participant I as /interaction_intelligence
   participant M as interpretation server and LLM
-  participant S as speech capability
+  participant S as speech (simple_hri)
   C->>O: /dialog/execute_task (task, dialog_mode)
   O->>O: the behavior of the mode (SlotFilling)
   O->>T: the request in the blackboard, activate the runner
@@ -409,7 +416,7 @@ stops the node at startup ([ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md)).
 
 ### Transcriptions
 
-The intelligence subscribes to the transcriptions of the speech capability and to typed text
+The intelligence subscribes to the transcriptions of speech (simple_hri) and to typed text
 (`transcription_topics`). It drops the noise and publishes the rest on
 `/interaction/user_utterance`, where `Listen` takes the next utterance. Noise means Whisper
 hallucinations such as subtitle credits, fillers and empty text: an utterance made only of the
@@ -476,10 +483,10 @@ former LLM gateway (`ros2_llm_manager`) is still in the repository, but it is no
 
 ## Speech, perception and embodiment
 
-- Speech is a capability that the trees use when they need it. `Listen` asks it to listen, and
-  `Speak` (and `WithFillers`, for the conversational fillers) asks it to speak, through
-  simple_hri's actions `/stt_action` and `/tts_action`. Both nodes publish `/is_speaking` for the
-  embodiment ([SPEECH.md](SPEECH.md)).
+- Speech (simple_hri) is a low-level sub-capability that the trees call when they need it.
+  `Listen` asks it to listen, and `Speak` (and `WithFillers`, for the conversational fillers) asks
+  it to speak, through simple_hri's actions `/stt_action` and `/tts_action`. Both nodes publish
+  `/is_speaking` for the embodiment ([SPEECH.md](SPEECH.md)).
 - User perception (`interaction_perception`) is a separate, optional subsystem, used through a
   service (the state of the user) and a topic (the lip activity, for barge-in). Without it, the
   conversation only loses the visual barge-in
@@ -502,7 +509,7 @@ through rosbridge.
 | Frame Builder | Visual editors for the input of each dialogue behavior: slots with types, allowed values, ranges and conditions; quiz banks; procedure steps; role-play scenes and rubrics; resources |
 | Prompts | Override any prompt template, with validation of its placeholders |
 | Strategies | Edit the fixed phrases of each dialogue behavior per language, including the prompts while the user is silent and the closing line of every ending |
-| Configuration | LLM provider and model, the conversation limits, and the speech capability (simple_hri or none) with its speech-to-text and text-to-speech engines, saved as named profiles |
+| Configuration | LLM provider and model, the conversation limits, and speech (simple_hri or none) with its speech-to-text and text-to-speech engines, saved as named profiles |
 
 The Monitor's timeline shows the speech, LLM and voice latencies, barge-in marks, the frame
 filling up, the user's emotion and camera images. The GUI's internal design is described in

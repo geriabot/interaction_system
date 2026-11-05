@@ -1,10 +1,13 @@
-# The speech capability
+# Speech (simple_hri)
 
 This page explains how the interaction system listens and speaks, and how to replace the speech
-capability with the robot's own. The interaction system does not record or play sound itself: its
-trees ask a speech capability to listen (`Listen`) and to speak (`Speak`), as any robot behavior
-uses a capability. The capability is [simple_hri](https://github.com/rodperex/simple_hri), a
-separate package fetched by `thirdparty.repos`, which the trees use through its actions:
+package with the robot's own. The interaction system does not record or play sound itself: its
+trees ask the speech sub-capability to listen (`Listen`) and to speak (`Speak`). Speech is not a
+capability of the robot in the sense of [ARCHITECTURE.md](ARCHITECTURE.md) (a high-level,
+orchestrated subsystem with its own coordination and action layers), but a low-level
+sub-capability that the trees call, and that another capability, such as emotion expression,
+could also use. It is [simple_hri](https://github.com/rodperex/simple_hri), a separate package
+fetched by `thirdparty.repos`, which the trees use through its actions:
 
 | | simple_hri |
 |---|---|
@@ -50,7 +53,7 @@ forwarding), start simple_hri with its own `simple_hri.launch.py` and the intera
   (`/user_speaking` true), it cancels the utterance and publishes `/barge_in`; what the user says is
   the next turn. While a reply is prepared, `WithFillers` says the conversational fillers with the
   same action, publishing each on `/robot_filler` instead
-  ([Conversational fillers](behaviors/fillers.md)). A speech capability that is not available,
+  ([Conversational fillers](behaviors/fillers.md)). A speech package that is not available,
   or an utterance that does not end in time, does not stop the conversation: the node goes on
   with a warning.
 - Halting a tree (a canceled conversation) cancels the utterance and the listening.

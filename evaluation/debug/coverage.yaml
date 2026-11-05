@@ -136,7 +136,7 @@ mechanisms:
   - {id: O12, name: "Other error reasons", expected: "no behavior fits, choosing failed, runner not activated, orchestrator deactivated",
      tests: [TE::test_no_behavior_fits_the_request, TE::test_a_behavior_whose_runner_cannot_be_activated, TE::test_the_orchestrator_deactivated_during_a_dialogue, TD::test_choosing_the_behavior_failed]}
   - {id: O13, name: "Speech-to-text or text-to-speech down", expected: "user_silent / utterance skipped",
-     tests: [], layer1: "the harness is the speech capability; decided (O13): a technical check before E4 (REAL_SESSIONS.md)"}
+     tests: [], layer1: "the harness replaces the speech package; decided (O13): a technical check before E4 (REAL_SESSIONS.md)"}
   - {id: F1, name: "Fillers: at 2 s and 6 s, at most two, the language's phrases", expected: "the language's fillers; never block the reply",
      tests: [TD::test_filler_after_two_seconds, TD::test_second_filler_four_seconds_later_and_no_more, TD::test_no_filler_when_the_reply_is_fast, TD::test_filler_in_a_slow_opening, TB::test_the_fillers_of_the_language]}
   - {id: F2, name: "A filler is not a turn", expected: "no counter changes",

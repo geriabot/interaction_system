@@ -250,7 +250,7 @@ the behavior is then never offered.
   ROS.
 - Run whole conversations through the system with the simulation harness
   (`evaluation/simulation/interaction_sim`): `DialogueHarness.run(goal, ScriptedUser([...]))`
-  plays the user and the speech capability; with `llm_client_factory` the intelligence can use a
+  plays the user and the speech package; with `llm_client_factory` the intelligence can use a
   deterministic stand-in for the LLM ([evaluation/README.md](../evaluation/README.md)).
 - Watch the tree in Groot2 (port 5555 of the active runner).
 - Draw the tree for the documentation. This command writes one SVG per tree file (the folder of

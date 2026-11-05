@@ -42,7 +42,7 @@ The panel needs what the scripts need ([REPRODUCING.md](REPRODUCING.md#before-an
    server reached through an SSH tunnel), and, for the cloud models, their API keys in the
    environment of the terminal that starts the panel (`OPENAI_API_KEY`, `GEMINI_API_KEY`): the
    scripts launched by the panel inherit it.
-3. For the real sessions: the microphone and speaker of the speech capability (simple_hri) on
+3. For the real sessions: the microphone and speaker of speech (simple_hri) on
    this computer, and the robot on the network ([REAL_SESSIONS.md](REAL_SESSIONS.md#what-you-need)).
 4. Python 3 with PyYAML to run the panel itself.
 

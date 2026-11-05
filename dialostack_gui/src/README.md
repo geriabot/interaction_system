@@ -65,7 +65,7 @@ never builds YAML.
 
 ### Speech
 
-The speech capability is simple_hri, started by `main.launch.py` on the engine
+Speech is the simple_hri package, started by `main.launch.py` on the engine
 machine. It listens when the dialogue asks and plays on that machine's speaker,
 so the page carries no audio. The STT tab chooses simple_hri or none (typed text
 only), the STT engine (faster-whisper or Whisper) and the Whisper model; the TTS

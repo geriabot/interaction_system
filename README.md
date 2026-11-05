@@ -85,7 +85,7 @@ inside:
 | Deliberation, planning | Decide the goals, when needed | Not needed: the goal comes in the request |
 | Coordination | An FSM, the task plan | An FSM, the life of a request: `IDLE`, `SETTING_BEHAVIOR_ACTION`, `SETTING_BEHAVIOR_INPUT`, `ACTING` |
 | Action | The behavior forest | One tree per dialogue behavior; only the chosen one is active |
-| Capabilities | Perception, navigation, interaction... | Speech (speech-to-text, text-to-speech), user perception (lip activity for barge-in, experimental; emotion, preliminary) |
+| Capabilities | Perception, navigation, attention, interaction... | User perception (lip activity for barge-in, experimental; emotion, preliminary) and, planned, emotion expression; speaking and listening go through speech (simple_hri), a low-level sub-capability that the trees call |
 | Interpretation | Narrow questions about unstructured input, beside the layers that ask them | behavior_architecture's interpretation server, with the system's questions: asked for the FSM (which dialogue behavior) and for the trees (understanding, phrasing); it asks the LLM |
 | External service | — | The LLM behind the interpretation server |
 
@@ -230,7 +230,7 @@ Read the guides in this order to go from what the system does to how to extend i
    the configuration files.
 3. [docs/behaviors](docs/behaviors/README.md): each dialogue behavior and shared mechanism in
    detail, with a drawing of its Behavior Tree.
-4. [SPEECH.md](docs/SPEECH.md): the speech capability (simple_hri), how the trees listen and
+4. [SPEECH.md](docs/SPEECH.md): the speech sub-capability (simple_hri), how the trees listen and
    speak, and barge-in (experimental).
 5. [MODELS.md](docs/MODELS.md): which model answers each question, and how to change it.
 6. [PROMPTS.md](docs/PROMPTS.md): the questions to the LLM, which skill asks each one, and how to

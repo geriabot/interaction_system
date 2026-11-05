@@ -48,7 +48,7 @@ The interaction system publishes generic signals that the robot's nodes can foll
 
 | Signal | Type | Use |
 |---|---|---|
-| `/is_speaking` | `std_msgs/Bool` (transient local) | True while the robot speaks, whatever the speech capability: talking gestures, mouth or eye lights |
+| `/is_speaking` | `std_msgs/Bool` (transient local) | True while the robot speaks, whatever the speech package: talking gestures, mouth or eye lights |
 | `/robot_utterance` | `std_msgs/String` | Each line of the robot, when it starts to be said |
 | `/robot_filler` | `std_msgs/String` | Each conversational filler ("Hmm…", said while the reply is prepared), when it starts to be said: e.g. a thinking gesture |
 | `/interaction_system/status` | `interaction_system_interfaces/msg/InteractionSystemStatus` | The state of the system and the phase of the conversation: an idle pose, a listening light |

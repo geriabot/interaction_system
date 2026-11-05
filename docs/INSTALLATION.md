@@ -41,6 +41,6 @@ GUI's code is described in [dialostack_gui](../dialostack_gui/src/README.md).
 
 - The first conversation: [README, Quick start](../README.md#quick-start).
 - Every command in one page: [INDEX.md](../INDEX.md).
-- The speech capability: [SPEECH.md](SPEECH.md).
+- Speech (simple_hri): [SPEECH.md](SPEECH.md).
 - Every parameter: [CONFIGURATION.md](CONFIGURATION.md).
 - Using it from your robot: [INTEGRATING.md](INTEGRATING.md), [ADDING_A_ROBOT.md](ADDING_A_ROBOT.md).

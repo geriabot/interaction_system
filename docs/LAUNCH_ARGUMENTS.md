@@ -8,7 +8,7 @@ and [CONFIGURATION.md](CONFIGURATION.md) lists the parameters of the nodes.
 
 ### The whole stack: `interaction_system main.launch.py`
 
-This launch file starts the speech capability and the interaction system
+This launch file starts speech (simple_hri) and the interaction system
 (`interaction_system.launch.py`, with its interpretation server), all with the same parameter
 file. The GUI
 starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `tts` and
@@ -16,7 +16,7 @@ starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `
 
 | Argument | Default value | Description |
 |---|---|---|
-| `speech` | `simple_hri` | The speech capability: `simple_hri` or `none` (no speech nodes; see below) |
+| `speech` | `simple_hri` | The speech package: `simple_hri` or `none` (no speech nodes; see below) |
 | `stt` | `faster_whisper` | simple_hri's speech-to-text: `faster_whisper` (`stt_faster_whisper`: faster-whisper with Silero VAD) or `whisper` (`stt_whisper`: Whisper with WebRTC VAD) |
 | `tts` | `piper` | simple_hri's text-to-speech: `piper` (`tts_piper`: the Piper voice of the language) or `mms` (`tts_mms`: MMS-TTS) |
 | `whisper_model` | `small` | Whisper model of simple_hri: `tiny`, `base`, `small`, `medium`, `large-v3` |
@@ -28,7 +28,7 @@ starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `
 
 With `speech:=simple_hri`, the launch file starts simple_hri's speech-to-text node as
 `stt_service_node` and its text-to-speech node as `tts_service_node`. With `speech:=none`, another
-node provides the capability, e.g. the simulation of `interaction_sim` or your robot.
+node provides speech, e.g. the simulation of `interaction_sim` or your robot.
 
 `input_device:=default` goes through the system's sound server, which converts the sample rate.
 Use it when the default device is a raw ALSA device that does not record at 16 kHz ("Invalid
@@ -51,8 +51,8 @@ behaviors, in one process), `/interaction_intelligence` and behavior_architectur
 `/interaction/interpretation_server`, which asks the model the intelligence's questions, with
 its parameters written from the parameter files
 ([CONFIGURATION.md](CONFIGURATION.md#the-interpretation-server)). When the Ollama provider is
-enabled, `interpretation_warmup` loads `ollama.model` into the server's memory and exits. The
-speech capability is started separately.
+enabled, `interpretation_warmup` loads `ollama.model` into the server's memory and exits. Speech
+(simple_hri) is started separately.
 
 | Argument | Default value | Description |
 |---|---|---|

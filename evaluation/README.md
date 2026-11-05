@@ -60,7 +60,7 @@ evaluation/
 │   └── human_review/            one page per hand task, for reviewers, annotators and the coordinator
 ├── offline/                     the questions to the LLM without ROS: benchmarks and datasets (README.md)
 ├── panels/                      the review panel for the hand reviews (README.md)
-├── simulation/interaction_sim/  ROS package: the simulated speech capability and users, the system tests
+├── simulation/interaction_sim/  ROS package: the simulated speech package and users, the system tests
 ├── ablations/interaction_ablations/   ROS package: the ablations, trees and skills derived from the method's
 ├── experiments/                 the experiment files (*.yaml), personas.yaml
 │   ├── scenarios/               dialogues.yaml (English), dialogues_es.yaml (Spanish: the source of E4,
@@ -125,7 +125,7 @@ python3 offline/run_models.py --config offline/config_ollama.yaml --models <m1>,
 
 ## Simulation: whole conversations without audio
 
-`simulation/interaction_sim` stands for the speech capability and the user, so that the real
+`simulation/interaction_sim` stands for speech (simple_hri) and the user, so that the real
 system (orchestrator, trees, intelligence, interpretation server) holds whole conversations without
 microphones. Its modules:
 
@@ -258,7 +258,7 @@ ros2 launch interaction_ablations llm_led.launch.py speech:=none params_file:=<p
 ## Experiments
 
 `scripts/run_experiment.py` runs an experiment file: for each system model and condition it
-launches the whole system (`main.launch.py speech:=none`, the harness being the speech capability)
+launches the whole system (`main.launch.py speech:=none`, the harness replacing simple_hri)
 in its own process group, pulls and loads the model on the server, runs every scenario × persona ×
 repetition with a simulated user, saves each dialogue, and stops the system. Saved dialogues are
 skipped, so a run can be resumed. The experiment files of the repository, and what each runs, are

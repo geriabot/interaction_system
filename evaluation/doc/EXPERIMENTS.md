@@ -1295,7 +1295,7 @@ Two mechanisms are observed on every card: the endings (every conversation ends 
 line) and the outcome with its reason (`completed`, except the pizza, `partial`, and the geography
 quiz, `breakdown`). A silence that reaches `max_silence` (90 s), the turn limit and model failures
 are not provoked with people; they are checked against their specification in E3. The failures of
-the speech capability are not provoked with people either and are not an experiment: they are a
+speech (simple_hri) are not provoked with people either and are not an experiment: they are a
 technical check of the setup before the sessions, described under
 [E3](#e3-robustness-of-the-shared-mechanisms) and in
 [REAL_SESSIONS.md](REAL_SESSIONS.md#technical-check-of-the-speech-failures). The detection of
