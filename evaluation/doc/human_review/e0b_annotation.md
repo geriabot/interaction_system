@@ -112,6 +112,9 @@ again.
   "Next").
 - Under each question there is a one-line explanation and a "See examples" link, which points to
   the examples of the guide on the right.
+- The sentences come grouped by conversation, in the order the robot said them, so consecutive
+  sentences often share the same task and conversation. Only some sentences of each conversation
+  are on the sheet.
 - Judge only the robot's sentence at the bottom, not its earlier ones, and do not try to guess how
   the robot was built.
 - If you are unsure, give the answer you find most likely and write the doubt in the "Doubt or
@@ -190,9 +193,9 @@ The sheets are written by `scripts/run_e0b.py label`, which runs `analysis/judge
 sheets` for each language once the judges' instructions are frozen and the local judges have
 labeled the dialogues. They are `results/e0b/<en|es>/e0/sheet_a.csv` and `sheet_b.csv`, two
 copies of the same blind sample of 150 to 300 robot sentences per language, and `key.json`. The
-sample is stratified by persona and condition; no judge chooses the sentences, and its size
-follows the rule of JUDGE_VALIDATION.md. `key.json` links each row to its dialogue and the judges'
-labels, and must never be shown to the annotators. The sheets are made once: `sheets` refuses to
+strata, the allocation and the size of the sample follow the rules of JUDGE_VALIDATION.md; do not
+tell the annotators how the sample was drawn. `key.json` links each row to its dialogue, its
+stratum and the judges' labels, and must never be shown to the annotators. The sheets are made once: `sheets` refuses to
 overwrite an existing `key.json` (its `--force` is only for before anyone annotates). The
 procedure is in [JUDGE_VALIDATION.md](../JUDGE_VALIDATION.md#running-e0b).
 

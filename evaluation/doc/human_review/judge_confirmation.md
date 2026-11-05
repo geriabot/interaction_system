@@ -132,8 +132,9 @@ sessions.
   folder, which the panel opens with `annotate --csv <sheet> --annotator "Name"`, and
   `judge_validation.py report <campaign folder> --a ... --b ... --order <tag>` applies the E0b rule.
   That sampler takes only the sentences labeled by every judge whose labels file is in the
-  folder, and stratifies by persona and condition with no judge choosing the sentences; the
-  judges' labels only set its size, by the E0b size rule. It marks a label with fewer than 30
-  human positives as not validated. `judge_runs.py --sample` does not use the judge's labels
-  either. Whether to use this route for the confirmation is still to be decided, and the decision
+  folder, and draws the enriched sample of E0b: strata flag × persona × condition, the flag set
+  by the judges given with `--flag-judges` (by default every judge with labels), up to half of
+  the sample from the flagged strata, and the decision on the kappa weighted by the inverse
+  inclusion probabilities. It marks a label with fewer than 30 human positives as not validated.
+  `judge_runs.py --sample` does not use the judge's labels. Whether to use this route for the confirmation is still to be decided, and the decision
   must be written in JUDGE_VALIDATION.md before any campaign is confirmed.

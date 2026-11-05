@@ -393,20 +393,25 @@ LLM-led, talks with the simulated user of E1 under three personas chosen to prod
 utterance: 84 dialogues in English (2 scenarios per strategy) and 48 in Spanish (the 8 scenarios of
 E4). The dialogues are split into a development half, on which the judge's instructions are
 adjusted and frozen, and a validation half, from which two annotators label 150 to 300 utterances
-per language. No judge chooses these utterances, and their number rises until the expected
-positives of each label reach 30.
+per language. Since both labels are rare, the sample is enriched: up to half of it is drawn from
+the utterances that some local judge flags as out of the frame or unsupported, and the rest,
+uniformly, from the other utterances, within persona × condition, so that every utterance has a
+known, non-zero inclusion probability. Its size rises until the expected human positives of each
+label reach 30.
 
 The candidate judges are taken from the literature on LLM judges, local open models first and then
-cloud models, and are compared on the same annotated utterances. Among those that reach kappa 0.8
-on both labels, with both annotators and in both languages, the cheapest is used in every
-experiment, one judge for both languages: the first local judge in the fixed order that passes, or
-otherwise the cheapest cloud judge that passes. The free judges come first. The cloud judges label
-the annotated utterances only if no local judge passes, and the report is then made again on the
-same annotations, so people annotate once.
+cloud models, and are compared on the same annotated utterances. Among those that reach a
+weighted kappa of 0.8 on both labels, with both annotators and in both languages, the cheapest is
+used in every experiment, one judge for both languages: the first local judge in the fixed order
+that passes, or otherwise the cheapest cloud judge that passes. The free judges come first. The
+cloud judges label the annotated utterances only if no local judge passes, and the report is then
+made again on the same annotations, so people annotate once.
 
-The decision statistic is the unweighted kappa, with a bootstrap over dialogues. Sensitivity,
-specificity and the kappa weighted by the inverse inclusion probabilities of the stratified sample
-are also reported. A label with fewer than 30 human positives in a language is not validated. A
+The decision statistic is the kappa weighted by the inverse inclusion probabilities, which undoes
+the enrichment (without the weights, the sample would favor the judges that flagged it), with a
+stratified bootstrap over dialogues. The weighted sensitivity and specificity, and the unweighted
+kappa, are also reported; the agreement between the two annotators is checked with the
+unweighted kappa. A label with fewer than 30 human positives in a language is not validated. A
 judge never labels a system of its own family, so in E0b such a judge, local or cloud, is not run.
 The conversational fillers, which are fixed phrases, are not labeled.
 [JUDGE_VALIDATION.md](JUDGE_VALIDATION.md) describes the phases, the ladder of judges, the decision

@@ -198,65 +198,147 @@ def _items(n_runs=40, per_run=4):
     return items
 
 
-def test_the_sample_is_stratified_with_inclusion_probabilities():
-    items = _items()
-    chosen = jv.stratified_sample(items, 60, random.Random(7))
-    assert len(chosen) == 60
+def test_the_strata_cross_the_flag_with_persona_and_condition():
+    # The flag: any flag judge positive on either label; a judge outside the flag judges never
+    # sets it (the cloud judges label later and never define the strata)
+    x = ("r", {"persona": "cooperative", "condition": "bounded"}, 0, "t", "h",
+         {"local": {"in_frame": 1, "unsupported": 0}, "cloud": {"in_frame": 0, "unsupported": 1}})
+    assert jv.flagged(x) == 1 and jv.flagged(x, ["local"]) == 0
+    assert jv.stratum_of(x, ["local"]) == "0|cooperative|bounded"
+    y = x[:5] + ({"local": {"in_frame": 1, "unsupported": 1}},)
+    assert jv.stratum_of(y, ["local"]) == "1|cooperative|bounded"
+
+
+def test_half_of_the_sample_goes_to_the_flagged_strata_with_spill():
+    sizes = {"1|p|a": 3, "1|p|b": 50, "0|p|a": 400, "0|p|b": 400}
+    # A flagged stratum smaller than its share gives the rest to the other flagged stratum
+    assert jv.enriched_allocation(sizes, 100) == {"1|p|a": 3, "1|p|b": 47, "0|p|a": 25, "0|p|b": 25}
+    # n odd: the flagged half is rounded down
+    alloc = jv.enriched_allocation(sizes, 101)
+    assert sum(v for k, v in alloc.items() if k[0] == "1") == 50 and sum(alloc.values()) == 101
+
+
+def test_too_few_flagged_utterances_leave_the_rest_to_the_unflagged_half():
+    sizes = {"1|p|a": 5, "1|p|b": 5, "0|p|a": 400, "0|p|b": 400}
+    assert jv.enriched_allocation(sizes, 100) == {"1|p|a": 5, "1|p|b": 5, "0|p|a": 45, "0|p|b": 45}
+    # And the reverse: an unflagged half too small gives its leftover back to the flagged half
+    sizes = {"1|p|a": 200, "1|p|b": 200, "0|p|a": 10, "0|p|b": 10}
+    assert jv.enriched_allocation(sizes, 100) == {"1|p|a": 40, "1|p|b": 40, "0|p|a": 10, "0|p|b": 10}
+    # Never more than there are
+    assert sum(jv.enriched_allocation({"1|p|a": 2, "0|p|a": 3}, 50).values()) == 5
+
+
+def test_the_inclusion_probabilities_are_consistent_and_never_zero():
+    items = _items()                                  # 160 utterances, 23 flagged
+    chosen = jv.stratified_sample(items, 30, random.Random(7), ["j"])
+    assert len(chosen) == 30
     strata = {}
     for x in items:
-        strata.setdefault(f"{x[1]['persona']}|{x[1]['condition']}", []).append(x)
+        strata.setdefault(jv.stratum_of(x, ["j"]), []).append(x)
+    assert len({c[1] for c in chosen}) == len(strata) == 8   # every stratum drawn
+    assert sum(1 for c in chosen if c[1][0] == "1") == 15    # half of the sample flagged
     for x, stratum, prob in chosen:
         drawn = sum(1 for c in chosen if c[1] == stratum)
-        assert drawn == 15 and prob == pytest.approx(drawn / len(strata[stratum]))
-    assert len({c[1] for c in chosen}) == 4  # every stratum
+        assert 0 < prob <= 1 and prob == pytest.approx(drawn / len(strata[stratum]))
+    # Horvitz-Thompson: the inverse probabilities of the sample add up to every stratum's size,
+    # so to the whole validation half
+    for stratum, group in strata.items():
+        assert sum(1 / p for _, s, p in chosen if s == stratum) == pytest.approx(len(group))
+    assert sum(1 / p for *_, p in chosen) == pytest.approx(len(items))
+    # The flagged utterances are drawn far more often than the others, none never
+    p_flag = {p for _, s, p in chosen if s[0] == "1"}
+    p_rest = {p for _, s, p in chosen if s[0] == "0"}
+    assert min(p_flag) > max(p_rest) > 0
+    # A sample too small to reach every stratum is refused (a zero inclusion probability)
+    with pytest.raises(ValueError):
+        jv.stratified_sample(items, 4, random.Random(7), ["j"])
 
 
-def test_no_judge_chooses_the_utterances():
-    # The same items with other judge's labels give the same sample (author, 2026-11-02)
+def test_the_unflagged_half_is_drawn_uniformly_whatever_the_judges_say_there():
+    # Two judges' labels that differ only on flagged utterances give the same unflagged draw
     items = _items()
-    flipped = [x[:5] + ({"j": {"in_frame": 1 - x[5]["j"]["in_frame"], "unsupported": 1}},)
-               for x in items]
-    a = [(c[0][0], c[0][2]) for c in jv.stratified_sample(items, 60, random.Random(7))]
-    b = [(c[0][0], c[0][2]) for c in jv.stratified_sample(flipped, 60, random.Random(7))]
+    other = [x[:5] + ({"j": {"in_frame": 0, "unsupported": 1}},) if x[5]["j"]["in_frame"] == 0
+             else x for x in items]
+    a = [(c[0][0], c[0][2]) for c in jv.stratified_sample(items, 60, random.Random(7), ["j"])
+         if c[1][0] == "0"]
+    b = [(c[0][0], c[0][2]) for c in jv.stratified_sample(other, 60, random.Random(7), ["j"])
+         if c[1][0] == "0"]
     assert a == b
 
 
 def test_the_sample_grows_until_the_expected_positives_reach_the_minimum():
-    # 800 utterances, 1 in 7 out of the frame and unsupported by the judge
+    # The development half: the flagged strata carry the judges' mean prevalence, the unflagged
+    # ones 0 by construction (the flag is set by the same judges)
+    dev = _items()
+    prev = jv.stratum_prevalence(dev, ["j"])
+    assert prev["1"]["in_frame"] == 1.0 and prev["0"]["in_frame"] == 0.0
+    # 1 in 7 out of the frame and unsupported: 800 utterances, about 114 flagged
     items = [x[:5] + ({"j": {"in_frame": x[5]["j"]["in_frame"],
                              "unsupported": 1 - x[5]["j"]["in_frame"]}},)
              for x in _items(n_runs=200)]
-    n, expected = jv.sample_size(items, items, 150)
-    # 150 x 1/7 = 21 < 30; 200 x 1/7 = 28.6 < 30; 250 x 1/7 = 35.7: the first size that reaches it
-    assert n == 250 and expected["in_frame"] >= jv.MIN_POSITIVES
-    # Never more than MAX_N; and without a development half, the size asked for
+    # 75 flagged draws at prevalence 1: 75 expected positives at the start
+    n, expected = jv.sample_size(items, items, 150, ["j"])
+    assert n == 150 and expected == {"in_frame": 75.0, "unsupported": 75.0}
     assert jv.sample_size(items, [], 150) == (150, {})
+    # 1 in 50 flagged (16 utterances): the flagged half cannot hold 30; the size goes to MAX_N
     rare = [x[:5] + ({"j": {"in_frame": 1 if k % 50 else 0, "unsupported": 0}},)
             for k, x in enumerate(items)]
-    assert jv.sample_size(rare, rare, 150)[0] == jv.MAX_N
+    n, expected = jv.sample_size(rare, rare, 150, ["j"])
+    assert n == jv.MAX_N and expected["in_frame"] == 16.0
 
 
-def test_the_bootstrap_resamples_dialogues():
-    # Two dialogues, all of one's utterances agree, none of the other's: resampling dialogues
-    # gives kappas of whole dialogues (here only nan or 1 or -1-ish), never a mix of utterances
-    pairs = [(1, 1), (0, 0)] * 5 + [(1, 0), (0, 1)] * 5
-    clusters = ["a"] * 10 + ["b"] * 10
-    lo, hi = jv.interval(pairs, 7, clusters, n=200)
-    assert lo <= hi
-    lo_u, hi_u = jv.interval(pairs, 7, None, n=200)
-    assert (hi - lo) >= (hi_u - lo_u)  # wider: the dialogue is the unit
+def test_the_stratified_bootstrap_resamples_dialogues_within_cells():
+    # Two cells; in each, one dialogue agrees on every utterance and the other on none:
+    # resampling dialogues gives wider intervals than resampling utterances
+    rows = []
+    for c in ("x", "y"):
+        rows += [(c, f"{c}a", v, v, 1.0) for v in (1, 0) * 5]
+        rows += [(c, f"{c}b", v, 1 - v, 1.0) for v in (1, 0) * 5]
+    stat = lambda s: jv._row_figures(s, "unsupported")  # noqa: E731
+    by_dialogue = jv.stratified_bootstrap(rows, 7, stat, n=300)
+    by_utterance = jv.stratified_bootstrap([(c, k, j, h, w) for k, (c, _, j, h, w)
+                                            in enumerate(rows)], 7, stat, n=300)
+    lo, hi = by_dialogue["kappa"]
+    lo_u, hi_u = by_utterance["kappa"]
+    assert lo <= hi and (hi - lo) > (hi_u - lo_u)
+    assert set(by_dialogue) >= {"weighted_kappa", "weighted_sensitivity", "weighted_specificity"}
 
 
-def test_weighted_kappa_undoes_the_oversampling():
+def test_weighted_kappa_equals_the_unweighted_one_with_equal_weights():
     assert jv.weighted_kappa([1, 0], [1, 0], [1.0, 1.0]) == 1.0
     assert math.isnan(jv.weighted_kappa([], [], []))
+    rng = random.Random(3)
+    a = [rng.randint(0, 1) for _ in range(200)]
+    b = [x if rng.random() < 0.8 else 1 - x for x in a]
+    for w in (1.0, 7.5):
+        assert jv.weighted_kappa(a, b, [w] * 200) == pytest.approx(judge_runs.kappa(a, b))
+        fig = jv.weighted_figures(a, b, [w] * 200, "unsupported")
+        assert fig["weighted_kappa"] == pytest.approx(fig["kappa"])
+        assert fig["weighted_kappa"] == pytest.approx(judge_runs.kappa(a, b))
+
+
+def test_weighted_sensitivity_undoes_the_verification_bias():
+    # A population of 1000: the judge flags 100 (60 positive for people), leaves 900 (90
+    # positive). True sensitivity 60/150 = 0.4, specificity 810/850. Sampled: 50 flagged
+    # (probability 1/2: 30 positive) and 50 unflagged (probability 1/18: 5 positive)
+    judge_ = [1] * 50 + [0] * 50
+    human = [1] * 30 + [0] * 20 + [1] * 5 + [0] * 45
+    w = [2.0] * 50 + [18.0] * 50
+    fig = jv.weighted_figures(judge_, human, w, "unsupported")
+    assert fig["weighted_sensitivity"] == pytest.approx(0.4)
+    assert fig["weighted_specificity"] == pytest.approx(810 / 850)
+    assert fig["weighted_prevalence"] == pytest.approx(0.15)
+    # Unweighted, the sample overstates the sensitivity and understates the specificity
+    plain = jv.weighted_figures(judge_, human, [1.0] * 100, "unsupported")
+    assert plain["weighted_sensitivity"] == pytest.approx(30 / 35)
+    assert plain["weighted_specificity"] == pytest.approx(45 / 65)
 
 
 def _make_folder(tmp_path, lang, judges=("mistral_small",), agree=True, positives=40):
     folder = tmp_path / lang
     (folder / "runs" / "m" / "c").mkdir(parents=True)
     n = 100
-    key = {"prompt_hash": jv.prompt_hash(), "language": lang, "items": {}}
+    key = {"design": jv.DESIGN, "prompt_hash": jv.prompt_hash(), "language": lang, "items": {}}
     rows_a, rows_b = [], []
     labels = {j: [] for j in judges}
     for i in range(n):
@@ -272,11 +354,7 @@ def _make_folder(tmp_path, lang, judges=("mistral_small",), agree=True, positive
                               "unsupported_claims": ["x"] if pos else []})
     (folder / "e0").mkdir()
     (folder / "e0" / "key.json").write_text(json.dumps(key))
-    for name, rows in (("a", rows_a), ("b", rows_b)):
-        with open(folder / f"{name}.csv", "w", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=["id", "in_frame (1/0)", "unsupported (1/0)"])
-            w.writeheader()
-            w.writerows(rows)
+    _write_sheets(folder, rows_a, rows_b)
     for j, lab in labels.items():
         with open(folder / f"judgments_{j}.jsonl", "w") as f:
             for x in lab:
@@ -284,6 +362,14 @@ def _make_folder(tmp_path, lang, judges=("mistral_small",), agree=True, positive
                     x = {**x, "in_frame": not x["in_frame"]}
                 f.write(json.dumps(x) + "\n")
     return folder
+
+
+def _write_sheets(folder, rows_a, rows_b):
+    for name, rows in (("a", rows_a), ("b", rows_b)):
+        with open(folder / f"{name}.csv", "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["id", "in_frame (1/0)", "unsupported (1/0)"])
+            w.writeheader()
+            w.writerows(rows)
 
 
 def _report(folder, order=""):
@@ -295,12 +381,81 @@ def _report(folder, order=""):
 def test_report_figures_and_too_few_positives(tmp_path):
     rep = _report(_make_folder(tmp_path, "en", positives=40))
     r = rep["judges"]["mistral_small"]["in_frame"]
-    assert r["A"]["kappa"] == 1.0 and r["A"]["sensitivity"] == 1.0 and r["A"]["specificity"] == 1.0
+    assert r["A"]["weighted_kappa"] == 1.0 and r["A"]["kappa"] == 1.0
+    assert r["A"]["weighted_sensitivity"] == 1.0 and r["A"]["weighted_specificity"] == 1.0
+    assert r["A"]["weighted_ci95"] == [1.0, 1.0]
+    assert r["A"]["prevalence"] == r["A"]["weighted_prevalence"] == 0.4
     assert r["positives_either"] == 40 and r["decision"] == "USE the judge"
-    assert rep["bootstrap_unit"] == "dialogue"
+    assert rep["design"] == jv.DESIGN and rep["decision_statistic"] == "weighted_kappa"
+    assert rep["bootstrap_unit"].startswith("dialogue")
+    assert rep["annotators"]["in_frame"]["kappa"] == rep["annotators"]["in_frame"]["weighted_kappa"] == 1.0
     assert rep["error_rate"]["mistral_small"] == {"errors": 0, "asked": 100, "rate": 0.0}
     rep = _report(_make_folder(tmp_path / "few", "en", positives=10))
     assert rep["judges"]["mistral_small"]["in_frame"]["decision"] == jv.NOT_VALIDATED
+
+
+def _make_enriched_folder(tmp_path):
+    """The judge is the flag. Flagged stratum: 100 utterances, 50 drawn (48 positive for both
+    annotators, 2 not); unflagged: 1000, 50 drawn (3 positive the judge missed). Unweighted kappa
+    0.90; weighted (the population) 0.72."""
+    folder = tmp_path / "en"
+    (folder / "e0").mkdir(parents=True)
+    key = {"design": jv.DESIGN, "prompt_hash": jv.prompt_hash(), "language": "en", "items": {},
+           "strata": {"1|p|c": {"size": 100, "taken": 50}, "0|p|c": {"size": 1000, "taken": 50}}}
+    rows, labels = [], []
+    for i in range(100):
+        flag = i < 50
+        human_pos = i < 48 or 50 <= i < 53
+        run = f"runs/m/c/d{i // 5}.json"
+        stratum = "1|p|c" if flag else "0|p|c"
+        key["items"][str(i + 1)] = {"run": run, "index": i, "model": "qwen3:8b", "persona": "p",
+                                    "condition": "c", "stratum": stratum, "flag": int(flag),
+                                    "inclusion_probability": 0.5 if flag else 0.05}
+        rows.append({"id": str(i + 1), "in_frame (1/0)": 0 if human_pos else 1,
+                     "unsupported (1/0)": 1 if human_pos else 0})
+        labels.append({"run": run, "index": i, "in_frame": not flag,
+                       "unsupported_claims": ["x"] if flag else []})
+    (folder / "e0" / "key.json").write_text(json.dumps(key))
+    _write_sheets(folder, rows, rows)
+    with open(folder / "judgments_mistral_small.jsonl", "w") as f:
+        for x in labels:
+            f.write(json.dumps(x) + "\n")
+    return folder
+
+
+def test_the_report_decides_on_the_weighted_kappa(tmp_path):
+    rep = _report(_make_enriched_folder(tmp_path))
+    for m in jv.MEASURES:
+        r = rep["judges"]["mistral_small"][m]
+        assert r["A"]["kappa"] == pytest.approx(0.9, abs=1e-3)          # reported only
+        assert r["A"]["weighted_kappa"] == pytest.approx(0.719, abs=1e-3)
+        assert r["A"]["weighted_sensitivity"] == pytest.approx(96 / 156, abs=1e-3)
+        assert r["A"]["weighted_prevalence"] == pytest.approx(156 / 1100, abs=1e-3)
+        assert r["A"]["prevalence"] == 0.51 and r["positives_either"] == 51
+        lo, hi = r["A"]["weighted_ci95"]
+        assert lo <= r["A"]["weighted_kappa"] <= hi
+        # Unweighted it would be USE; the weighted kappa makes it tentative
+        assert r["decision"] == "USE, tentative conclusions"
+    assert rep["worst"]["mistral_small"] == pytest.approx(0.719, abs=1e-3)
+    assert rep["chosen_this_language"] == "mistral_small" and rep["tentative"]
+    # combine reads the same statistic
+    out = jv.combine_reports({"en": rep, "es": rep}, ["mistral_small"])
+    assert out["chosen"] == "mistral_small" and out["tentative"]
+    assert out["worst"]["mistral_small"] == pytest.approx(0.719, abs=1e-3)
+
+
+def test_a_sample_or_report_of_another_design_is_refused(tmp_path):
+    folder = _make_folder(tmp_path, "en")
+    key = json.loads((folder / "e0" / "key.json").read_text())
+    del key["design"]                       # a sample drawn before enriched_v1
+    (folder / "e0" / "key.json").write_text(json.dumps(key))
+    with pytest.raises(SystemExit) as stop:
+        _report(folder)
+    assert "design" in str(stop.value) and jv.DESIGN in str(stop.value)
+    good = _report(_make_folder(tmp_path / "ok", "en"))
+    old = {k: v for k, v in good.items() if k != "design"}
+    with pytest.raises(SystemExit):
+        jv.combine_reports({"en": good, "es": old}, ["mistral_small"])
 
 
 def test_report_stops_when_the_instructions_changed(tmp_path, monkeypatch):
@@ -316,6 +471,39 @@ def test_sheets_refuse_to_overwrite_the_key(tmp_path):
         jv.sheets(types.SimpleNamespace(results=str(folder), n=10, language="", seed=7,
                                         force=False))
     assert "annotations" in str(stop.value)
+
+
+def test_the_sheets_record_the_design_the_strata_and_the_flag_judges(tmp_path):
+    for d in range(12):
+        rec = _rec(5, persona=["cooperative", "boundary_testing"][d % 2],
+                   condition=["bounded", "llm_led"][(d // 2) % 2])
+        (tmp_path / "runs" / "m" / "c").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "runs" / "m" / "c" / f"d{d:02d}.json").write_text(json.dumps(rec))
+    for tag in ("local", "cloud"):
+        with open(tmp_path / f"judgments_{tag}.jsonl", "w") as f:
+            for d in range(12):
+                for i in range(0, 10, 2):
+                    out = tag == "cloud" or (d + i) % 3 == 0
+                    f.write(json.dumps({"run": f"runs/m/c/d{d:02d}.json", "index": i,
+                                        "in_frame": not out, "unsupported_claims": []}) + "\n")
+    args = dict(results=str(tmp_path), n=30, language="", seed=7, force=False)
+    with pytest.raises(SystemExit):        # a flag judge without labels
+        jv.sheets(types.SimpleNamespace(**args, flag_judges="local,missing"))
+    jv.sheets(types.SimpleNamespace(**args, flag_judges="local"))
+    key = json.loads((tmp_path / "e0" / "key.json").read_text())
+    assert key["design"] == jv.DESIGN and key["flag_judges"] == ["local"]
+    assert sum(s["size"] for s in key["strata"].values()) == 60
+    assert sum(s["taken"] for s in key["strata"].values()) == key["n"] == 30
+    assert sum(s["taken"] for k, s in key["strata"].items() if k[0] == "1") == 15
+    for item in key["items"].values():
+        s = key["strata"][item["stratum"]]
+        assert item["flag"] == int(item["stratum"][0])
+        assert item["inclusion_probability"] == pytest.approx(s["taken"] / s["size"], abs=1e-6)
+    # The annotators see no flag, judge nor condition
+    with open(tmp_path / "e0" / "sheet_a.csv", newline="", encoding="utf-8") as f:
+        header = next(csv.reader(f))
+    assert header == ["id", "task", "material", "conversation_before", "robot_utterance",
+                      "in_frame (1/0)", "unsupported (1/0)", "note"]
 
 
 def test_one_judge_for_both_languages(tmp_path):

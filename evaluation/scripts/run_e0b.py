@@ -23,10 +23,11 @@ E0b, the validation of the judge (doc/JUDGE_VALIDATION.md), in stages, each one 
         Phases 2-3, once the judge's instructions are frozen, FREE: every local judge of the
         ladder labels every dialogue, one judge on the server at a time (pulled if missing,
         unloaded and removed after its two languages; a judge with nothing left to label is not
-        pulled), then the annotation sheets of each language are drawn from the validation half
-        (no judge chooses them; the local judges' labels of the development half only size the
-        sample). --keep-models keeps the
-        judges pulled here.
+        pulled), then the annotation sheets of each language are drawn from the validation half:
+        strata flag x persona x condition, the flag set by the local judges of the ladder (any of
+        them labels the utterance out of the frame or unsupported), half of the sample to the
+        flagged strata; the local judges' labels of the development half only size the sample.
+        --keep-models keeps the judges pulled here.
     python3 run_e0b.py report --a-en A.csv --b-en B.csv --a-es A.csv --b-es B.csv
         Phase 4, once two people have filled the sheets: the report of each language
         (results/e0b/<lang>/e0/report.json), then ONE judge for both languages (the ladder across
@@ -312,7 +313,9 @@ def label(args) -> None:
     sheets = []
     for lang in LANGUAGES:
         if not os.path.exists(os.path.join(folder(lang), "e0", "key.json")):
-            run(py("analysis/judge_validation.py", "sheets", folder(lang), "--n", str(args.n)))
+            # The flag of the enriched sample: the local judges of the ladder (never a cloud one)
+            run(py("analysis/judge_validation.py", "sheets", folder(lang), "--n", str(args.n),
+                   "--flag-judges", ",".join(tag for _, _, tag in local)))
             sheets.append(lang)
     provenance.catalog("label", RESULTS, {"judges": done, "sheets_made": sheets})
     print("The sheets are ready for the two annotators; then report. The cloud judges are called "

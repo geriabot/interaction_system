@@ -475,6 +475,10 @@ def test_label_handles_one_judge_at_a_time(server, tmp_path, monkeypatch, catalo
     entry = _catalog(catalog_in_tmp)[-1]
     assert entry["event"] == "label" and entry["judges"] == ["j1", "j3"]
     assert sorted(entry["sheets_made"]) == ["en", "es"]
+    # The flagged strata of the sheets are set by every local judge of the ladder (j2 labelled
+    # earlier included), never by a cloud judge
+    for cmd in (c for c in cmds if "sheets" in c):
+        assert cmd[cmd.index("--flag-judges") + 1] == "j1,j2,j3"
 
 
 def test_development_only_labels_one_half_and_stops(server, tmp_path, monkeypatch):

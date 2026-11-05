@@ -331,14 +331,49 @@ random with the same rates. Kappa is used instead of the share of equal labels b
 of interest are rare: if 95% of the utterances are in the frame, a judge that always answers "in
 the frame" agrees on 95% of them and its kappa is close to 0.
 
+The E0b sample over-represents the utterances the local judges flag
+([JUDGE_VALIDATION.md](JUDGE_VALIDATION.md#the-phases)), so every sampled utterance *i* carries a
+weight w_i = 1 / π_i, the inverse of its inclusion probability π_i (the number drawn from its
+stratum over the size of the stratum). The weighted 2×2 table of judge and annotator has, in each
+cell, the sum of the weights of the utterances that fall in it: the Horvitz–Thompson estimate of
+the counts of the whole validation half. From it:
+
+- **weighted kappa**: Cohen's kappa computed on the weighted table, with p_o, p_e and the label
+  rates taken from the weighted counts. No published source treats a design-weighted Cohen's kappa
+  as such; it is Cohen's kappa on the table estimated with the Horvitz–Thompson weights. With equal
+  weights it equals the unweighted kappa. *Weighted* refers here to the sampling weights, not to
+  the disagreement weights of the kappa for ordered categories. At very low prevalence kappa
+  approaches the positive specific agreement (Hripcsak and Rothschild 2005), so on these rare
+  labels it rests on the agreement over the positives;
+- **weighted sensitivity**: the weighted count of utterances both the judge and the annotator mark
+  positive (out of the frame, or unsupported) over the weighted count the annotator marks positive;
+- **weighted specificity**: the same over the utterances the annotator marks negative;
+- **weighted prevalence**: the weighted count the annotator (or the judge) marks positive over the
+  sum of the weights; the prevalence in the sample is the unweighted share.
+
+Without the weights, the figures of an enriched sample are complete-case estimates under
+verification bias: when the cases a test calls positive are verified more often, the unweighted
+sensitivity is biased upward and the specificity downward, and inverse-probability
+(Horvitz–Thompson) weighting corrects it (Alonzo 2014, pp. 71, 72, 78). The full references are
+in [JUDGE_VALIDATION.md](JUDGE_VALIDATION.md#references).
+
 `analysis/judge_validation.py report` computes, per label and per candidate judge (one
 `judgments_<tag>.jsonl` each):
 
-- kappa of the judge with annotator A and with annotator B, leaving out the utterances of a system
-  of the judge's own family;
-- kappa between the two annotators;
-- a 95% interval for each kappa: percentile bootstrap over the annotated utterances, 2000
-  resamples (`--seed`, 7);
+- the weighted kappa of the judge with annotator A and with annotator B, leaving out the
+  utterances of a system of the judge's own family (the decision statistic);
+- the judge's weighted sensitivity and specificity with each annotator as reference;
+- the unweighted kappa of the judge with each annotator (reported only);
+- the prevalence of the label in the sample and the weighted one, for each annotator and the judge;
+- the unweighted kappa between the two annotators (the reliability check of the guide) and the
+  weighted one;
+- a 95% interval for every kappa, sensitivity and specificity: a stratified cluster bootstrap,
+  2000 resamples (`--seed`, 7). Within each persona × condition cell, as many dialogues as the
+  cell holds in the sample are drawn with replacement, each with all its sampled utterances and
+  their weights, and the statistics are recomputed on the resample; the 2.5th and 97.5th
+  percentiles are the interval. Dialogues are the unit because the utterances of one dialogue are
+  not independent; the cell is the stratum of the resampling because the flag varies within a
+  dialogue, while persona and condition do not;
 - the decision of the rule for each judge, and the judge chosen by the ladder
   ([JUDGE_VALIDATION.md](JUDGE_VALIDATION.md#the-decision-rule)).
 
