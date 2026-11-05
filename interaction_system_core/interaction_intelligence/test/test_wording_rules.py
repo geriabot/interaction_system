@@ -148,6 +148,8 @@ def test_the_address_rule_is_informal_second_person_and_language_agnostic():
     rule = builder().address
     assert rule and "second person" in rule and "informal" in rule and "familiar" in rule
     assert "third person" in rule
+    # A name the user gives is theirs: without it a read-back made it a third party's
+    assert "their own name" in rule
     # The same rule in every language: the register is named, never translated
     assert builder("Spanish").address == rule
 
