@@ -176,15 +176,19 @@ scenario's goal items (`goal_items`), as described in
 [EXPERIMENTS.md](EXPERIMENTS.md#the-simulated-users-and-their-check). The marks are written after
 the dialogue by the local annotator (`analysis/annotate_turns.py`); older run records hold the
 simulator's own declarations instead. Values are compared after a light normalization: lower case,
-single spaces, no surrounding punctuation, no accents (`--keep-accents` keeps them). Scenarios
-without goal items get `adh_check` `n/a` and the other columns empty.
+words and digits only (punctuation anywhere becomes a space), single spaces, no accents
+(`--keep-accents` keeps them), and a trailing stage direction in parentheses of a scripted value
+ignored. Scenarios without goal items get `adh_check` `n/a` and the other columns empty; a
+dialogue with goal items but without the annotator's marks (not annotated, or the annotator
+failed on it) gets `unannotated`, is never excluded and is not counted as checked.
 
 | Column | Definition | Unit |
 |---|---|---|
-| `adh_check` | `fail` (a simulator failure), `review` (flagged for a person, not excluded), `ok`, or `n/a` (no goal items) | label |
+| `adh_check` | `fail` (a simulator failure), `review` (flagged for a person, not excluded), `ok`, `n/a` (no goal items) or `unannotated` (no marks) | label |
 | `adh_off_script` | The declared values that are neither the item's value nor its planned `then`, or whose id is not a goal item (`id=value`, separated by `;`) | list |
 | `adh_unrevealed` | The goal items never declared; `id (value)` or `id (then)` when an item with a planned change missed one of its two values | list |
-| `adh_review` | The declarations whose value does not appear in the words of the line said in that turn (`t<turn>:id`) | list |
+| `adh_unconfirmed` | The values the annotator marked "other" without evidence besides its own judgement (see EXPERIMENTS.md): flagged for review, never excluded (`id=value`) | list |
+| `adh_review` | The declarations whose words (the annotator's quote, else the value) do not appear in the words of the line said in that turn (`t<turn>:id`) | list |
 | `adh_revealed_errors` | Turns whose declaration could not be read (the line was kept) | count |
 | `sim_errors` | Turns in which the simulated user's model failed to answer (a fallback line was said) | count |
 | `sim_excluded`, `sim_excluded_why` | Whether the dialogue is a simulator failure by the exclusion rule (`--adherence-rule`, default `user_silent`), and why (`off_script` or `unrevealed`) | boolean, label |

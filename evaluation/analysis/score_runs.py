@@ -578,9 +578,9 @@ def qa_summary(rows: list[dict]) -> list[str]:
 
 
 def adherence_summary(rows: list[dict]) -> list[str]:
-    """Per model and condition: dialogues, those checked (with goal items), the excluded rate
-    (over all dialogues), those flagged for review, and the success rate with and without the
-    excluded dialogues."""
+    """Per model and condition: dialogues, those checked (with goal items and the annotator's
+    marks), the excluded rate (over all dialogues), those flagged for review, and the success
+    rate with and without the excluded dialogues."""
     groups = defaultdict(list)
     for r in rows:
         groups[(r["model"], r["condition"])].append(r)
@@ -590,7 +590,7 @@ def adherence_summary(rows: list[dict]) -> list[str]:
         kept = [r for r in rs if not r.get("sim_excluded")]
         lines.append(
             f"{model:16s} {cond:14s} {len(rs):3d} "
-            f"{sum(r.get('adh_check') != 'n/a' for r in rs):7d} "
+            f"{sum(r.get('adh_check') not in ('n/a', 'unannotated') for r in rs):7d} "
             f"{sum(bool(r.get('sim_excluded')) for r in rs) / len(rs):8.2f} "
             f"{sum(r.get('adh_check') == 'review' for r in rs):6d} "
             f"{sum(r['task_success'] for r in rs) / len(rs):8.2f} "

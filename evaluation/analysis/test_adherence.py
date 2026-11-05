@@ -320,6 +320,73 @@ def test_normalisation_is_light():
     assert adherence.check(run(log, items=[{"id": "drink", "value": "latte"}]))["sim_excluded"]
 
 
+def test_normalisation_ignores_inner_punctuation_and_keeps_words_and_digits():
+    assert adherence.norm_value("the duvet goes in the large machines, 4 or 5") == \
+        adherence.norm_value("The duvet goes in the large machines 4 or 5")
+    assert adherence.norm_value("yellow flag: swim with caution, close to the shore") == \
+        "yellow flag swim with caution close to the shore"
+    assert adherence.norm_value("11:00") == "11 00" and adherence.norm_value("¿Sí?") == "si"
+    assert adherence.norm_value("forty-eight") != adherence.norm_value("forty")
+    log = [say(1, "Large machine", ("machines", "the duvet goes in the large machines 4 or 5"))]
+    items = [{"id": "machines", "value": "the duvet goes in the large machines, 4 or 5"}]
+    assert adherence.check(run(log, items=items))["adh_off_script"] == ""
+
+
+def test_a_stage_direction_of_a_scripted_value_is_not_part_of_it():
+    assert adherence.bare("cannot wind the thread (three times)") == "cannot wind the thread"
+    assert adherence.bare("(aside)") == "(aside)" and adherence.bare("done") == "done"
+    items = [{"id": "step_4", "value": "cannot wind the thread (three times)"},
+             {"id": "flavour", "value": "lemon", "then": "almond (once)"}]
+    log = [say(1, "I cannot wind the thread", ("step_4", "cannot wind the thread")),
+           say(2, "I cannot wind it", ("step_4", "cannot wind the thread (three times)")),
+           say(3, "Lemon", ("flavour", "lemon")), say(4, "Almond, please", ("flavour", "almond"))]
+    c = adherence.check(run(log, items=items), rule="e0a")
+    assert c["adh_off_script"] == "" and c["adh_unrevealed"] == ""
+    assert c["adh_skipped_change"] == "" and not c["sim_excluded"]
+
+
+def test_the_quote_of_the_annotator_is_what_the_review_flag_looks_for():
+    def mark(turn, text, ident, value, quote):
+        return {"turn": turn, "text": text, "revealed": [
+            {"id": ident, "value": value, "choice": "scripted", "quote": quote}]}
+    items = [{"id": "price", "value": "asks how much the repair will cost"}]
+    log = [mark(1, "How much will it be?", "price", items[0]["value"], "How much will it be?")]
+    assert adherence.check(run(log, items=items))["adh_check"] == "ok"
+    log = [mark(1, "How much will it be?", "price", items[0]["value"], "the repair cost")]
+    assert adherence.check(run(log, items=items))["adh_review"] == "t1:price"
+
+
+QN_GOAL = {"resources_json": json.dumps([{"name": "instrument", "content": json.dumps({
+    "options": ["Never", "Once or twice a week", "Most days", "Every day"],
+    "items": ["Crosswords?", "Cards?"]})}])}
+
+
+def test_a_questionnaire_answer_off_script_is_not_hidden_by_the_options_read():
+    items = [{"id": "item_1", "value": "Every day"},
+             {"id": "item_2", "value": "about three times a week",
+              "then": "Once or twice a week"}]
+    options = ("The options are: Never, Once or twice a week, Most days or Every day.")
+    log = [{"turn": 1, "robot": "Crosswords? " + options, "text": "Every day",
+            "revealed": [{"id": "item_1", "value": "Every day"}]},
+           {"turn": 2, "robot": "Cards? " + options, "text": "About three times a week.",
+            "revealed": [{"id": "item_2", "value": "about three times a week"}]},
+           {"turn": 3, "robot": options, "text": "Most days.",
+            "revealed": [{"id": "item_2", "value": "Most days", "choice": "other"}]}]
+    rec = run(log, items=items, strategy="questionnaire", goal=QN_GOAL)
+    assert adherence.options_of(rec) == ["Never", "Once or twice a week", "Most days",
+                                         "Every day"]
+    c = adherence.check(rec, rule="e0a")
+    assert c["adh_off_script"] == "item_2=Most days" and c["sim_excluded_why"] == "off_script"
+    assert c["adh_robot_induced"] == ""
+    # A read-back of one answer still induces it; another strategy keeps the old reading
+    log[2]["robot"] = "I have Most days, is that right?"
+    c = adherence.check(run(log, items=items, strategy="questionnaire", goal=QN_GOAL), "e0a")
+    assert c["adh_robot_induced"] == "item_2=Most days" and c["adh_off_script"] == ""
+    log[2]["robot"] = options
+    c = adherence.check(run(log, items=items, strategy="slot_filling", goal=QN_GOAL), "e0a")
+    assert c["adh_robot_induced"] == "item_2=Most days"
+
+
 def test_an_off_script_value_excludes():
     log = GOOD + [say(4, "Actually a large one", ("size", "large"))]
     c = adherence.check(run(log))
@@ -364,6 +431,28 @@ def test_the_rules():
                                rule="any_unrevealed")["sim_excluded"]
     with pytest.raises(ValueError):
         adherence.check(run(log), rule="nope")
+
+
+def test_the_e0a_rule_excludes_a_change_skipped_with_the_chance_to_say_it():
+    said_first = [say(1, "A medium latte", ("drink", "latte"), ("size", "medium")),
+                  say(2, "Until 8 am", ("water", "8 am"))]
+    # One more line of its own after the first value, the change never said: excluded
+    log = said_first + [say(3, "That is all")]
+    c = adherence.check(run(log, outcome="completed"), rule="e0a")
+    assert c["sim_excluded"] and c["sim_excluded_why"] == "skipped_change"
+    assert c["adh_skipped_change"] == "water"
+    # No line after the first value (the robot closed, or only an injected event): kept
+    for tail in ([], [{"turn": 3, "event": "silence"}], [{"turn": 3, "event": "cancel",
+                                                          "text": "Stop"}]):
+        c = adherence.check(run(said_first + tail, outcome="completed"), rule="e0a")
+        assert not c["sim_excluded"] and c["adh_skipped_change"] == ""
+    # The change said: kept; the first value never said (never asked): kept
+    assert not adherence.check(run(GOOD), rule="e0a")["sim_excluded"]
+    log = [say(1, "A medium latte", ("drink", "latte"), ("size", "medium")), say(2, "Bye")]
+    assert not adherence.check(run(log, outcome="user_silent"), rule="e0a")["sim_excluded"]
+    # Off script still excludes, first
+    c = adherence.check(run(GOOD + [say(4, "A large one", ("size", "large"))]), rule="e0a")
+    assert c["sim_excluded_why"] == "off_script"
 
 
 def test_a_value_not_in_the_line_only_flags_for_review():

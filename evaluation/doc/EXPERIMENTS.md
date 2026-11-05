@@ -199,15 +199,36 @@ the goal items and marks each user line. It makes one deterministic, schema-cons
 dialogue to a local model; the first candidate is gemma3:12b, of a family other than the evaluated
 system's. Each user line gets two marks:
 
-- the goal items it states, as `{"id": ..., "value": ...}`, with the ids constrained to the list
-  and the value copied from it or the one actually said;
+- the goal items it states, as `{"id": ..., "value": ...}`, with the ids constrained to the list.
+  The annotator does not write the value: for each item it chooses the scripted value, the
+  planned change (`then`, when the item has one) or "other", and quotes the words of the line
+  that state it. For the first two choices the mark holds the scenario's own string, so a
+  paraphrase ("Coloured clothes are washed at 60 degrees" for "coloured clothes at 60 degrees")
+  is never compared with the script as if it were a different value; only for "other" does the
+  mark hold the value said. The quote is kept for the audit. The same choice covers the values
+  that describe what the user does ("asks how much the repair will cost"), and a stage direction
+  at the end of a value ("(three times)") is shown to the annotator apart from the value.
+  Only an "other" mark can put a dialogue off script, so each gets a second look: a value that
+  is only part of a planned value is that value; otherwise a short call with the whole
+  conversation asks whether the line gives the scripted value, the planned change, another
+  value or nothing about the item. A different value excludes only with evidence besides the
+  model's judgement: its words are in the line, and it has numbers none of which is a planned
+  value's, or, in slot filling, quizzes and procedures, whose scripted values are short
+  answers, it shares no content word with them. Without that evidence it is flagged for
+  review. In a questionnaire whose goal items are its questions in order, a line that says one
+  of the options answers the question the robot read last, and that option is its value;
 - `request`, whether the line asks the robot for something (a question or a request) or not (a
-  comment, thanks, an answer, a goodbye).
+  comment, thanks, an answer, a goodbye). It comes from a call of its own that keeps the
+  annotator's first prompt, with which the grounded-QA scoring was validated.
 
 With the items, `request` tells which planned question a turn of grounded question answering asks
 and which turns asked nothing; this is how that strategy is scored ([METRICS.md](METRICS.md)). The
 marks go to a sidecar file per dialogue (`<results>/annotations/...`) and are merged when the
-dialogues are scored; the run records are never changed.
+dialogues are scored; the run records are never changed. An answer of the annotator that cannot
+be used (a model error, an answer that is not JSON or that leaves a user line out) is retried;
+if it still fails, the sidecar records the failure and its reason, the dialogue counts as not
+annotated (never as a user who stated nothing: it is neither checked nor excluded), the run
+summary counts it, and the next run of the annotator tries it again.
 
 The simulator does not annotate its own lines: doing so while playing the user adds to its load,
 and an annotation made afterwards cannot influence the dialogue and can be redone without rerunning
@@ -216,14 +237,19 @@ the same way. The annotator is validated by hand once and checked per campaign b
 disagreements of two local annotators ([HUMAN_REVIEW.md](../HUMAN_REVIEW.md), task 3).
 
 `score_runs.py` compares the marks with the goal items after a light normalization of case, spaces,
-surrounding punctuation and accents; numbers are not converted and there are no synonyms. Three
-verdicts result:
+punctuation (anywhere in the value) and accents, ignoring a stage direction in parentheses at the
+end of a scripted value; numbers are not converted and there are no synonyms, which the
+annotator's choice already covers. Three verdicts result:
 
 - **Off script**: a declared value that is neither the item's value nor its planned `then`, or an
-  id that is not in the list.
+  id that is not in the list. A value the robot had said before (it proposed it, read it back or
+  misheard it) is flagged for review instead; a robot line that reads two or more of a
+  questionnaire's options proposes none of them, so an option other than the scripted one is off
+  script even though the robot had read it.
 - **Never revealed**: a goal item never declared, or, for an item with a planned change, its first
   value or its `then` never declared.
-- **Review**: a declared value whose words do not appear in the line said in that turn. A mismatch
+- **Review**: a declaration whose words (the annotator's quote) do not appear in the line said in
+  that turn. A mismatch
   between the text and the declaration cannot be detected automatically in general, so this only
   flags the dialogue for the hand audit; it never excludes it.
 
