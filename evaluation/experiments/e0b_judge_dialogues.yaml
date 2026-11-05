@@ -13,7 +13,7 @@
 name: e0b_judge_dialogues
 scenarios: scenarios/dialogues.yaml
 personas_file: personas.yaml
-scenarios_per_strategy: 2    # 2 per strategy: the 7 strategies (the mechanisms come from the personas)
+scenarios_per_strategy: 8    # all 56 (8 per strategy): the rare labels need a large pool (JUDGE_VALIDATION.md)
 personas: [cooperative, boundary_testing, mild_cognitive_impairment]
 repetitions: 1
 language: English

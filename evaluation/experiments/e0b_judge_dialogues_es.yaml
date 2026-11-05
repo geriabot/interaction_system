@@ -11,7 +11,12 @@
 # Paid calls (the simulated user only, a few cents): run_experiment.py --dry-run counts them; the
 # run needs --allow-cloud.
 name: e0b_judge_dialogues_es
-scenarios: scenarios/e4_es.yaml   # the 7 strategies, each scenario with one mechanism provoked by its events (and the card's detour)
+# The 56 scenarios of E1 in Spanish and the 8 of E4 (each with one mechanism provoked by its events
+# and the card's detour); E4's share ids with E1's, so they carry a suffix. The rare labels need a
+# large pool (JUDGE_VALIDATION.md)
+scenarios:
+  - scenarios/dialogues_es.yaml
+  - {file: scenarios/e4_es.yaml, id_suffix: _e4}
 personas_file: personas.yaml
 personas: [cooperative, boundary_testing, mild_cognitive_impairment]
 repetitions: 1

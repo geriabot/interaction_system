@@ -59,7 +59,8 @@ import campaigns  # noqa: E402
 import real_sessions  # noqa: E402
 import sessions_common  # noqa: E402
 import whole_evaluation as whole  # noqa: E402
-from experiment_files import condition_dialogues, select_scenarios  # noqa: E402
+from experiment_files import (condition_dialogues, load_scenarios,  # noqa: E402
+                              select_scenarios)
 
 EXPERIMENTS = os.path.join(EVAL, "experiments")
 HARDWARE = os.path.join(EXPERIMENTS, "hardware")
@@ -131,7 +132,7 @@ def hardware_files():
 
 def scenarios_of(path):
     exp = cached(path, load)
-    scenarios = cached(os.path.join(os.path.dirname(path), exp["scenarios"]), load)["scenarios"]
+    scenarios = load_scenarios(os.path.dirname(path), exp, lambda p: cached(p, load))
     return select_scenarios(scenarios, exp)
 
 

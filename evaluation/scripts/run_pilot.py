@@ -39,7 +39,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 EVAL = os.path.normpath(os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 sys.path.append(os.path.join(EVAL, "offline", "core"))
-from experiment_files import condition_dialogues, load_experiment, select_scenarios  # noqa: E402
+from experiment_files import (condition_dialogues, load_experiment,  # noqa: E402
+                              load_scenarios, select_scenarios)
 
 PILOTS = os.path.join(EVAL, "experiments", "pilot")
 ROOT = os.path.join(EVAL, "results", "pilot")
@@ -77,8 +78,8 @@ def planned(path: str) -> list[tuple]:
     import yaml
     exp = load_experiment(path)
     base = os.path.dirname(path)
-    with open(os.path.join(base, exp["scenarios"]), encoding="utf-8") as f:
-        scenarios = select_scenarios(yaml.safe_load(f)["scenarios"], exp)
+    scenarios = select_scenarios(load_scenarios(base, exp, lambda p: yaml.safe_load(
+        open(p, encoding="utf-8"))), exp)
     conditions = {k: v or {} for k, v in exp["conditions"].items()}
     return [(m, c, s["id"], p, r) for m in exp["models"] for c in conditions
             if not conditions[c].get("models") or m in conditions[c]["models"]

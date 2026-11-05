@@ -44,6 +44,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import control_panel  # noqa: E402  (its jobs: start, state, stop, answer)
+from experiment_files import scenario_files  # noqa: E402
 sys.path.insert(0, os.path.join(control_panel.EVAL, "real"))
 import campaigns  # noqa: E402  (the configurations, the voices and their settings)
 import real_sessions  # noqa: E402  (the Piper settings and their ranges)
@@ -382,7 +383,8 @@ def experiment_waits():
         if isinstance(exp, dict) and exp.get("scenarios"):
             wait = (exp.get("limits") or {}).get("wait_timeout")
             if wait is not None:
-                out.setdefault(os.path.basename(exp["scenarios"]), set()).add(float(wait))
+                for f, _ in scenario_files(exp):
+                    out.setdefault(os.path.basename(f), set()).add(float(wait))
     return out
 
 

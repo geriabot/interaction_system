@@ -77,3 +77,19 @@ def test_no_role_play_scene_is_written_in_the_second_person():
                 scenes += 1
                 assert not second.search(scene), f"{name} {s['id']}: {scene}"
     assert scenes > 0
+
+
+def test_scenarios_from_several_files_keep_their_ids_apart(tmp_path):
+    from experiment_files import load_scenarios
+    import pytest
+    import yaml
+    (tmp_path / "a.yaml").write_text(yaml.safe_dump({"scenarios": [{"id": "x"}, {"id": "y"}]}))
+    (tmp_path / "b.yaml").write_text(yaml.safe_dump({"scenarios": [{"id": "x"}]}))
+    one = load_scenarios(str(tmp_path), {"scenarios": "a.yaml"}, lambda p: yaml.safe_load(open(p)))
+    assert [s["id"] for s in one] == ["x", "y"]
+    both = load_scenarios(str(tmp_path), {"scenarios": ["a.yaml", {"file": "b.yaml", "id_suffix": "_b"}]},
+                          lambda p: yaml.safe_load(open(p)))
+    assert [s["id"] for s in both] == ["x", "y", "x_b"]
+    with pytest.raises(ValueError, match="more than one"):
+        load_scenarios(str(tmp_path), {"scenarios": ["a.yaml", "b.yaml"]},
+                       lambda p: yaml.safe_load(open(p)))

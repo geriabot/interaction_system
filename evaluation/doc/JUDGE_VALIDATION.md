@@ -38,7 +38,7 @@ those of the real sessions of E4 are checked in the [confirmations](#confirmatio
 
 | Phase | What happens | Output |
 |---|---|---|
-| 1. Dialogues | The system talks with the simulated user with three personas, in English (2 scenarios per strategy) and in Spanish (the 8 scenarios of E4) | 84 dialogues in English, 48 in Spanish (about 1450 robot utterances) |
+| 1. Dialogues | The system talks with the simulated user with three personas, in English (the 56 scenarios of E1, 8 per strategy) and in Spanish (the same 56 in Spanish and the 8 scenarios of E4) | 336 dialogues in English, 384 in Spanish (about 5,000 robot utterances) |
 | 2. The judge | The dialogues of each language are split into a development half and a validation half; the judge's instructions are adjusted on the development half only, then frozen; each candidate judge labels the robot's utterances | One labels file per judge |
 | 3. The people | Two annotators label the same stratified sample of the validation half, enriched with the utterances the local judges flag, each alone, with the [guide](#the-annotation-guide) | Two filled sheets per language |
 | 4. Comparison | The agreement of each judge with each annotator, per label and language, weighted by the inverse inclusion probabilities; the agreement between the annotators; the [decision rule](#the-decision-rule) and the [ladder](#the-ladder-of-judges), applied across both languages | One judge used in the experiments, in both languages |

@@ -27,7 +27,7 @@ sys.path.insert(0, SCRIPTS)
 import cloud_smoke  # noqa: E402
 import pilot_standin as ps  # noqa: E402
 import run_pilot  # noqa: E402
-from experiment_files import (condition_dialogues, derive_pilot, load_experiment,  # noqa: E402
+from experiment_files import (condition_dialogues, derive_pilot, load_experiment, load_scenarios,  # noqa: E402
                               select_scenarios)
 
 EXPERIMENTS = os.path.join(EVAL, "experiments")
@@ -98,8 +98,7 @@ def test_a_pilot_covers_every_cell_strategy_and_persona_of_its_experiment(path):
     cells = {(m, c) for m in exp["models"] for c in exp["conditions"]}
     assert {(m, c) for m, c, *_ in plan} == cells           # every condition x model cell
     base_dir = os.path.dirname(experiment_of(path))
-    base_scen = select_scenarios(load_yaml(os.path.join(base_dir, base["scenarios"]))
-                                 ["scenarios"], base)
+    base_scen = select_scenarios(load_scenarios(base_dir, base, load_yaml), base)
     pilot_scen = {s["id"]: s for s in all_scenarios(path, exp)}
     strategies = {pilot_scen[s]["strategy"] for _, _, s, _, _ in plan}
     assert strategies == {s["strategy"] for s in base_scen}  # every strategy

@@ -111,7 +111,7 @@ from interaction_sim.llm_faults import ENV as FAULTS_ENV, FaultPlan, validate_fa
 from interaction_sim.llm_user import LlmUser, UserEvent
 
 from experiment_files import (check_pairs, condition_dialogues, condition_scenarios,
-                              describe_model_wait, load_experiment, model_wait,
+                              describe_model_wait, load_experiment, load_scenarios, model_wait,
                               model_wait_params, select_scenarios)
 import provenance
 
@@ -674,7 +674,10 @@ def main() -> None:
     except ValueError as exc:
         sys.exit(f"{exp_path}: {exc}")
     base = os.path.dirname(exp_path)
-    scenarios = load(os.path.join(base, exp["scenarios"]))["scenarios"]
+    try:
+        scenarios = load_scenarios(base, exp, load)
+    except ValueError as exc:
+        sys.exit(f"{exp_path}: {exc}")
     scenarios = select_scenarios(scenarios, exp)
     try:
         check_pairs(scenarios, exp)

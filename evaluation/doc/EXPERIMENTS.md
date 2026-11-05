@@ -390,8 +390,12 @@ the judge (H1 in E1 and E4, H2 in E3).
 
 **Design.** The system with the local model of each language (chosen in E0a), bounded and
 LLM-led, talks with the simulated user of E1 under three personas chosen to produce every kind of
-utterance: 84 dialogues in English (2 scenarios per strategy) and 48 in Spanish (the 8 scenarios of
-E4). The dialogues are split into a development half, on which the judge's instructions are
+utterance: 336 dialogues in English (the 56 scenarios of E1, 8 per strategy) and 384 in Spanish
+(the same 56 scenarios in Spanish and the 8 of E4). The number of dialogues is set by the rare
+labels, not by the annotation: with a few dozen dialogues per language the validation half holds
+only a handful of positives, which no sampling can raise to the 30 the decision needs, while a
+larger pool lets the enriched sample find them with the same number of annotated utterances. The
+dialogues are split into a development half, on which the judge's instructions are
 adjusted and frozen, and a validation half, from which two annotators label 150 to 300 utterances
 per language. Since both labels are rare, the sample is enriched: up to half of it is drawn from
 the utterances that some local judge flags as out of the frame or unsupported, and the rest,

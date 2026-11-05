@@ -6,6 +6,44 @@
 does not import ROS): one definition, so that the panel counts the dialogues the runner runs."""
 
 
+def scenario_files(exp: dict) -> list[tuple[str, str]]:
+    """(path, id suffix) of every scenarios file of the experiment, relative to its folder."""
+    entries = exp["scenarios"] if isinstance(exp["scenarios"], list) else [exp["scenarios"]]
+    return [(e, "") if isinstance(e, str) else (e["file"], e.get("id_suffix", ""))
+            for e in entries]
+
+
+def rebase_scenarios(scenarios, rel: str):
+    """The `scenarios` of an experiment with every path joined to `rel` (one file or a list)."""
+    import os
+    if isinstance(scenarios, list):
+        return [os.path.normpath(os.path.join(rel, e)) if isinstance(e, str)
+                else dict(e, file=os.path.normpath(os.path.join(rel, e["file"])))
+                for e in scenarios]
+    return os.path.normpath(os.path.join(rel, scenarios))
+
+
+def load_scenarios(base: str, exp: dict, loader) -> list[dict]:
+    """Every scenario of the experiment's `scenarios`: one file, or a list of files, each a path
+    or {file, id_suffix} (the suffix keeps apart scenarios of two files that share an id, such as
+    the variants of E4 of E1's scenarios). `loader(path)` returns the parsed YAML. Ids must be
+    unique across the files: the records of a run are named after them."""
+    import copy
+    import os
+    out, seen = [], set()
+    for path, suffix in scenario_files(exp):
+        for s in loader(os.path.join(base, path))["scenarios"]:
+            if suffix:
+                s = copy.deepcopy(s)
+                s["id"] = s["id"] + suffix
+            if s["id"] in seen:
+                raise ValueError(f"Scenario id {s['id']} is in more than one scenarios file "
+                                 "(give one of them an id_suffix)")
+            seen.add(s["id"])
+            out.append(s)
+    return out
+
+
 def select_scenarios(scenarios: list[dict], exp: dict) -> list[dict]:
     """The scenarios of the experiment: `scenario_ids` if given, then the first
     `scenarios_per_strategy` of each strategy, in the order of the file."""
@@ -181,9 +219,10 @@ def load_experiment(path: str) -> dict:
     with open(base_path, encoding="utf-8") as f:
         base = yaml.safe_load(f)
     rel = os.path.relpath(os.path.dirname(base_path), os.path.dirname(path))
-    for key in ("scenarios", "personas_file"):
-        if key in base:
-            base[key] = os.path.normpath(os.path.join(rel, base[key]))
+    if "scenarios" in base:
+        base["scenarios"] = rebase_scenarios(base["scenarios"], rel)
+    if "personas_file" in base:
+        base["personas_file"] = os.path.normpath(os.path.join(rel, base["personas_file"]))
     if "personas_file" not in base:
         base["personas_file"] = os.path.normpath(os.path.join(rel, "personas.yaml"))
     return derive_pilot(exp, base)
