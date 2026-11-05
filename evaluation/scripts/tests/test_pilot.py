@@ -157,15 +157,17 @@ def test_both_languages_and_the_dialogue_counts():
     counts = {n: len(run_pilot.planned(p)) for n, p in names.items()}
     assert counts == {"e0a_dialogues_pilot": 7, "e0a_dialogues_es_pilot": 7,
                       "e0b_judge_dialogues_pilot": 14, "e0b_judge_dialogues_es_pilot": 14,
-                      "e1_bounded_vs_llm_led_pilot": 84, "e1_role_swap_pilot": 28,
+                      "e1_bounded_vs_llm_led_pilot": 71, "e1_role_swap_pilot": 28,
                       "e3_mechanisms_pilot": 24, "e3_noise_pilot": 56, "e3_failures_pilot": 12,
                       "e4_sim_es_pilot": 7}
-    # E1: about 20 per condition (21 per cell of the 2x2), every development scenario once
+    # E1: 21 per cell of the 2x2, every development scenario once; the bounded cloud cell keeps
+    # only the pairs of its three personas, as in E1
     plan = run_pilot.planned(names["e1_bounded_vs_llm_led_pilot"])
     per_cell = {}
     for m, c, *_ in plan:
         per_cell[(m, c)] = per_cell.get((m, c), 0) + 1
-    assert set(per_cell.values()) == {21} and len(per_cell) == 4
+    assert sorted(per_cell.values()) == [8, 21, 21, 21] and len(per_cell) == 4
+    assert per_cell[("openai/qwen2.5:32b", "bounded")] == 8
 
 
 # ---------------------------------------------------------------- the derivation
@@ -211,6 +213,36 @@ def test_pairs_replace_the_cross_product_per_condition():
     assert [(s["id"], p) for s, p in condition_dialogues(scenarios, exp,
                                                          {"scenario_ids": ["x"]})] == [("x", "b")]
     assert len(condition_dialogues(scenarios, {"personas": ["a", "b"]}, {})) == 4
+
+
+def test_a_cell_can_run_a_subset_of_the_personas():
+    scenarios = [{"id": "x"}, {"id": "y"}]
+    exp = {"personas": ["a", "b", "c"]}
+    cond = {"personas_by_kind": {"<openai>": ["c", "a"]}}
+    # The cloud model's cell: the subset, in the experiment's order; the local model's: all
+    assert [(s["id"], p) for s, p in condition_dialogues(scenarios, exp, cond, "openai/gpt-x")] \
+        == [("x", "a"), ("x", "c"), ("y", "a"), ("y", "c")]
+    assert len(condition_dialogues(scenarios, exp, cond, "qwen3:8b")) == 6
+    assert len(condition_dialogues(scenarios, exp, cond)) == 6
+    # A pilot's pairs keep only the personas of the cell
+    pilot = dict(exp, pairs=[["x", "a"], ["y", "b"]])
+    assert [(s["id"], p) for s, p in condition_dialogues(scenarios, pilot, cond,
+                                                         "openai/qwen2.5:32b")] == [("x", "a")]
+    with pytest.raises(ValueError, match="not of the experiment"):
+        condition_dialogues(scenarios, exp, {"personas_by_kind": {"<openai>": ["z"]}}, "m")
+    with pytest.raises(ValueError, match="the keys are"):
+        condition_dialogues(scenarios, exp, {"personas_by_kind": {"cloud": ["a"]}}, "m")
+
+
+def test_e1_runs_the_bounded_cloud_cell_on_three_personas():
+    exp = load_experiment(os.path.join(EXPERIMENTS, "e1_bounded_vs_llm_led.yaml"))
+    with open(os.path.join(EXPERIMENTS, exp["scenarios"]), encoding="utf-8") as f:
+        scenarios = select_scenarios(yaml.safe_load(f)["scenarios"], exp)
+    count = {(m, c): len(condition_dialogues(scenarios, exp, cond, m))
+             for m in exp["models"] for c, cond in exp["conditions"].items()}
+    local, cloud = exp["models"]
+    assert count == {(local, "bounded"): 448, (local, "llm_led"): 448,
+                     (cloud, "bounded"): 168, (cloud, "llm_led"): 448}
 
 
 # ---------------------------------------------------------------- the stand-in

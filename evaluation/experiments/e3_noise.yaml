@@ -6,31 +6,15 @@
 # per condition (asr_noise of the condition); the level 0 is run here too, with the same
 # scenarios, personas and seeds, so that the four levels differ only in the noise.
 #
-# The scenarios of E1 (scenarios/dialogues.yaml), four of each strategy (the same as the E1
-# variants, listed below), whole dialogues without planned events. English only: the sound-alike substitutions
-# of the injector are English words (decided 2026-10-30).
+# The 56 scenarios of E1 (scenarios/dialogues.yaml), whole dialogues without planned events
+# (2026-11-03; until then four of each strategy, 28: with 84 pairs per level the interval of the
+# difference method - B spans about +-13 points, with 168 about +-9). English only: the
+# sound-alike substitutions of the injector are English words (decided 2026-10-30).
 #
 # Paid calls (the simulated user only): run_experiment.py --dry-run counts them; the run needs
 # --allow-cloud.
 name: e3_noise
 scenarios: scenarios/dialogues.yaml
-# The scenarios: four of each strategy, chosen by id so that the subset keeps the mechanisms that
-# only one scenario of E1 provokes (decided 2026-10-30; until then the first four of each
-# strategy in file order, which left out the explanation that fails, the stuck step, the step
-# repeated and the step back, among others): slot filling with a planned correction (sf_library);
-# the explanation not understood, the one said back with a wrong point, the decline answered with
-# a targeted question and the one that fails (ex_walker); the quiz answers in the user's own
-# words, a number in words and "I don't remember"; the procedure question, repeat and skip, back
-# and stuck step; the role play ended by the limit, by the user, by the scene and with a coach
-# hint; the questionnaire answer between options, the clarification with a reversed item, the
-# declined item and the repeated item
-scenario_ids: [sf_coffee, sf_clinic, sf_pizza, sf_library,
-               ex_fasting, ex_bus, ex_fire, ex_walker,
-               qz_geography, qz_memory, qz_animals, qz_health,
-               pr_handwash, pr_breathing, pr_plants, pr_alarm,
-               rp_interview, rp_doctor, rp_restaurant, rp_return,
-               qa_museum, qa_station, qa_hospital_reception, qa_library,
-               qn_museum_satisfaction, qn_robot_service, qn_loneliness, qn_event_feedback]
 personas_file: personas.yaml
 personas: [cooperative, terse, older_adult]
 repetitions: 1

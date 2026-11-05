@@ -35,16 +35,41 @@ def check_pairs(scenarios: list[dict], exp: dict) -> None:
         raise ValueError(f"pairs: scenarios {missing} are not in {exp.get('scenarios')}")
 
 
-def condition_dialogues(scenarios: list[dict], exp: dict, condition: dict) -> list[tuple]:
-    """(scenario, persona) of every dialogue a condition runs (one repetition): each scenario of
-    the condition with each persona of the experiment, or, when the experiment lists `pairs`
-    ([scenario id, persona] each: a pilot, which pairs every scenario with one persona instead of
-    crossing them), those of the pairs whose scenario the condition runs, in the pairs' order."""
+def cell_personas(exp: dict, condition: dict, model: str | None = None) -> list[str]:
+    """The personas a condition runs with a model: the experiment's, or those its
+    `personas_by_kind` gives for the model's kind (<local>, <openai>, <gemini>: a cell run on a
+    subset of the personas, as the bounded conversation with the cloud model in E1). ValueError
+    for an unknown kind or a persona the experiment does not have."""
+    personas = list(exp.get("personas", []))
+    by_kind = (condition or {}).get("personas_by_kind") or {}
+    unknown = sorted(set(by_kind) - set(MODEL_KINDS))
+    if unknown:
+        raise ValueError(f"personas_by_kind: the keys are {sorted(MODEL_KINDS)}, not {unknown}")
+    for kind, subset in by_kind.items():
+        foreign = sorted(set(subset) - set(personas))
+        if foreign:
+            raise ValueError(f"personas_by_kind {kind}: personas {foreign} are not of the "
+                             f"experiment {personas}")
+    if model is not None and model_kind(model) in by_kind:
+        keep = set(by_kind[model_kind(model)])
+        personas = [p for p in personas if p in keep]
+    return personas
+
+
+def condition_dialogues(scenarios: list[dict], exp: dict, condition: dict,
+                        model: str | None = None) -> list[tuple]:
+    """(scenario, persona) of every dialogue a condition runs with a model (one repetition):
+    each scenario of the condition with each persona of the cell (cell_personas), or, when the
+    experiment lists `pairs` ([scenario id, persona] each: a pilot, which pairs every scenario
+    with one persona instead of crossing them), those of the pairs whose scenario the condition
+    runs and whose persona the cell has, in the pairs' order."""
     mine = condition_scenarios(scenarios, condition)
+    personas = cell_personas(exp, condition, model)
     if exp.get("pairs"):
         by_id = {s["id"]: s for s in mine}
-        return [(by_id[sid], persona) for sid, persona in exp["pairs"] if sid in by_id]
-    return [(s, p) for s in mine for p in exp.get("personas", [])]
+        return [(by_id[sid], persona) for sid, persona in exp["pairs"]
+                if sid in by_id and persona in personas]
+    return [(s, p) for s in mine for p in personas]
 
 
 # ------------------------------------------------------------------ the pilot (doc/PILOT.md)

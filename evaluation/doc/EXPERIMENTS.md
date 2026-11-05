@@ -16,7 +16,7 @@ section and in [the order of the work](#order-of-the-work).
 |---|---|---|---|---|---|---|
 | [E0b](#e0b-validating-the-judge) | Does the LLM judge label the robot's utterances as two people do? | Prerequisite of H1–H3 | Local model, bounded and LLM-led | Gemini 2.5 Flash-Lite | The ladder of candidate judges, against two annotators | 132 dialogues, 150 to 300 utterances annotated per language |
 | [E0a](#e0a-choosing-the-local-model) | Which open model does the system use, in each language? | Fixes the system of H1 | Each candidate | Gemini 2.5 Flash-Lite (phase 2) | None | Phase 1: 11 critical questions, both languages, 16 candidates and 5 `@critical` variants; phase 2: 21 development scenarios per language |
-| [E1](#e1-bounded-against-llm-led-conversation) | Does a small local model in a bounded conversation match a large cloud model that leads the conversation? | H1 (role swap: H3) | Local and cloud, bounded and LLM-led (2×2) | Gemini 2.5 Flash-Lite | Chosen in E0b | 1792 dialogues per repetition |
+| [E1](#e1-bounded-against-llm-led-conversation) | Does a small local model in a bounded conversation match a large cloud model that leads the conversation? | H1 (role swap: H3) | Local and cloud, bounded and LLM-led (2×2; the bounded cloud cell on three personas) | Gemini 2.5 Flash-Lite | Chosen in E0b | 1512 dialogues per repetition |
 | [E2](#e2-choosing-the-dialogue-behavior) | Does the system choose the right strategy from a task in natural language? | System claim | Local model | None | None | 60 tasks × 3 conditions |
 | [E3](#e3-robustness-of-the-shared-mechanisms) | Do the shared mechanisms keep the conversation on its task when it goes wrong? | H2 | Local model: method, ablations, LLM-led | Gemini 2.5 Flash-Lite | Chosen in E0b | 1662 dialogues, in English (mechanisms 765, noise 672, model failures 225) |
 | [E4](#e4-validation-with-real-users) | Does the method behave with real people as in simulation, mechanism by mechanism? | H1, H3 | The method, local model only | 16 participants (and a simulated twin) | Chosen in E0b | 64 conversations (twin: 96) |
@@ -682,11 +682,36 @@ question; or *cloud*, a large OpenAI model pinned to a dated version.
 | C | Bounded | Cloud | The bounding applied to a large model |
 | D | LLM-led | Cloud | The usual alternative: a large commercial model leading the conversation |
 
-Every scenario and persona runs in the four conditions. D is a strong baseline: the most
+Every scenario and persona runs in A, B and D. C runs every scenario with three personas,
+`cooperative`, `older_adult` and `boundary_testing` (168 dialogues), because neither the main claim
+(A against D) nor the effect of bounding with the model fixed (A against B) uses it: C answers only
+whether bounding also helps a large model, and the method, not the cloud model, is what E1
+evaluates. With 168 pairs, a difference of 10 points in task success between C and D is detected
+with a power of about 0.8 (exact McNemar test, α = 0.05, 20% of the pairs discordant; somewhat
+less with the correlation within a scenario), against about 1 with the 448 pairs of every
+persona; a difference of 5 points is not detected reliably with either (about 0.2 and 0.6). The
+personas are those of the role swap, among them the one that tests the bounding hardest. The
+comparisons with C use the scenario × persona pairs it shares with the other conditions. D is a strong baseline: the most
 competitive alternative available, with the same material and rules as the method and explicit
 instructions to stay within the task and to state only facts from the material. B alone would be a
 weak baseline, because it is expected that bounding helps a small model, and showing it says
 little.
+
+**What the LLM-led conversation runs with.** It is not the bare model: it runs inside the same
+system, with the least a robot needs to run a task and receive its result. On every turn the model
+answers in JSON, constrained by a schema, with the line to say, whether the conversation is over,
+its outcome (success, cancelled or failed) and its result (for example the data of the form). The
+system speaks the line and, when the model says the conversation is over, closes it and hands the
+result to the behavior that asked for the task. Speech, fillers, silence handling and the turn
+limit (25 user turns) are the method's. At the turn limit the system closes the conversation with
+its fixed line and the dialogue fails, whatever the model had gathered. Nothing else is added: no
+trees, no narrow questions, no check of the values, no read-back, confirmation or cancellation
+imposed by code (the rules ask the model to confirm the data and a request to stop, as the trees
+do) and no closing decided by the system. The result is never taken on the model's word: task
+success compares it with the ground truth of the scenario, with the same scorer as the method's.
+This is the design of the LLM-led systems and monolithic baselines of the related work (AutoTOD,
+Xu et al. 2024; Garcia et al. 2026); without an interface of this kind no behavior of the robot
+could receive the result of the task.
 
 Both ways of holding the conversation use the same conversational fillers, a shared mechanism: a
 fixed phrase per language when the reply is not ready after 2 s, then a ladder of other phrases
@@ -748,6 +773,12 @@ follows a robot question. Neither is evidence independent of the system, so thes
 counted separately per condition, the success rate is reported with and without them, and they are
 listed for a person to read ([METRICS.md](METRICS.md#task-success-score_runspy)).
 
+Every failed dialogue is also classified by how it failed, per condition
+([METRICS.md](METRICS.md#how-a-dialogue-failed)): with a silent unsafe error; not closed (the turn
+limit, or a timeout); ended by the user before the task was done (silence or leaving); or closed
+with a wrong or incomplete result. In the LLM-led conditions this separates failing to end the
+task from doing it wrong.
+
 Two measures are reported separately and are not part of task success: the questionnaire score
 computed by code against the one planned (`score_ok`), and the rubric criteria said in the role
 play's introduction (`rubric_in_intro`, expected 0).
@@ -756,27 +787,50 @@ play's introduction (`rubric_in_intro`, expected 0).
 
 1. Bounding helps with the model fixed. A is better than B, and C better than D, on utterances
    out of the frame and unsupported claims, without losing task success, in particular with the
-   `boundary_testing`, `mild_cognitive_impairment` and `uncooperative` personas. Within each pair
+   `boundary_testing`, `mild_cognitive_impairment` and `uncooperative` personas (C against D on
+   the three personas of C). Within each pair
    the model is the same, so the difference comes only from who controls the conversation. If it
    also holds for the large model, the mechanism does more than make up for a small model's limits.
 2. A bounded local model can replace a large model that leads the conversation; this is the main
-   claim. A is not inferior to D in task success, within a margin fixed before the campaign (for
-   example, 10 percentage points), and is better than D on utterances out of the frame and
+   claim. The paired difference of task success A − D is reported with its 95% interval, and
+   with the margins of non-inferiority it supports: the claim holds for any margin larger than the
+   distance from 0 to the interval's lower bound. A margin of 10 percentage points is the
+   reference used to plan the size; the results discuss which margins hold and what each means
+   for the advantages of the local model (no data leaves the robot, no cost per call, no
+   dependence on a provider). A is also compared with D on utterances out of the frame and
    unsupported claims.
 3. With bounding, the size of the model matters little. The difference between A and C is
-   reported on every measure, as a description rather than a criterion: a small difference means a
+   reported on every measure, on the three personas of C, as a description rather than a
+   criterion: a small difference means a
    local model is enough when the conversation is bounded.
 
-The analysis estimates both factors and their interaction: a logistic regression of success per
-dialogue on the control, the model and their interaction, with random effects of scenario and
-persona. The interaction says whether bounding helps the small model more than the large one.
+The analysis estimates both factors and their interaction on the scenario × persona pairs that
+the four conditions share (the three personas of C): a logistic regression of success per dialogue
+on the control, the model and their interaction, with random effects of scenario and persona. The interaction says whether bounding helps the small model more than the large one.
 
 **If the result is negative.** If D matches A on every measure, it is reported all the same; the
 contribution becomes an equivalent behavior with a local model, with no data sent to third parties.
 
-**Size.** 56 scenarios × 8 personas × 4 conditions = 1792 dialogues per repetition. The local lane
-(half of them) takes the GPU server about 15–16 hours; the cloud lane runs at the same time. The
-number of repetitions is fixed with the pilot.
+**Size.** 56 scenarios × 8 personas × 3 conditions (A, B, D) + 56 scenarios × 3 personas in C =
+1344 + 168 = 1512 dialogues per repetition. The local lane (A and B, 896 of them) takes the GPU server about 15–16 hours; the cloud lane runs at the same time.
+
+**The size is checked before the cloud cells run.** Its power depends on two quantities not known
+in advance: the variance of the paired difference of success between the bounded and the LLM-led
+conversation, and the correlation between the dialogues of one scenario (a hard scenario is hard
+for every persona). In E0a phase 2 the correlation of paired differences within a scenario ranged
+from 0 to about 0.4. With 448 pairs and 56 scenarios, the power of the non-inferiority test ranges
+from about 0.5 to above 0.95 over plausible values of the two. They are therefore measured on the
+local cells, A and B, which run first (the go/no-go gate below) and use no paid system model.
+From them, and not from the difference between A and B, the size that gives a power of 0.8 for the
+non-inferiority of A against D is computed (true difference 0, the reference margin of 10 points,
+one-sided α = 0.025, design effect 1 + (m − 1)·ρ with m dialogues per scenario), and reported with the power for
+a true difference of 3 points in favour of D. If the planned size falls short, scenarios are added
+to the same specification before the cloud cells run, rather than repetitions: when the dialogues
+of a scenario are correlated, a repetition adds little information, and with a correlation ρ no
+number of repetitions makes the 56 scenarios worth more than about 56/ρ independent dialogues. The
+variance of A against B stands in for that of A against D, an assumption stated with the result.
+Only nuisance quantities are used, so the check does not bias the test. The repetitions stay at
+one unless this check calls for more.
 
 **Go/no-go gate.** The local comparison comes first. Before any cloud condition runs, E1 runs only
 its local cells: A (bounded) against B (LLM-led), with the same local model. If the method performs
@@ -805,8 +859,8 @@ gate runs.
 
 **Status.** Files, personas, judge and runner ready and checked without connection; the pilot file
 ready ([experiments/pilot/](../experiments/pilot/)). Pending: the new strategies and their
-scenarios, the pinned cloud versions, the pilot and the number of repetitions (the power analysis:
-[PILOT.md](PILOT.md#what-the-pilot-gives-e1)).
+scenarios, the pinned cloud versions, the pilot, and the size check on the local cells before the
+cloud cells (above).
 
 ### Threats to validity and the variant of E1
 
@@ -842,10 +896,17 @@ strategy in file order would leave out:
 
 The coach hint (`rp_return`) and the declined item (`qn_loneliness`) are already among the first
 four. The role swap therefore sees every ending and every mechanism of E1, and the size does not
-change. The noise of E3 uses the same 28 scenarios. The role swap passes if the direction of the
-comparisons of E1 holds (for example, A still beats B on utterances out of the frame), even if the
-absolute values change. If the direction reverses, the corresponding conclusion of E1 is reported
-as dependent on that element.
+change. Each comparison of E1 is read in the role swap according to how clear it was in E1, since
+with 84 pairs per condition the sign of a difference near zero is close to chance:
+
+- a clear difference in E1 (its 95% interval excludes 0) holds if the role swap's estimate has the
+  same sign (for example, A still beats B on utterances out of the frame), even if the values
+  change;
+- a difference near zero in E1 (its interval includes 0) holds if the role swap's interval is
+  compatible with E1's (it includes E1's estimate), whatever its sign.
+
+If a comparison does not hold, the corresponding conclusion of E1 is reported as dependent on that
+element.
 
 | Variant | What changes | Conditions and personas | Size | File |
 |---|---|---|---|---|
@@ -1076,6 +1137,15 @@ taken as not understood.
     the fallback). Expected value: zero mismatches. B's endings under a sustained failure are
     reported.
 
+How the results of these criteria are read. Where the expected value is zero, the count is
+reported with the upper bound of the 95% interval of the rate (about 3/n for zero in n dialogues):
+for example, no mismatch in the 36 dialogues of silence bounds the rate of mismatches at about 8%,
+and none in the 171 of model failures at about 2%. Any mismatch is analysed as a fault of the
+implementation. The comparisons whose expected effect is large by design (confirming a cancel
+request, reading the form back) have enough dialogues; the confirmation of the data rests on 4
+scenarios, so its generality is limited and said so. The differences between the three ways of
+detecting a cancel request are expected to be of a few points and are reported as descriptive.
+
 **Validation of the urgency detector, before E3.** The detector is first evaluated on its own,
 without the robot, on hand-annotated lines in English and Spanish (urgencies phrased in different
 ways, non-urgent health remarks, false alarms, ordinary task lines): detection rate and false-alarm
@@ -1137,8 +1207,14 @@ the client's own parsing, retries, time limits and fallbacks run; a hung call en
 stops waiting. The lines said at the failed turns are events, so that each failure lands on a known
 content.
 
-The noise runs on the scenarios of E1, four of each strategy (the same 28 as the role swap of E1),
-in English only, because the sound-alike substitutions of the injector are English words.
+The noise runs on the 56 scenarios of E1, in English only, because the sound-alike substitutions
+of the injector are English words. All 56 rather than a subset because the question is a
+comparison at each noise level: with 28 scenarios × 3 personas (84 pairs per level) the 95%
+interval of the difference between the method and B would span about ±13 points, so only a large
+reversal could be seen; with 168 pairs it spans about ±9. More scenarios give more than more
+repetitions, since the dialogues of one scenario are correlated. As in E1, the size is checked on
+the runs without noise (the variance of the paired difference and the correlation within a
+scenario) before the noise levels run, and recomputed with the real values.
 
 **Measures.** Task success and the planned ending ([METRICS.md](METRICS.md#task-success-score_runspy));
 utterances out of the frame and medical advice (the judge). What each mechanism did is counted by
@@ -1180,11 +1256,11 @@ against the planned one; the error closing said and the failed skills (`error_cl
 abstention, the frame and the answers kept).
 
 **Size.** Mechanisms: 765 dialogues (the method, 38 scenarios × 9; each of the three cancel
-ablations, 11 × 9; `no_confirmation`, 4 × 9; B, 10 × 9). Noise: 672 (28 scenarios × 3 personas ×
+ablations, 11 × 9; `no_confirmation`, 4 × 9; B, 10 × 9). Noise: 1344 (56 scenarios × 3 personas ×
 2 conditions × 4 levels). Model failures: 225 (the method, 19 scenarios × 9; B, 6 × 9), in about
 4 hours, because most end within a few turns, the failed calls do not reach the model, and the two
 scenarios that wait on purpose wait for the method's own limits (`intelligence_timeout`,
-30 s; the reply's time budget, 20 s). In all, 1662 dialogues and about 28 hours of the GPU server.
+30 s; the reply's time budget, 20 s). In all, 2334 dialogues and about 42 hours of the GPU server.
 With the events fixed by code and the system's understanding questions at temperature 0, the
 repetitions vary only the rest of the dialogue; the number of distinct situations is given by the
 scenarios. The urgencies will add dialogues when implemented.

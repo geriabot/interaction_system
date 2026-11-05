@@ -59,7 +59,7 @@ import campaigns  # noqa: E402
 import real_sessions  # noqa: E402
 import sessions_common  # noqa: E402
 import whole_evaluation as whole  # noqa: E402
-from experiment_files import condition_scenarios, select_scenarios  # noqa: E402
+from experiment_files import condition_dialogues, select_scenarios  # noqa: E402
 
 EXPERIMENTS = os.path.join(EVAL, "experiments")
 HARDWARE = os.path.join(EXPERIMENTS, "hardware")
@@ -160,8 +160,8 @@ def experiment_info(stem, path):
         "cloud_models": [m for m in exp["models"] if sessions_common.is_cloud(m)],
         # A placeholder: <pin> (a cloud model's dated version) or <...> (e.g. the finalists of E0a)
         "unpinned": [m for m in exp["models"] + [sim.get("model", "")] if "<" in m],
-        "expected": sum(len(condition_scenarios(scenarios, conditions[c])) for _, c in pairs)
-        * len(personas) * reps,
+        "expected": sum(len(condition_dialogues(scenarios, exp, conditions[c], m))
+                        for m, c in pairs) * reps,
         "description": shorten(" ".join(l.lstrip("# ") for l in open(path, encoding="utf-8").read()
                                         .splitlines() if l.startswith("#")), 900),
     }

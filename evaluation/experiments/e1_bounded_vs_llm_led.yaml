@@ -1,7 +1,8 @@
 # E1, the main experiment: the bounded conversation (the method: one Behavior Tree per
 # strategy, the LLM asked narrow questions) against the LLM-led conversation (the LLM runs the
 # whole strategy with the same rules, scope rules and material: the monolithic ablation), each
-# with a small local model and with a large cloud model (a 2x2 design). Same orchestrator,
+# with a small local model and with a large cloud model (a 2x2 design, the bounded cloud cell on
+# three personas). Same orchestrator,
 # speech, silences, turn limit, simulated users and scenarios: only who controls the
 # conversation and the model change. The claim it tests: a small local model in the bounded
 # conversation matches the large model leading the conversation on task success, and stays in
@@ -28,8 +29,12 @@ language: English
 # openai/gpt-...-YYYY-MM-DD; the run refuses an unpinned <pin>)
 models: [qwen3:8b, "openai/<pin>"]
 conditions:
-  # The method: the Behavior Trees with the default parameters (no routes: one model)
-  bounded: {}
+  # The method: the Behavior Trees with the default parameters (no routes: one model). With the
+  # cloud model (condition C) only three personas: C answers only whether bounding also helps a
+  # large model, and E1 evaluates the method, not the cloud model (168 pairs: a difference of 10
+  # points in task success against D is detected with a power of about 0.8; EXPERIMENTS.md, E1)
+  bounded:
+    personas_by_kind: {"<openai>": [cooperative, older_adult, boundary_testing]}
   llm_led:
     ablation: monolithic
     skill_modules: ["interaction_ablations.skills"]

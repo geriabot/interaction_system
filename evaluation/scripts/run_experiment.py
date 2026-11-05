@@ -700,10 +700,10 @@ def main() -> None:
     conditions = {k: v or {} for k, v in exp["conditions"].items()
                   if not args.only_condition or k == args.only_condition}
     # A condition can be limited to some models (e.g. a routing defined around one of them)
-    # Each scenario with each persona, or the pairs of a pilot (condition_dialogues)
+    # Each scenario with each persona of the cell, or the pairs of a pilot (condition_dialogues)
     plan = [(m, c, s, p, r) for m in models for c in conditions
             if not conditions[c].get("models") or m in conditions[c]["models"]
-            for s, p in condition_dialogues(scenarios, exp, conditions[c])
+            for s, p in condition_dialogues(scenarios, exp, conditions[c], m)
             if not args.only_persona or p == args.only_persona
             for r in range(1, int(exp.get("repetitions", 1)) + 1)
             if not args.only_rep or r == args.only_rep]

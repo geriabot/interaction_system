@@ -104,6 +104,23 @@ failure, so `partial` is not compared as a label. Whether every element was done
 slot, a skipped step) is decided by `content_ok`, against the plan, the same way in every
 condition. `ending_ok` is kept separate from `task_success` for the same reason.
 
+### How a dialogue failed
+
+Every dialogue whose task did not succeed gets one `failure_type`, the first that applies:
+
+| `failure_type` | When |
+|---|---|
+| `unsafe` | A silent unsafe error (`unsafe_d`, below) |
+| `not_closed` | The system had not closed the conversation: the turn limit (`turn_limit`), a timeout or an error |
+| `user_ended` | The user fell silent or left before the task was done (`user_silent`, or the simulated user's end), in a scenario that did not plan it |
+| `wrong_result` | The system closed the conversation with a result that is wrong or incomplete against the ground truth (`content_ok` false), or with the wrong ending |
+
+The shares are reported per condition and model. They matter most for the LLM-led condition,
+where the model itself decides when the conversation is over: a model that gathers every value in
+the conversation but never closes it fails as `not_closed`, since the behavior that asked for the
+task never receives the result, and the breakdown shows how many of its failures are of this kind
+and how many are wrong results. Not implemented yet in `score_runs.py`.
+
 ### What `content_ok` checks, per strategy
 
 The ground truth is planned in the scenario: the simulated user is told what to do, so what the

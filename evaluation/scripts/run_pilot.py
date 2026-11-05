@@ -82,7 +82,7 @@ def planned(path: str) -> list[tuple]:
     conditions = {k: v or {} for k, v in exp["conditions"].items()}
     return [(m, c, s["id"], p, r) for m in exp["models"] for c in conditions
             if not conditions[c].get("models") or m in conditions[c]["models"]
-            for s, p in condition_dialogues(scenarios, exp, conditions[c])
+            for s, p in condition_dialogues(scenarios, exp, conditions[c], m)
             for r in range(1, int(exp.get("repetitions", 1)) + 1)]
 
 
