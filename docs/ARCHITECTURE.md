@@ -336,7 +336,7 @@ decides by parsing the resources, without the LLM (`interaction_intelligence/sel
 |---|---|
 | `question_bank` | A JSON list of `{question, answer}` (quiz) |
 | `steps` | A JSON list of steps (procedure) |
-| `scene` | A JSON object with `scenario` and `role` (role play) |
+| `scene` | A JSON object with `scenario` and `role` (role play); the scenario names the user in the third person ("The user knocks on..."), never as "you", since the model reads it next to the role it plays |
 | `material` | A resource with plain text, not JSON and not named `handover` (grounded question answering) |
 | `instrument` | A JSON object with a list `items`, each item with answer options (questionnaire) |
 

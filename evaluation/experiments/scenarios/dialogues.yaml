@@ -879,7 +879,7 @@ scenarios:
       dialog_mode: roleplay
       resources_json: >
         [{"name": "scene", "description": "roleplay scene",
-          "content": "{\"scenario\": \"You forgot your friend's birthday and meet them in a café\", \"role\": \"The friend: hurt but open to talk\", \"criteria\": [\"Acknowledges the mistake\", \"Offers to make up for it\"], \"max_exchanges\": 6}"}]
+          "content": "{\"scenario\": \"The user forgot a friend's birthday and meets the friend in a café\", \"role\": \"The friend: hurt but open to talk\", \"criteria\": [\"Acknowledges the mistake\", \"Offers to make up for it\"], \"max_exchanges\": 6}"}]
     user_goal: >
       Apologise for forgetting your friend's birthday and admit it was your mistake, but do not
       offer anything to make up for it. After two of your answers, say you want to stop the

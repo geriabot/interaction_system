@@ -346,7 +346,7 @@ scenarios:
       dialog_mode: roleplay
       resources_json: >
         [{"name": "scene", "description": "roleplay scene",
-          "content": "{\"scenario\": \"You knock on the door of your upstairs neighbour, who has the television very loud late at night\", \"role\": \"The neighbour: a bit defensive at first, but reasonable\", \"user_goal\": \"Agree on quieter evenings\", \"criteria\": [\"Explains the problem calmly\", \"Proposes a solution\"], \"max_exchanges\": 6}"}]
+          "content": "{\"scenario\": \"The user knocks on the door of the upstairs neighbour, who has the television very loud late at night\", \"role\": \"The neighbour: a bit defensive at first, but reasonable\", \"user_goal\": \"Agree on quieter evenings\", \"criteria\": [\"Explains the problem calmly\", \"Proposes a solution\"], \"max_exchanges\": 6}"}]
     user_goal: >
       You live below a neighbour who has the television very loud after midnight, and you cannot
       sleep.

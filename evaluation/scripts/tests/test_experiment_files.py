@@ -52,3 +52,28 @@ def test_the_role_swap_and_the_noise_keep_four_per_strategy_with_the_unique_mech
         assert unique <= {s["id"] for s in selected}, name
         chosen.append([s["id"] for s in selected])
     assert chosen[0] == chosen[1]
+
+
+def test_no_role_play_scene_is_written_in_the_second_person():
+    # The scene goes to the model next to "your character" (the role it plays): a "you" in the
+    # scene, meaning the user, made models of three families swap the roles at the opening
+    import json
+    import re
+    import yaml
+    second = re.compile(r"\b(you|your|yours|yourself|tú|tu|tus|te|ti|contigo|os|vosotros)\b", re.I)
+    folder = os.path.join(os.path.dirname(__file__), "..", "..", "experiments", "scenarios")
+    scenes = 0
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".yaml"):
+            continue
+        with open(os.path.join(folder, name), encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        for s in data.get("scenarios") or []:
+            goal = s.get("goal") or {}
+            for res in json.loads(goal.get("resources_json") or "[]"):
+                if res.get("name") != "scene":
+                    continue
+                scene = json.loads(res["content"])["scenario"]
+                scenes += 1
+                assert not second.search(scene), f"{name} {s['id']}: {scene}"
+    assert scenes > 0
