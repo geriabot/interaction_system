@@ -204,3 +204,15 @@ def test_the_cancel_question_does_not_explain_how_to_answer_it():
     # Still asked so that "yes" means stopping (classify_cancel_reply reads it that way)
     assert "whether they want to stop" in one_line(tpl)
     assert "whether they want to stop" in templates()["classify_cancel_reply"]
+
+
+# ==== Grounded questions: a wrong check of the last answer is not a reaction ====
+
+
+def test_a_check_with_another_value_is_a_request_to_repeat():
+    # A check that repeats the last answer with another value means the person misunderstood:
+    # answering it with only the invitation to ask more let the mistake pass
+    tpl = templates()["answer_from_material"]
+    assert "compare its value with the value of the last answer" in tpl
+    assert 'is "asks" with kind "repeat"' in tpl
+    assert "value different from the one the last answer gave" in tpl

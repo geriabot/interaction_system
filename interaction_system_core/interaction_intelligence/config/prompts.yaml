@@ -828,7 +828,12 @@ interaction_intelligence:
         - "reacts": reacts without asking anything and without saying they have
           finished ("Thanks, that was helpful", "Okay", "What a shame", "30
           euros, perfect": the last answer repeated back, also as a question to
-          check it, "Thirty euros, you said?").
+          check it, "Thirty euros, you said?"). Before choosing "reacts" for a
+          check, compare its value with the value of the last answer: if they
+          differ ("Forty euros, you said?" when the last answer said 14 euros;
+          "At seven?" when it said 19:30), the person has misunderstood, and it
+          is "asks" with kind "repeat", so that the robot gives the right
+          answer again.
         - "unclear": the words make no sense or cannot be understood as anything
           (unintelligible speech, a word salad such as "Table the of green
           across", a fragment, filler).
@@ -854,7 +859,8 @@ interaction_intelligence:
           when the MATERIAL does not mention them (for a cinema: "Is there a
           lift?", "Do the staff speak French?" are "not_in_material", not
           "off_task").
-        - "repeat": asks to repeat the last answer.
+        - "repeat": asks to repeat the last answer, or checks it back with a
+          value different from the one the last answer gave.
         - "other": anything else (unintelligible, filler).
         When "act" is "finished", "reacts" or "unclear", "kind" is "other".
 
