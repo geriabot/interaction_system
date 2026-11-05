@@ -128,10 +128,10 @@ English, for every language: each asks for the reply in `{language}`, and the un
 questions return labels and JSON, which do not depend on the language. Nothing has to be
 translated. Two places name a language:
 
-- The shared address rule (`address_rule`) asks for the informal second person and gives the
-  Spanish example ("tú", never "usted"), and the generation templates give Spanish examples of
-  gender-neutral wording. For a language with another system of formality, an example in that
-  language may help the model.
+- The shared address rule (`address_rule`) asks for the informal second person, described
+  without examples (quoted examples were copied literally into every language), and the
+  role-play templates give Spanish examples of gender-neutral wording. For a language with
+  another system of formality, describe it there rather than quoting a word of it.
 - The cancel detection (`detect_cancel_intent`) lists the English stop words and asks the model
   for their equivalents in `{language}`.
 

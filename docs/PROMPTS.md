@@ -120,9 +120,11 @@ into the questions, so that what does not depend on the LLM is decided by the co
 
 - `address_rule` fills `{address}`: how every spoken line addresses the user. The person the robot
   talks to is the user of the task (the customer, the patient, the student...), so the line speaks
-  to them directly ("what is your name?", never "the customer's name") and in the informal second
-  person ("tú" in Spanish, never "usted"; the wording names the register, so English is
-  unaffected). Every template that writes a line the user hears has it among its rules (the
+  to them directly, never about them in the third person or by their role, and in the informal
+  register (the familiar form of address where the language has one; English is unaffected). The
+  rule describes the register and quotes no phrase or word: with quoted examples, models copied
+  them literally (a question for the user's name in tasks that ask for none, a Spanish pronoun in
+  English lines), and a test keeps it free of quotes. Every template that writes a line the user hears has it among its rules (the
   openings, the next question, the read-back and the closings, the quiz feedback, the procedure,
   the explanation, the grounded answers, the role play, the cancellation question and its
   closing). It is the same text in every turn, so it is part of the cached prefix. The LLM-led
@@ -156,9 +158,9 @@ new templates in that order.
 - The language of the conversation is the parameter `language` (or `main.launch.py
   language:=es`): the templates ask for replies in that language, and the fixed phrases follow it.
   The templates are written in English for every language: `{language}` is the name of the
-  language file (`English`, `Spanish`), and the shared address rule gives Spanish examples of the
-  informal register ("tú", never "usted") and of gender-neutral wording. A language with another
-  system of formality may need its own example there. That is a change of the prompts, after
+  language file (`English`, `Spanish`). The shared address rule names the informal register
+  without examples; the role-play templates give Spanish examples of gender-neutral wording. A
+  language with another system of formality or gender may need its own description there. That is a change of the prompts, after
   which phase 1 of the model choice is run again
   ([ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md#4-the-prompts)).
 

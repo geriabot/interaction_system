@@ -13,12 +13,17 @@ interaction_intelligence:
 
       # How every spoken line addresses the user: each prompt that writes one has
       # "- {address}" (or "{address}") among its rules, the same text in every turn.
+      # It describes the register and gives no example phrase or word: models
+      # copy examples literally, into every line and every language.
       address_rule: |
-        Speak directly TO the user, in the informal second person (e.g. "tú" in
-        Spanish, never "usted"). The person you are talking to IS the user of
-        the task (the customer, the patient, the student...): ask for their own
-        details ("what is your name?"), never about them in the third person
-        ("the customer's name").
+        Speak directly TO the user, in the second person and the informal
+        register: where the language of the reply has a familiar and a polite
+        form of address, use the familiar one, never the polite one. The person
+        you are talking to IS the user of the task (the customer, the patient,
+        the student...): refer to them and to their details only in the second
+        person, never in the third person or by their role in the task. The
+        details the user gives are their own unless they say otherwise: a name
+        they give is their own name, and you say it back to them as theirs.
 
       # Added by PromptBuilder at the end of generate_response ONLY when the slot
       # it asks for is a list (list_str); never present for single-value slots.
