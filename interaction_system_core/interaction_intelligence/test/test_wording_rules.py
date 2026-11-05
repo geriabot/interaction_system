@@ -146,10 +146,18 @@ def test_the_list_instruction_does_not_break_the_cached_prefix():
 
 def test_the_address_rule_is_informal_second_person_and_language_agnostic():
     rule = builder().address
-    assert rule and "second person" in rule and "usted" in rule and "tú" in rule
-    assert "customer's name" in rule
+    assert rule and "second person" in rule and "informal" in rule and "familiar" in rule
+    assert "third person" in rule
     # The same rule in every language: the register is named, never translated
     assert builder("Spanish").address == rule
+
+
+def test_the_address_rule_gives_no_phrase_or_word_to_copy():
+    # Models copied its old examples literally: a name question in tasks that ask for no
+    # name, and a Spanish pronoun in English lines. It describes, it does not quote
+    rule = builder().address
+    assert '"' not in rule and "'" not in rule
+    assert rule.isascii()
 
 
 def test_every_spoken_line_template_carries_the_address_rule():
