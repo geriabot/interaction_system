@@ -51,13 +51,28 @@ After "anything else?", a "no" is the end, and a thanks alone is a reaction. Eve
 with "anything else?", so taking a thanks for the end would close too early: a user may thank the
 robot and then ask another question.
 
+A reaction may repeat the last answer back with another value ("Half past eight? Great, I can
+sleep in." after "The pool opens at 7:30"): the person has misunderstood the answer, and inviting
+more questions would let the mistake pass. `answer_from_material` reads a plain wrong check as a
+request to repeat, but a wrong check with a comment before or after it as a reaction, whatever the
+wording of the question. So a turn read as a reaction, when the last question was answered from
+the material, gets a question of its own (`detect_wrong_check`): does the turn repeat back a value
+of that answer (a time, a price, a day, a date, a place, a number) with a different value? The same
+value in another form (a 12-hour time for a 24-hour one, words for digits) is not a different
+value. If it does, the turn is handled as a request to repeat: the robot says the last answer
+again. The question is not asked when there is no answer to check (no question answered yet, or
+the last one abstained or declined), and when it fails (no answer in time, an answer without the
+boolean asked for) the turn stays a reaction: without an answer, the robot does what it did
+without the question.
+
 | The user | The robot | Progress |
 |---|---|---|
 | Asks something whose answer is in the material | The answer, verified, then "Is there anything else you'd like to know?" | Yes |
 | Asks something within the topic whose answer is not in the material | "I don't have that information." and the handover, if given (fixed phrases) | Yes |
 | Asks something whose drafted answer is not supported by the material | The same abstention: an answer that does not pass the verification is never said | Yes |
 | Asks something outside the task (also help with their own matters: what to buy or choose), or asks for an opinion or a service the robot does not give | "That is outside what we are talking about here, so I can't help you with it; I can only answer questions about the information I have." | Yes |
-| Only reacts, without asking and without saying they have finished ("Thanks, that was helpful", "what a shame", the answer repeated back) | "Is there anything else you'd like to know?" (not recorded as a question) | Yes |
+| Only reacts, without asking and without saying they have finished ("Thanks, that was helpful", "what a shame", the answer repeated back with its value) | "Is there anything else you'd like to know?" (not recorded as a question) | Yes |
+| Repeats the last answer back with another value, with or without a comment | The last answer again (`detect_wrong_check`; no LLM for the line) | No |
 | Has finished: wants nothing more ("No", "No, thanks", "That will be all", "I have no more questions", "Goodbye") | "Alright. Have a good day!" and the conversation ends (`completed`) | — |
 | Asks to repeat the last answer | The last answer again (no LLM) | No |
 | Anything else (off-topic noise, unintelligible) | "Could you repeat that?" | No |
@@ -96,6 +111,7 @@ unverified closing is a turn not understood ("Could you repeat that?").
 | `max_stalled` turns in a row without progress | [Breakdown](no_progress.md) |
 | The LLM fails to read a turn | The label `other` (a turn not understood, as for the value `unclear` [above](#how-each-turn-is-understood)): the robot asks to repeat; a sustained failure ends as a breakdown |
 | The LLM fails to verify an answer | The answer is not said: the robot abstains |
+| The LLM fails to say whether a reaction is a wrong check | The turn stays a reaction: "Is there anything else you'd like to know?" |
 | No material in the request | `error` before the robot speaks |
 | Turn limit, failure of the system | [Endings](endings.md) |
 

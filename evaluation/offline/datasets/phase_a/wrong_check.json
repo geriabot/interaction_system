@@ -1,0 +1,537 @@
+{
+  "_instructions": [
+    "Benchmark: a wrong check of the last answer in grounded question answering (detect_wrong_check).",
+    "The question is asked only for a turn that answer_from_material read as a reaction, after an answer from the material: does the turn repeat back a value of that answer with a different value?",
+    "Required fields:",
+    "  id, language (en | es), description, category, trap (a case built to provoke an error: a wrong check hidden by a comment or by another form of the value, a same value in another form, a number that is not a value of the answer)",
+    "Critical cases: every wrong check (expected_wrong_check true, the categories wrong_*): read as no wrong check, it is the critical error wrong_check_missed (the misunderstanding passes, the robot only invites more questions). A case that is not a wrong check read as one is reported (false_wrong_check).",
+    "  answer               : the robot's last answer, as the skill passes it (without the invitation to ask more)",
+    "  user_text            : the person's turn",
+    "  expected_wrong_check : true only if the turn repeats back a value of the answer with a different value (12-hour and 24-hour times, digits and words of the same value are the same value)",
+    "Categories: wrong_plain, wrong_comment_after, wrong_comment_before (wrong checks); right_plain, right_comment, right_other_format (checks with the same value); reaction (no value); other_number (a number that is not a value of the answer).",
+    "No content from the evaluation scenarios nor from the examples of the prompts."
+  ],
+  "question": "detect_wrong_check",
+  "cases": [
+    {
+      "id": "wc_en_001",
+      "language": "en",
+      "description": "24-hour time checked as another hour",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "The last train to the airport leaves at 23:10.",
+      "user_text": "Ten past ten?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_002",
+      "language": "en",
+      "description": "Price checked with another amount",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "A single ticket for the exhibition costs 14 euros.",
+      "user_text": "Eleven euros?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_003",
+      "language": "en",
+      "description": "Day checked as another day, as a statement",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "The pharmacy is closed on Mondays.",
+      "user_text": "Closed on Wednesdays, then.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_004",
+      "language": "en",
+      "description": "Room and floor checked with other numbers",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "Your appointment is on the third floor, room 312.",
+      "user_text": "Room 213 on the second floor?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_005",
+      "language": "en",
+      "description": "Wrong time, then a pleased comment",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "The swimming pool opens at 7:30 on weekdays.",
+      "user_text": "Half past eight? Great, I can sleep in.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_006",
+      "language": "en",
+      "description": "Wrong price, then a complaint",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "Parking costs 3 euros per hour.",
+      "user_text": "Five euros an hour? That's quite steep.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_007",
+      "language": "en",
+      "description": "Wrong day, then a pleased comment",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "The cooking workshop is on Friday evening.",
+      "user_text": "Saturday evening? Perfect, I'm free then.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_008",
+      "language": "en",
+      "description": "Wrong platform, then a plan",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "The lost property office is next to platform 2.",
+      "user_text": "Next to platform six, okay, I'll head over there.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_009",
+      "language": "en",
+      "description": "24-hour time read one hour early in the 12-hour form, then a comment",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "The concert finishes at 22:15.",
+      "user_text": "Quarter past nine? That's earlier than I thought.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_010",
+      "language": "en",
+      "description": "Wrong percentage, then thanks",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "Students get a 20 percent discount.",
+      "user_text": "Thirty percent off? Brilliant, thank you.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_011",
+      "language": "en",
+      "description": "Comment first, then a wrong 12-hour time",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "The library closes at 20:00 on Saturdays.",
+      "user_text": "Oh good, so it closes at six on Saturdays.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_012",
+      "language": "en",
+      "description": "Comment first, then the wrong place",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "The boat tour departs from the north pier.",
+      "user_text": "Right, lovely, from the south pier then.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_013",
+      "language": "en",
+      "description": "Thanks first, then a wrong date",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "The vaccination clinic runs on the 14th of March.",
+      "user_text": "Thanks so much, the 4th of March, yes?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_014",
+      "language": "en",
+      "description": "Comment first, then a wrong price",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "A monthly bus pass costs 35 euros.",
+      "user_text": "Nice, that's cheaper than I expected, 25 euros.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_en_015",
+      "language": "en",
+      "description": "The same time checked back",
+      "category": "right_plain",
+      "trap": false,
+      "answer": "The museum café closes at 17:30.",
+      "user_text": "At 17:30?",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_016",
+      "language": "en",
+      "description": "The same place checked back",
+      "category": "right_plain",
+      "trap": false,
+      "answer": "The guided walk starts from the old town hall.",
+      "user_text": "From the old town hall?",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_017",
+      "language": "en",
+      "description": "The same price in words, then a comment",
+      "category": "right_comment",
+      "trap": false,
+      "answer": "Bike rental costs 12 euros for the whole day.",
+      "user_text": "Twelve euros for the day? That's a bargain.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_018",
+      "language": "en",
+      "description": "The same days, then a comment",
+      "category": "right_comment",
+      "trap": false,
+      "answer": "The dentist sees patients on Tuesdays and Thursdays.",
+      "user_text": "Tuesdays and Thursdays, great, that suits me.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_019",
+      "language": "en",
+      "description": "The same gate and place, then thanks",
+      "category": "right_comment",
+      "trap": false,
+      "answer": "Gate B7 is at the end of the left corridor.",
+      "user_text": "B7 at the end on the left, thanks a lot.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_020",
+      "language": "en",
+      "description": "The same time in the 12-hour form, then a comment",
+      "category": "right_other_format",
+      "trap": true,
+      "answer": "The ferry leaves at 18:45.",
+      "user_text": "A quarter to seven? Fine, we'll be there early.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_021",
+      "language": "en",
+      "description": "The same time written another way",
+      "category": "right_other_format",
+      "trap": true,
+      "answer": "The fitness class begins at 9:00 in the morning.",
+      "user_text": "Nine a.m., right, I'll set an alarm.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_022",
+      "language": "en",
+      "description": "The same price in words",
+      "category": "right_other_format",
+      "trap": true,
+      "answer": "The entrance fee is 8.50 euros.",
+      "user_text": "Eight fifty, okay.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_023",
+      "language": "en",
+      "description": "A reaction without a value",
+      "category": "reaction",
+      "trap": false,
+      "answer": "The castle tour lasts about two hours.",
+      "user_text": "Oh, that sounds lovely.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_024",
+      "language": "en",
+      "description": "Thanks without a value",
+      "category": "reaction",
+      "trap": false,
+      "answer": "Dogs are not allowed inside the gallery.",
+      "user_text": "Thanks, that's good to know.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_025",
+      "language": "en",
+      "description": "An acknowledgement without a value",
+      "category": "reaction",
+      "trap": false,
+      "answer": "The registration desk is on the ground floor.",
+      "user_text": "Okay, thanks a million.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_en_026",
+      "language": "en",
+      "description": "A number that is not a value of the answer",
+      "category": "other_number",
+      "trap": true,
+      "answer": "The playground is open until 19:00.",
+      "user_text": "Lovely, my two kids will be thrilled.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_001",
+      "language": "es",
+      "description": "Hora de 24 horas comprobada como otra hora",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "El último autobús a la playa sale a las 21:40.",
+      "user_text": "¿A las diez y cuarenta?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_002",
+      "language": "es",
+      "description": "Precio comprobado con otra cantidad",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "La entrada al zoo cuesta 16 euros.",
+      "user_text": "¿Veinte euros?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_003",
+      "language": "es",
+      "description": "Día comprobado como otro día, como afirmación",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "El ayuntamiento atiende al público los martes.",
+      "user_text": "Los jueves, entonces.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_004",
+      "language": "es",
+      "description": "Planta comprobada con otro número",
+      "category": "wrong_plain",
+      "trap": false,
+      "answer": "La consulta de pediatría está en la cuarta planta.",
+      "user_text": "¿En la segunda planta?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_005",
+      "language": "es",
+      "description": "Hora equivocada y después un comentario contento",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "La piscina municipal abre a las 8:00 los sábados.",
+      "user_text": "¿A las nueve? Genial, así duermo un poco más.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_006",
+      "language": "es",
+      "description": "Precio equivocado y después una queja",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "El aparcamiento cuesta 2 euros la hora.",
+      "user_text": "¿Cuatro euros la hora? Uf, es bastante caro.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_007",
+      "language": "es",
+      "description": "Día equivocado y después un comentario contento",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "El taller de cerámica es el miércoles por la tarde.",
+      "user_text": "¿El viernes por la tarde? Perfecto, ese día estoy libre.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_008",
+      "language": "es",
+      "description": "Vía equivocada y después un plan",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "La oficina de objetos perdidos está junto a la vía 3.",
+      "user_text": "Junto a la vía cinco, vale, voy para allá.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_009",
+      "language": "es",
+      "description": "Hora de 24 horas leída una hora antes, y después un comentario",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "La obra de teatro termina a las 23:30.",
+      "user_text": "¿A las diez y media? Pues nos da tiempo a cenar después.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_010",
+      "language": "es",
+      "description": "Porcentaje equivocado y después las gracias",
+      "category": "wrong_comment_after",
+      "trap": true,
+      "answer": "Los jubilados tienen un descuento del 50 por ciento.",
+      "user_text": "¿Un 15 por ciento? Algo es algo, gracias.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_011",
+      "language": "es",
+      "description": "Primero un comentario, después una hora de 12 horas equivocada",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "La biblioteca cierra a las 21:00 los viernes.",
+      "user_text": "Ah, estupendo, entonces cierra a las ocho los viernes.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_012",
+      "language": "es",
+      "description": "Primero un comentario, después el lugar equivocado",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "La excursión en barco sale del muelle este.",
+      "user_text": "Muy bien, gracias, desde el muelle oeste.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_013",
+      "language": "es",
+      "description": "Primero un comentario, después una fecha equivocada",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "La campaña de donación de sangre es el 22 de mayo.",
+      "user_text": "Qué bien, el 12 de mayo, ¿verdad?",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_014",
+      "language": "es",
+      "description": "Primero un comentario, después un precio equivocado",
+      "category": "wrong_comment_before",
+      "trap": true,
+      "answer": "El abono mensual de metro cuesta 40 euros.",
+      "user_text": "Vaya, más barato de lo que pensaba, 30 euros.",
+      "expected_wrong_check": true
+    },
+    {
+      "id": "wc_es_015",
+      "language": "es",
+      "description": "La misma hora comprobada",
+      "category": "right_plain",
+      "trap": false,
+      "answer": "La cafetería del hospital cierra a las 19:30.",
+      "user_text": "¿A las 19:30?",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_016",
+      "language": "es",
+      "description": "El mismo lugar comprobado",
+      "category": "right_plain",
+      "trap": false,
+      "answer": "La visita guiada sale desde la plaza mayor.",
+      "user_text": "¿Desde la plaza mayor?",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_017",
+      "language": "es",
+      "description": "El mismo precio en palabras y después un comentario",
+      "category": "right_comment",
+      "trap": false,
+      "answer": "Alquilar una bicicleta cuesta 10 euros al día.",
+      "user_text": "¿Diez euros al día? Está muy bien de precio.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_018",
+      "language": "es",
+      "description": "Los mismos días y después un comentario",
+      "category": "right_comment",
+      "trap": false,
+      "answer": "El fisioterapeuta atiende los lunes y los miércoles.",
+      "user_text": "Lunes y miércoles, perfecto, me viene bien.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_019",
+      "language": "es",
+      "description": "La misma puerta y el mismo lugar, y las gracias",
+      "category": "right_comment",
+      "trap": false,
+      "answer": "La puerta C4 está al final del pasillo de la derecha.",
+      "user_text": "La C4 al fondo a la derecha, muchas gracias.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_020",
+      "language": "es",
+      "description": "La misma hora en la forma de 12 horas y después un comentario",
+      "category": "right_other_format",
+      "trap": true,
+      "answer": "El tren a Toledo sale a las 16:15.",
+      "user_text": "¿A las cuatro y cuarto? Bien, llegaremos con tiempo.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_021",
+      "language": "es",
+      "description": "La misma hora escrita de otra forma",
+      "category": "right_other_format",
+      "trap": true,
+      "answer": "La clase de yoga empieza a las 10:00 de la mañana.",
+      "user_text": "A las diez de la mañana, de acuerdo, pondré el despertador.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_022",
+      "language": "es",
+      "description": "El mismo precio en palabras",
+      "category": "right_other_format",
+      "trap": true,
+      "answer": "La entrada cuesta 6,50 euros.",
+      "user_text": "Seis con cincuenta, vale.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_023",
+      "language": "es",
+      "description": "Una reacción sin ningún valor",
+      "category": "reaction",
+      "trap": false,
+      "answer": "La visita al castillo dura unas dos horas.",
+      "user_text": "Ay, qué bonito suena eso.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_024",
+      "language": "es",
+      "description": "Las gracias sin ningún valor",
+      "category": "reaction",
+      "trap": false,
+      "answer": "No se admiten perros dentro del museo.",
+      "user_text": "Gracias, es bueno saberlo.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_025",
+      "language": "es",
+      "description": "Un asentimiento sin ningún valor",
+      "category": "reaction",
+      "trap": false,
+      "answer": "El mostrador de inscripción está en la planta baja.",
+      "user_text": "Vale, muchísimas gracias.",
+      "expected_wrong_check": false
+    },
+    {
+      "id": "wc_es_026",
+      "language": "es",
+      "description": "Un número que no es un valor de la respuesta",
+      "category": "other_number",
+      "trap": true,
+      "answer": "El parque infantil está abierto hasta las 20:00.",
+      "user_text": "Qué bien, mis tres nietos se van a poner contentos.",
+      "expected_wrong_check": false
+    }
+  ]
+}

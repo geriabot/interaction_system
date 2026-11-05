@@ -65,6 +65,7 @@ def _markers(name, case):
                           case.get("scene", {}).get("scenario", "")],
         "cancel_detect": [f'USER SAID: "{t}"'],
         "cancel_reply": [f'USER REPLY: "{t}"'],
+        "wrong_check": [f'REPLY: "{t}"', f'ANSWER: "{case.get("answer")}"'],
     }[name]
 
 
@@ -100,6 +101,8 @@ def _expected(name, case):
         return {"intent": case["expected_intent"]}
     if name == "cancel_detect":
         return {"cancel": case["expected_cancel"]}
+    if name == "wrong_check":
+        return {"wrong_check": case["expected_wrong_check"]}
     return {"answer": case["expected_answer"]}
 
 
@@ -146,6 +149,7 @@ UNSAFE = {
     "roleplay_turn": ({"intent": "end"},
                       lambda c: c["expected_intent"] not in ("end", "scene_end")),
     "cancel_reply": ({"answer": "yes"}, lambda c: c["expected_answer"] != "yes"),
+    "wrong_check": ({"wrong_check": False}, lambda c: c["expected_wrong_check"]),
 }
 
 
@@ -307,6 +311,30 @@ def test_scale_step_roleplay_cancel_rules():
     # Only a yes stops: "no" and "other" both resume, so either is right (author, 2026-11-01)
     assert cr({"expected_answer": "other"}, {"answer": "no"})["correct"]
     assert not cr({"expected_answer": "other"}, {"answer": "finished"})["correct"]
+
+
+def test_wrong_check_rules():
+    s = bench("wrong_check").score
+    wrong = {"expected_wrong_check": True}
+    assert s(wrong, {"wrong_check": False})["critical"] == "wrong_check_missed"
+    assert s(wrong, {"wrong_check": True}) == {"correct": True, "critical": None, "flags": []}
+    r = s({"expected_wrong_check": False}, {"wrong_check": True})
+    assert not r["correct"] and r["critical"] is None and r["flags"] == ["false_wrong_check"]
+    # No answer: the turn stays a reaction, as without the question; never critical
+    r = s(wrong, {"wrong_check": None})
+    assert not r["correct"] and r["critical"] is None and r["flags"] == ["not_answered"]
+
+
+def test_wrong_check_has_wrong_checks_with_comments_and_checks_of_the_same_value():
+    cases = dataset("wrong_check")
+    # The critical cases (a miss is wrong_check_missed) are the categories wrong_*
+    assert all(c["category"].startswith("wrong_") is c["expected_wrong_check"] for c in cases)
+    for lang in ("en", "es"):
+        mine = [c for c in cases if c["language"] == lang]
+        # Wrong checks with a comment: the turn the main question reads as a reaction
+        assert sum(1 for c in mine if c["category"].startswith("wrong_comment")) >= 8
+        assert any(c["category"] == "right_other_format" for c in mine)
+        assert any(c["category"] == "reaction" for c in mine)
 
 
 def test_cancel_detect_asks_the_model_even_when_the_local_check_decides():

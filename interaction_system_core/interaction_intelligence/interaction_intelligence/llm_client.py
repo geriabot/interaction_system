@@ -746,6 +746,25 @@ class LLMDialogClient:
                 continue
         return False
 
+    def detect_wrong_check(self, user_text: str, answer: str) -> bool | None:
+        """Whether the person's turn repeats back a value of the robot's last answer with a
+        different value (a wrong check: the person misunderstood the answer). Asked only for a
+        turn that answer_from_material read as a reaction: a wrong check followed by a comment
+        is read as a reaction by that question. None when the LLM fails (no answer, or no
+        boolean "wrong_check" in it): the turn stays a reaction, as without this question."""
+        prompt, schema = self._pb.detect_wrong_check(user_text, answer)
+        for _ in range(self.MAX_RETRIES):
+            raw = self._call_nlu(prompt, schema, max_tokens=20)
+            if not raw:
+                continue
+            try:
+                value = parse_loose_json(raw).get("wrong_check")
+            except Exception:
+                continue
+            if isinstance(value, bool):
+                return value
+        return None
+
     # ==== QUESTIONNAIRE ====
 
     def map_scale_answer(

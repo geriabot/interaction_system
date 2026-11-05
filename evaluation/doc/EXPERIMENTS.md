@@ -435,7 +435,7 @@ conversation, not about how many models are used.
 
 | Phase | What is measured | Material | Candidates |
 |---|---|---|---|
-| 1. Narrow questions (`run_e0a.py phase-a`) | The quality of each critical narrow question on its own, and the act of the user's turn it recognizes | Annotated cases for 11 narrow questions, in English and Spanish; three repetitions at temperature 0 | The 16 candidates below and the 5 `@critical` variants |
+| 1. Narrow questions (`run_e0a.py phase-a`) | The quality of each critical narrow question on its own, and the act of the user's turn it recognizes | Annotated cases for 12 narrow questions, in English and Spanish; three repetitions at temperature 0 | The 16 candidates below and the 5 `@critical` variants |
 | 2. Whole dialogues (`run_e0a.py phase-b`) | Task success and latency of the whole system with simulated users, with the method only (the bounded conversation) | 21 development scenarios (three per strategy), in English and Spanish; three repetitions per scenario and persona | The finalists of phase 1 in that language |
 
 In phase 1 the act of the user's turn is one of: gives values, asks, skips, asks to repeat, other.

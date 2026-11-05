@@ -193,6 +193,11 @@ questions:
     validate: object
     variants:
       reasoning: {route: reasoning}
+  detect_wrong_check:
+    class: DialogueQuestion
+    template: detect_wrong_check
+    max_tokens: 20
+    validate: object
 
   # ==== Questionnaire ====
 

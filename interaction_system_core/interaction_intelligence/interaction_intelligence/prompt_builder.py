@@ -537,6 +537,11 @@ class PromptBuilder:
         return self._t("verify_answer", material=self._fmt_material(material),
                        answer=answer), schema
 
+    def detect_wrong_check(self, user_text: str, answer: str) -> tuple[str, dict]:
+        schema = {"type": "object", "properties": {"wrong_check": {"type": "boolean"}},
+                  "required": ["wrong_check"]}
+        return self._t("detect_wrong_check", user_text=user_text, answer=answer), schema
+
     # ==== QUESTIONNAIRE ====
 
     def map_scale_answer(self, user_text: str, item: str, options: list[str]) -> tuple[str, dict]:

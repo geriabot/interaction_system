@@ -68,6 +68,9 @@ CRITICAL_CATEGORIES = {
         "roleplay_turn: the practice closed (end, scene_end) when the user did not ask to stop "
         "and the scene was not over; qa_answer: the questions closed (done) when the user had "
         "not finished",
+    "wrong_check_missed":
+        "wrong_check: a check of the last answer with another value read as no wrong check (the "
+        "misunderstanding passes)",
 }
 
 DEFAULT_LANGUAGES = ("en", "es")

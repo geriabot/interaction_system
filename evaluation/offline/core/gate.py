@@ -65,7 +65,7 @@ FALLBACK_FINALISTS = 5
 # The benchmarks of phase A, in the order of the report
 PHASE_A_BENCHMARKS = ["confirmation", "turn_act", "quiz_grading", "teach_back", "qa_answer",
                       "qa_verify", "scale_answer", "step_turn", "roleplay_turn",
-                      "cancel_detect", "cancel_reply"]
+                      "cancel_detect", "cancel_reply", "wrong_check"]
 
 
 # The figures of one benchmark kept besides the accuracy (turn_act, cancel_detect)

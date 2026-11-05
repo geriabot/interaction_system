@@ -109,7 +109,7 @@ Every command on this page runs from `evaluation/` in a prepared terminal
 
 `offline/` measures, without ROS, the narrow questions the system asks the LLM against annotated
 datasets: the earlier ones (slot extraction, the answer to a confirmation, the choice of the dialogue
-behavior, quiz grading) and the eleven critical questions of phase 1 of E0a, in English and
+behavior, quiz grading) and the twelve critical questions of phase 1 of E0a, in English and
 Spanish, with its safety gate. A person reviews the trap cases of phase 1 before it runs, with
 `panels/review_panel.py dataset`. It imports the production modules of
 `interaction_intelligence` and its prompts, so it measures exactly what the system asks. The

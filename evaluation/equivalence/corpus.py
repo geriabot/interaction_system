@@ -248,6 +248,10 @@ def cases(language: str) -> list[tuple[str, str, callable]]:
     add("verify_finished", "plain", lambda llm: llm.verify_finished("nothing else, thanks"))
     add("verify_finished", "robot", lambda llm: llm.verify_finished(
         "no, gracias", "¿Algo más?"))
+    add("detect_wrong_check", "plain", lambda llm: llm.detect_wrong_check(
+        "Nine euros? Fine.", "It costs 19 euros."))
+    add("detect_wrong_check", "spanish", lambda llm: llm.detect_wrong_check(
+        "¿A las ocho? Vale, gracias.", "Abre a las 10:00."))
     add("quiz_opening", "plain", lambda llm: llm.quiz_opening(t["task"], 5))
     add("evaluate_quiz_answer", "plain", lambda llm: llm.evaluate_quiz_answer(
         "¿Cuál es el planeta más cercano al Sol?", "Mercurio", "Mercury... no, lead"))

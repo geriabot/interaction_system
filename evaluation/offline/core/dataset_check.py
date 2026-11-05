@@ -69,6 +69,7 @@ SPEC = {
     "cancel_detect": (("user_text", "expected_cancel"), "expected_cancel", None),
     "cancel_reply": (("user_text", "expected_answer"), "expected_answer",
                      ("yes", "no", "finished", "other")),
+    "wrong_check": (("answer", "user_text", "expected_wrong_check"), "expected_wrong_check", None),
 }
 
 # The fields with what the user says (checked against the examples of the prompts)
@@ -208,6 +209,10 @@ def _check_specific(stem: str, case: dict) -> list[str]:
             problems.append("key_facts and expected_polarity are for answerable cases only")
         if case.get("expected_polarity") not in (None, "yes", "no"):
             problems.append("expected_polarity must be yes or no")
+    if stem == "wrong_check" and case["category"].startswith("wrong_") is not case[
+            "expected_wrong_check"]:
+        problems.append("the categories wrong_* are the wrong checks (expected_wrong_check true), "
+                        "and only they")
     if stem == "quiz_grading" and case["expected_kind"] == "repeat" and case[
             "ground_truth_correct"]:
         problems.append("a reply that is not an answer cannot be correct")

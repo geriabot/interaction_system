@@ -26,7 +26,8 @@ Rules on what the user says:
   grounded_qa    "ask <word>": answered with "[<word>]" if the word is in the material, else not
                  in it ("ask unsupported" is answered but fails the verification); "off topic"
                  is outside the task; "shame" is a comment; "repeat" repeats; "no more" or
-                 "bye" ends; else other
+                 "bye" ends; else other. A comment with "wrong check" repeats back the last
+                 answer with another value (detect_wrong_check)
   questionnaire  "option N" chooses option N; "between" is ambiguous; "meaning" asks what it
                  means; "pass" declines; "repeat" repeats; else other
   roleplay       "stop practice" ends, "the end" ends the scene, "help me" asks for a hint,
@@ -319,6 +320,9 @@ class ScriptedLLM:
 
     def verify_answer(self, answer, material, ctx=None):
         return "unsupported" not in answer
+
+    def detect_wrong_check(self, user_text, answer):
+        return "wrong check" in user_text.lower()
 
     # ==== QUESTIONNAIRE ====
 

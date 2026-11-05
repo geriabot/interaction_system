@@ -600,6 +600,28 @@ def test_grounded_qa_answers_abstains_and_declines(system):
         "answered", "abstained", "abstained", "declined"]
 
 
+def test_grounded_qa_says_the_answer_again_after_a_wrong_check(system):
+    # A reaction that repeats back the last answer with another value: the person misunderstood
+    # it, and the answer is said again (detect_wrong_check, asked only for a reaction after an
+    # answer from the material)
+    r = run(system, goal(task="Answer the visitors' questions", mode="grounded_qa",
+                         resources=MUSEUM),
+            ["what a shame, wrong check", "ask opens", "what a shame",
+             "what a shame, wrong check", "off topic", "what a shame, wrong check", "no more"])
+    assert r.robot_lines() == [
+        "[qa_open]",
+        "[qa_more]",                  # no answer yet: nothing to check, a comment
+        "[opens] [qa_more]",
+        "[qa_more]",                  # a comment that checks no value
+        "[opens] [qa_more]",          # a wrong check: the last answer again
+        "[qa_decline] [qa_more]",
+        "[qa_more]",                  # after a decline: nothing to check, a comment
+        "[qa_bye]",
+    ]
+    assert r.status == "succeeded"
+    assert [q["resolution"] for q in frame(r)["questions"]] == ["answered", "declined"]
+
+
 def test_grounded_qa_needs_material(system):
     r = run(system, goal(task="Answer questions", mode="grounded_qa",
                          resources=resource("questions", QUESTIONS)), [])

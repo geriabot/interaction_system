@@ -48,6 +48,7 @@ BENCHMARKS = {
     "roleplay_turn": ("benchmarks.bench_roleplay_turn", "datasets/phase_a/roleplay_turn.json"),
     "cancel_detect": ("benchmarks.bench_cancel_detect", "datasets/phase_a/cancel_detect.json"),
     "cancel_reply": ("benchmarks.bench_cancel_reply", "datasets/phase_a/cancel_reply.json"),
+    "wrong_check": ("benchmarks.bench_wrong_check", "datasets/phase_a/wrong_check.json"),
     # Reported in E0a, never a selection criterion (not in the safety gate): the form of the
     # spoken lines, English and Spanish
     "wording": ("benchmarks.bench_wording", "datasets/wording.json"),

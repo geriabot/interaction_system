@@ -75,6 +75,7 @@ QUESTIONS = {
     "answer_from_material": ("answer_from_material", "answer_from_material", "json"),
     "verify_finished": ("verify_finished", "verify_finished", "json"),
     "verify_answer": ("verify_answer", "verify_answer", "json"),
+    "detect_wrong_check": ("detect_wrong_check", "detect_wrong_check", "json"),
     # Questionnaire
     "map_scale_answer": ("map_scale_answer", "map_scale_answer", "json"),
     # Quiz

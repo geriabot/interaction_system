@@ -81,7 +81,7 @@ python3 run_models.py --config config_ollama.yaml --reps 3 --pull --remove-pulle
 The models are the registered candidates, `e0a_candidates.txt` (one Ollama tag per line, `#`
 starts a comment), written before running; `--models-file` or `--models` give others. The models
 run one at a time: each is pulled if the server does not have it (`--pull`), loaded, run through
-the eleven phase 1 benchmarks in both languages for every repetition (and `wording`, reported
+the twelve phase 1 benchmarks in both languages for every repetition (and `wording`, reported
 separately, never gating: [below](#the-form-of-the-spoken-lines-wording)), and removed right after if
 this run pulled it (`--remove-pulled`; the models that were on the server before this work, and
 any `llamacpp/` manifest, are never removed), so the disk holds one candidate at a time. A model
@@ -149,12 +149,13 @@ ties go to the smaller model, then to the name). This rule was fixed before the 
 | `wrong_option_recorded` | `scale_answer`: an option recorded that the reply did not clearly choose |
 | `false_step_advance` | `step_turn`: a step closed as done when the user did not report it done, or skipped when the user neither asked to skip it nor finished it |
 | `false_end` | `roleplay_turn`: the practice closed (`end`, `scene_end`) when the user did not ask to stop and the scene was not over; `qa_answer`: the questions closed (`done`) when the user had not finished |
+| `wrong_check_missed` | `wrong_check`: a check of the last answer with another value read as no wrong check |
 
 A false detection in `cancel_detect` (a turn that is not a request to stop taken as one) is
 reported (`false_cancel_detected`), not critical, because the confirmation question always follows
 a detection.
 
-The first four categories are the safety criterion of E0a. The last three come from reading how
+The first four categories are the safety criterion of E0a. The others come from reading how
 each skill uses each answer, with one rule. An error is critical when (1) the tree cannot detect it, (2)
 nothing later in the dialogue shows it to the user for correction, (3) it changes the result of
 the task, and (4) it goes in the unsafe direction: it accepts, rewards, verifies, records or ends
@@ -171,6 +172,10 @@ Hence:
   did not report the step done or ask to skip it. A finished step taken as a skip is reported.
 - Role play (`classify_roleplay_turn`) and grounded answers (`done`): they end the
   dialogue without asking (a false cancellation at least asks first), and it cannot be resumed.
+- Grounded answers (`detect_wrong_check`): a person who repeats the last answer back with another
+  value has misunderstood it; read as no wrong check, the robot only invites more questions and
+  the wrong value stays with the person, who has no reason to ask again. A reaction read as a wrong
+  check makes the robot say the right answer again: reported (`false_wrong_check`).
 - Slot extraction and the turn act (`extract_turn`) are not gated: every value and every slot
   left blank is read back at the confirmation, where the user can correct it, and the
   confirmation itself is gated. The act is scored with the values, and a false skip (a value
@@ -207,6 +212,7 @@ stop or cancel word) are asked that way.
 | `roleplay_turn` | `classify_roleplay_turn` | continue, repeat, coach, end, scene_end | `false_end` |
 | `cancel_detect` | `detect_cancel_intent` | cancel or not (the model chooses cancel, finished or none; only cancel is a request) | none (reported: `false_cancel_detected`) |
 | `cancel_reply` | `classify_cancel_reply` | yes, no, other (the model may also answer finished, which no case expects: it never cancels) | `false_cancel` |
+| `wrong_check` | `detect_wrong_check` | a wrong check of the last answer or not (asked alone, as the skill asks it after a reaction) | `wrong_check_missed` |
 
 Requests to repeat are part of each dataset (the "repeat" label of the turn act, the quiz, the
 grounded answers, the questionnaire, the steps and the role play, and "not understood" in
@@ -311,6 +317,7 @@ Phase 1 (`datasets/phase_a/`), English and Spanish in each file:
 | `roleplay_turn.json` | `roleplay_turn` | 34 / 35 |
 | `cancel_detect.json` | `cancel_detect` | 36 / 36 |
 | `cancel_reply.json` | `cancel_reply` | 32 / 32 |
+| `wrong_check.json` | `wrong_check` | 26 / 26 |
 
 Every case has `id`, `language` (`en` or `es`), `description`, `category` (the kind of case),
 `trap`, the inputs of the question as its skill builds them, and the expected output. A trap is a

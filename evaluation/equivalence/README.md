@@ -18,7 +18,7 @@ exactly as before. These tools check it.
 
 ## The tools
 
-`corpus.py` lists the calls compared: every question of `LLMDialogClient` (50) and the question
+`corpus.py` lists the calls compared: every question of `LLMDialogClient` (51) and the question
 of the LLM-led baseline (`monolithic_turn`, interaction_ablations), with arguments that exercise
 each part of the prompts (frames with empty, filled, conditional, list and bounded slots and a
 history; a context with a domain, resources and a notable state of the user, or none; material,
@@ -59,9 +59,9 @@ ROS_DOMAIN_ID=<yours> python3 latency.py --main-src <checkout of the former code
 
 ## Results
 
-**Criterion 3.** 51 questions, 256 calls per backend and language, the body of every call
-identical byte for byte: Ollama 256/256 in English and 256/256 in Spanish, OpenAI-compatible APIs
-256/256 and 256/256. Through the ROS nodes (`latency.py`), the 309 bodies of 103 rounds of four
+**Criterion 3.** 52 questions, 260 calls per backend and language, the body of every call
+identical byte for byte: Ollama 260/260 in English and 260/260 in Spanish, OpenAI-compatible APIs
+260/260 and 260/260. Through the ROS nodes (`latency.py`), the 309 bodies of 103 rounds of four
 skills are identical, and so are the replies. The Gemini and Claude providers of the former
 gateway were not compared (the server's backends reproduce their SDKs' requests in content, not
 byte for byte).
@@ -81,9 +81,9 @@ same time within 0.3 s:
 
 | Failure | Ollama | OpenAI-compatible |
 |---|---|---|
-| HTTP 500; no server at the address | 240/240 the same | the same decisions, not the same requests (below) |
-| The server answers after the wait; a slow server; the reply's budget spent; a call that may reason hangs | 378/378 the same | slow server: 120/120 |
-| Prose, empty, `{}`, a code fence, a list, a trailing comma, a `<think>` block | 840/840 the same | 840/840 |
+| HTTP 500; no server at the address | 244/244 the same | the same decisions, not the same requests (below) |
+| The server answers after the wait; a slow server; the reply's budget spent; a call that may reason hangs | 384/384 the same | slow server: 122/122 |
+| Prose, empty, `{}`, a code fence, a list, a trailing comma, a `<think>` block | 854/854 the same | 854/854 |
 
 With an OpenAI-compatible API, the openai SDK of the former gateway retried a failed request by
 itself (twice, after a connection error or a 408, 409, 429 or 5xx answer, with backoff), and the

@@ -261,6 +261,7 @@ EXPECTED = {
     "roleplay_turn": (("expected_intent", "enum"),),
     "cancel_detect": (("expected_cancel", "bool"),),
     "cancel_reply": (("expected_answer", "enum"),),
+    "wrong_check": (("expected_wrong_check", "bool"),),
 }
 # Inputs that the question does not send to the LLM (the _instructions of each file say so)
 NOT_SENT = {"cancel_detect": {"situation"}, "cancel_reply": {"situation", "robot_question"},
@@ -401,6 +402,17 @@ PLAIN = {
                      "Has finished: nothing more to ask or add"),
         "other": ("Otra cosa (sigue con la tarea, pregunta o no está claro)",
                   "Something else (goes on with the task, asks, or unclear)")},
+    "wrong_check": {
+        "q": ("El robot ha dado una respuesta y la persona contesta sin preguntar nada nuevo. "
+              "¿Repite algún dato de la respuesta (una hora, un precio, un día, un lugar, un "
+              "número) con un valor distinto?",
+              "The robot gave an answer and the person replies without asking anything new. "
+              "Do they repeat back a value of the answer (a time, a price, a day, a place, a "
+              "number) with a different value?"),
+        "true": ("Sí: repite un dato con otro valor (ha entendido mal)",
+                 "Yes: repeats a value with another value (misunderstood)"),
+        "false": ("No: el mismo valor, aunque lo diga de otra forma, o no repite ningún dato",
+                  "No: the same value, even said another way, or no value repeated")},
 }
 YES_NO = {"true": ("Sí", "Yes"), "false": ("No", "No")}
 
