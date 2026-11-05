@@ -362,6 +362,33 @@ def test_second_request_rejected_while_running(system):
     client.destroy()
 
 
+def test_another_runners_status_does_not_end_the_dialogue(system):
+    """/behavior_status is shared by every behavior runner on the ROS domain: a SUCCESS or a
+    FAILURE published by another process (another robot's tree) does not end this dialogue."""
+    from std_msgs.msg import String
+    pub = system.node.create_publisher(String, "/behavior_status", 10)
+    stop_flag = threading.Event()
+
+    def stray():
+        time.sleep(0.3)
+        while not stop_flag.is_set():
+            for status in ("FAILURE", "SUCCESS"):
+                pub.publish(String(data=status))
+            time.sleep(0.2)
+
+    thread = threading.Thread(target=stray)
+    thread.start()
+    try:
+        r = run(system, goal(schema=DRINKS), ["drink=coffee", "size=large", "yes"])
+    finally:
+        stop_flag.set()
+        thread.join()
+        system.node.destroy_publisher(pub)
+    assert r.status == "succeeded", r
+    assert frame(r) == {"drink": "coffee", "size": "large"}
+    assert r.result.total_turns == 3
+
+
 def test_barge_in_cuts_the_robot(system):
     r = run(system, goal(schema=DRINKS),
             [UserTurn("drink=tea; size=small", barge_in_after=0.3), "yes"])

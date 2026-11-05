@@ -492,9 +492,25 @@ InteractionOrchestrator::go_to_state(int behavior_id)
 void
 InteractionOrchestrator::behavior_status_callback(std_msgs::msg::String::UniquePtr msg)
 {
-  if (state_ == InteractionState::ACTING && (msg->data == "SUCCESS" || msg->data == "FAILURE")) {
-    runner_result_ = msg->data;
+  if (state_ != InteractionState::ACTING || (msg->data != "SUCCESS" && msg->data != "FAILURE")) {
+    return;
   }
+  // /behavior_status is shared by every behavior runner on the ROS domain (other robots'
+  // included): the result counts only when this dialogue's runner has reached it
+  const auto expected = msg->data == "SUCCESS" ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
+  const auto runner = chosen_behavior_ >= 0 ?
+    runners_.find(catalog_.at(chosen_behavior_).node_name) : runners_.end();
+  // (runners_ holds every runner as the lifecycle node it is; they are all BehaviorRunners)
+  if (runner == runners_.end() ||
+    std::static_pointer_cast<behavior_architecture::BehaviorRunner>(runner->second)
+    ->get_bt_status() != expected)
+  {
+    RCLCPP_WARN(
+      get_logger(), "Ignored a %s on /behavior_status that is not this dialogue's runner",
+      msg->data.c_str());
+    return;
+  }
+  runner_result_ = msg->data;
 }
 
 // ==== FEEDBACK, RESULT AND STATUS ====
