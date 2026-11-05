@@ -161,3 +161,12 @@ def test_the_judge_refuses_real_sessions_not_reviewed(tmp_path):
     (tmp_path / "P01" / "trial_1_x_bounded.json").write_text(
         json.dumps({"persona": "real", "reviewed": {"by": "RPR"}}))
     assert len(judge_runs.load_runs(str(tmp_path))) == 1
+
+
+def test_a_critical_variant_is_its_model_on_the_server_with_selective_reasoning():
+    assert sc.split_model("qwen3:32b@critical") == ("ollama", "qwen3:32b")
+    assert sc.reasoning_of("qwen3:32b@critical") == "critical"
+    assert sc.split_model("gpt-oss:20b") == ("ollama", "gpt-oss:20b")
+    assert sc.reasoning_of("gpt-oss:20b") == "none"
+    with pytest.raises(ValueError):
+        sc.reasoning_of("qwen3:32b@fast")

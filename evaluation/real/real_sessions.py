@@ -129,8 +129,8 @@ sys.path.insert(0, HERE)
 from sessions_common import (API_KEYS, OUT, PIPER_SETTINGS, PIPER_VOICE,  # noqa: E402,F401
                              PLACEHOLDER, SESSIONS, balance, card_text, details, is_cloud,
                              is_reviewed, load, load_sessions, parse_voice, participant, read_plan,
-                             record_path, replace_in_text, review_record, split_model, stored,
-                             write_plan)
+                             reasoning_of, record_path, replace_in_text, review_record, split_model,
+                             stored, write_plan)
 import campaigns  # noqa: E402
 
 EVAL = os.path.dirname(HERE)
@@ -200,6 +200,7 @@ def stack_params(sessions: dict, model: str, trial_dir: str, barge_in: bool = Fa
             # (llm_timeout, reply_budget) are part of the method, and E4 runs with its defaults
             # (only E1 opens them, in run_experiment.py's model_wait); ollama.timeout above is only the gateway's limit for one request to the server
             "user_state_service": "",
+            "reasoning": reasoning_of(model),
         }},
         "interaction_orchestrator": {"ros__parameters": {
             **dict(sessions.get("limits", {})),

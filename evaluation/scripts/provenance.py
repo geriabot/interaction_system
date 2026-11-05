@@ -74,7 +74,9 @@ def model_digests(models: list[str], ollama: str | None) -> dict:
     except Exception:
         return {}
     have = {m["name"]: m.get("digest", "") for m in tags}
-    return {m: have.get(m) or have.get(f"{m}:latest") for m in models if "/" not in m}
+    # "<model>@critical" (selective reasoning) is <model> on the server
+    base = {m: m.partition("@")[0] for m in models}
+    return {m: have.get(base[m]) or have.get(f"{base[m]}:latest") for m in models if "/" not in m}
 
 
 # Packages whose version can change what a run produces

@@ -81,11 +81,21 @@ def load(path: str) -> dict:
 
 
 def split_model(model: str) -> tuple[str, str]:
-    """(provider, model) of a system model: provider/model for a cloud one, else Ollama."""
+    """(provider, model) of a system model: provider/model for a cloud one, else Ollama. A local
+    model's "@critical" (selective reasoning) is not part of its name on the server."""
     provider, sep, name = model.partition("/")
     if sep and provider in CLOUD_PROVIDERS:
         return provider, name
-    return "ollama", model
+    return "ollama", model.partition("@")[0]
+
+
+def reasoning_of(model: str) -> str:
+    """The intelligence's `reasoning` for a system model: "critical" for "<model>@critical" (it
+    may reason before the critical questions only; E0a's variants), else "none"."""
+    variant = model.partition("@")[2]
+    if variant not in ("", "critical"):
+        raise ValueError(f"unknown variant '@{variant}' of {model.partition('@')[0]}")
+    return "critical" if variant else "none"
 
 
 def is_cloud(model: str) -> bool:
