@@ -22,16 +22,21 @@ and E3, Spanish for E4), in stages, each one resumable:
         then the local annotator marks the simulated user's lines (annotate_turns.py: read by
         the grounded-QA scoring and the adherence check) and the dialogues are scored. A
         separate stage: it needs the author's go (credit loaded).
-    python3 run_e0a.py decide
-        The rule (the author), per language, on ALL the dialogues of phase B (3 repetitions; E0a
-        excludes none, the simulator's exclusion rate is reported as a check): among the
-        finalists of phase A that FIT the GPU (loaded with the 8k context, entirely in GPU
-        memory: /api/ps size_vram >= size, recorded when each model was loaded in phase B, else
-        in phase A), the one with the highest task success; ties: the smaller model (Ollama's
-        total parameters), then the name. One model per language (the same model when it wins
-        both). The paired difference of every other finalist with the chosen one (same scenario
-        x persona x repetition units) and its 95% cluster-bootstrap interval (scenario x persona
-        clusters, BOOTSTRAP draws, fixed seed) are reported, not used to decide. A language whose
+    python3 run_e0a.py decide [--by success|q]
+        The rule (the author), per language, on the dialogues of phase B (3 repetitions) that are
+        not simulator failures by E0a's exclusion rule (adherence.py, rule "e0a": a value off
+        script, or a planned change never said although the simulated user had one more line):
+        among the finalists of phase A that FIT the GPU (loaded with the 8k context, entirely in
+        GPU memory: /api/ps size_vram >= size, recorded when each model was loaded in phase B,
+        else in phase A), the one with the highest task success; ties: the smaller model
+        (Ollama's total parameters), then the name. One model per language (the same model when
+        it wins both). The paired difference of every other finalist with the chosen one (same
+        scenario x persona x repetition units) and its 95% cluster-bootstrap interval (scenario x
+        persona clusters, BOOTSTRAP draws, fixed seed) are reported, not used to decide. The
+        summary score Q (q_score.py) is reported beside it, with the choice it would make (--by
+        q): the highest Q; the finalists whose paired difference of Q with it has a 95% interval
+        that includes 0 are tied with it, and among them the fewest distinct critical cases of
+        phase A in that language, then the smaller model, then the name. A language whose
         finalists do not all have their planned dialogues is "incomplete": nothing is chosen. No
         model is discarded for its latency (it depends on the hardware): the system's time per
         turn (p50, p95, the share of turns over SLOW_TURN_S) is reported. Writes
@@ -65,6 +70,7 @@ sys.path.append(os.path.join(OFFLINE, "core"))
 sys.path.append(os.path.join(EVAL, "analysis"))
 import annotate_turns  # noqa: E402
 import gpu_lock  # noqa: E402
+import q_score  # noqa: E402
 import ollama_models  # noqa: E402
 import provenance  # noqa: E402
 from experiment_files import select_scenarios  # noqa: E402
@@ -233,24 +239,30 @@ def annotate(outs: list[str], pulled: list[str]) -> None:
 
 
 def unannotated(out: str) -> list[str]:
-    """The records of phase B without the annotator's marks (annotate_turns.py)."""
+    """The records of phase B without the annotator's marks (annotate_turns.py; a failure
+    marker is not a mark)."""
     import score_runs
-    return [p for p in score_runs.run_files(out)
-            if not os.path.exists(annotate_turns.sidecar(p))]
+    return [p for p in score_runs.run_files(out) if not annotate_turns.annotated(p)]
+
+
+# The exclusion rule of phase B (EXPERIMENTS.md, E0a, fixed before any result of phase 2)
+EXCLUSION_RULE = "e0a"
 
 
 def phase_b_units(out: str) -> dict:
     """{model: {(scenario, persona, rep): {"success": 0|1, "latencies": [...], "excluded":
-    bool}}} from the records of phase B with the annotator's marks merged (the grounded-QA
-    scoring and the adherence check read them): every dialogue (E0a excludes none)."""
+    bool, "fillers": n, "row": q_score row}}} from the records of phase B with the annotator's
+    marks merged (the grounded-QA scoring and the adherence check read them); "excluded" by
+    EXCLUSION_RULE."""
     import score_runs
     units: dict[str, dict] = {}
     for path in score_runs.run_files(out):
         rec = annotate_turns.load_record(path)
-        row = score_runs.add_adherence(score_runs.score(rec), rec)
+        row = score_runs.add_adherence(score_runs.score(rec), rec, EXCLUSION_RULE)
         units.setdefault(row["model"], {})[(rec["scenario"], rec["persona"], rec.get("rep", 1))] = {
             "success": int(bool(row["task_success"])), "latencies": row["_latencies"],
-            "excluded": bool(row.get("sim_excluded")), "fillers": row.get("fillers", 0)}
+            "excluded": bool(row.get("sim_excluded")), "fillers": row.get("fillers", 0),
+            "row": q_score.dialogue_row(rec, row, annotate_turns.annotated(path))}
     return units
 
 
@@ -267,14 +279,26 @@ def planned_units(experiment: str) -> int:
             * len(exp.get("conditions") or {"": None}))
 
 
+def _rows(units: dict) -> list[dict]:
+    return [u["row"] for u in units.values() if "row" in u]
+
+
 def figures(units: dict) -> dict:
-    """n, success (all dialogues), the system's time per turn on all dialogues (p50, p95, the
-    share of turns over SLOW_TURN_S; reported, not a gate), the fillers said, the simulator's
-    exclusion rate (a check only)."""
+    """n (every dialogue), the dialogues left out by the exclusion rule, success (the kept ones;
+    and on every dialogue), the system's time per turn on all dialogues (p50, p95, the share of
+    turns over SLOW_TURN_S; reported, not a gate), the fillers said, and Q with its figures
+    (q_score.summary)."""
     n = len(units)
+    kept = [u for u in units.values() if not u["excluded"]]
     lat = [x for u in units.values() for x in u["latencies"]]
-    return {"n": n,
-            "success": round(sum(u["success"] for u in units.values()) / n, 4) if n else None,
+    rows = _rows(units)
+    qs = q_score.summary(rows) if rows else {}
+    return {"n": n, "excluded": n - len(kept),
+            "success": round(sum(u["success"] for u in kept) / len(kept), 4) if kept else None,
+            "success_all": round(sum(u["success"] for u in units.values()) / n, 4) if n else None,
+            **{k: qs.get(k) for k in ("q", "q_ci95", "q_others_twice", "q_unsafe_minus_one",
+                                      "unsafe_dialogues", "failed_unsafely", "per_user_type",
+                                      "per_strategy", "unsafe", "excluded_why", "annotated")},
             "latency_p50_s": percentile(lat, 0.5),
             "latency_p95_s": percentile(lat, 0.95),
             "turns_over_2s": round(sum(1 for x in lat if x > SLOW_TURN_S) / len(lat), 4)
@@ -289,7 +313,8 @@ def paired_bootstrap(best: dict, other: dict, draws: int = BOOTSTRAP,
     """The paired difference of success, best minus other, over their common units, and its
     95% interval by a cluster bootstrap that resamples scenario x persona clusters (all the
     repetitions of a cluster together). Reported, not used to decide."""
-    common = sorted(set(best) & set(other))
+    common = sorted(u for u in set(best) & set(other)
+                    if not best[u].get("excluded") and not other[u].get("excluded"))
     clusters: dict[tuple, list] = {}
     for unit in common:
         clusters.setdefault(unit[:2], []).append(best[unit]["success"] - other[unit]["success"])
@@ -333,10 +358,27 @@ def gpu_fits() -> dict:
     return out
 
 
+def choose_by_q(eligible: list[str], units: dict, sizes: dict, critical: dict) -> dict:
+    """The choice by Q among the eligible finalists: the highest Q; tied with it, every finalist
+    whose paired difference of Q has a 95% interval that includes 0; among the tied, the fewest
+    distinct critical cases of phase A in the language, then the smaller model, then the name."""
+    kept = {m: [r for r in _rows(units[m]) if not r["excluded"]] for m in eligible}
+    q = {m: q_score.q_of(kept[m]) for m in eligible}
+    top = sorted(eligible, key=lambda m: (-q[m], _size(sizes, m), m))[0]
+    diffs = {m: q_score.paired_difference(kept[top], kept[m]) for m in eligible if m != top}
+    tied = [top] + [m for m in eligible if m != top and diffs[m]["ci95"][0] <= 0]
+    big = float("inf")
+    chosen = sorted(tied, key=lambda m: (critical.get(m, big), _size(sizes, m), m))[0]
+    return {"top": top, "tied": tied, "critical_phase_a": {m: critical.get(m) for m in tied},
+            "chosen": chosen, "q_differences_vs_top": diffs,
+            "smaa_first": q_score.smaa_first(kept)}
+
+
 def decide_language(candidates: list[str], units: dict, planned: int, sizes: dict,
-                    fits: dict) -> dict:
+                    fits: dict, critical: dict | None = None, by: str = "success") -> dict:
     """The decision of one language from the units of each candidate (phase_b_units): the
-    highest task success among the finalists that fit the GPU (ties: smaller, then name)."""
+    highest task success among the finalists that fit the GPU (ties: smaller, then name), and
+    the choice by Q (choose_by_q); `by` says which one is the decision."""
     figs = {m: figures(units.get(m) or {}) for m in candidates}
     short = {m: figs[m]["n"] for m in candidates if figs[m]["n"] != planned}
     out = {"candidates": candidates, "planned": planned, "figures": figs,
@@ -358,7 +400,12 @@ def decide_language(candidates: list[str], units: dict, planned: int, sizes: dic
                            for m in candidates if m not in eligible}
     if not eligible:
         return {**out, "state": "none", "chosen": None}
-    chosen = sorted(eligible, key=lambda m: (-figs[m]["success"], _size(sizes, m), m))[0]
+    by_success = sorted(eligible, key=lambda m: (-figs[m]["success"], _size(sizes, m), m))[0]
+    out["by_success"] = by_success
+    if all(_rows(units[m]) for m in eligible):
+        out["by_q"] = choose_by_q(eligible, units, sizes, critical or {})
+    chosen = out["by_q"]["chosen"] if by == "q" else by_success
+    out["decided_by"] = by
     out["differences"] = {m: paired_bootstrap(units[chosen], units[m])
                           for m in candidates if m != chosen}
     return {**out, "state": "chosen", "chosen": chosen}
@@ -395,17 +442,25 @@ def decide(args) -> None:
             sys.exit(f"{len(missing)} dialogues of {out} without the annotator's marks: run "
                      f"phase-b again (it resumes) or analysis/annotate_turns.py {out}")
         units = phase_b_units(out) if os.path.isdir(out) else {}
+        critical = {m: (g.get("distinct_critical_by_language") or {}).get(lang)
+                    for m, g in gate.items() if not m.startswith("_")}
         decision[lang] = decide_language(finalists(lang), units, planned_units(experiment), sizes,
-                                         fits)
+                                         fits, critical, getattr(args, "by", "success"))
         decision[lang]["phase_a"] = (gate.get("_finalists") or {}).get(lang) or {}
     chosen = sorted({d["chosen"] for d in decision.values() if d.get("chosen")})
     result = {"languages": decision, "digests": model_digests(chosen),
               "rule": "per language, among the finalists of phase A that fit the GPU (entirely "
                       "in GPU memory with the 8k context), the highest task success in phase B "
-                      "(3 repetitions, all dialogues); ties: the smaller model, then the name. "
+                      "(3 repetitions; simulator failures left out by the rule 'e0a'); ties: the "
+                      "smaller model, then the name. "
                       "The paired differences with the chosen model and their 95% "
                       "cluster-bootstrap intervals are reported, not used to decide. No latency "
-                      "gate (reported: p50, p95, share of turns over 2 s, Shiwa et al. 2009)"}
+                      "gate (reported: p50, p95, share of turns over 2 s, Shiwa et al. 2009)",
+              "rule_q": "the highest Q (q_score.py, equal weights); tied with it, the finalists "
+                        "whose paired difference of Q has a 95% interval including 0; among "
+                        "them, the fewest distinct critical cases of phase A in the language, "
+                        "then the smaller model, then the name",
+              "decided_by": getattr(args, "by", "success")}
     lines = write_decision(result)
     provenance.catalog("decision", OUT, {
         "chosen": {lang: d.get("chosen") for lang, d in decision.items()},
@@ -415,7 +470,8 @@ def decide(args) -> None:
 
 
 def write_decision(result: dict) -> list[str]:
-    lines = ["# E0a: the decision", "", f"Rule: {result['rule']}.", ""]
+    lines = ["# E0a: the decision", "", f"Rule: {result['rule']}.", "",
+             f"Rule by Q: {result.get('rule_q')}. Decided by: {result.get('decided_by')}.", ""]
     for lang, d in result["languages"].items():
         lines += [f"## {lang}", ""]
         info = d.get("phase_a") or {}
@@ -423,9 +479,9 @@ def write_decision(result: dict) -> list[str]:
             lines += [f"Phase A: {info.get('note')}", ""]
         lines += [f"Finalists of phase A: {', '.join(d['candidates']) or 'none'}; planned "
                   f"dialogues per model: {d['planned']}", "",
-                  "| model | size (B) | fits the GPU | dialogues | success | p50 / p95 (s) | "
-                  "turns > 2 s | fillers | sim. excluded (check) | d vs chosen [95% CI] |",
-                  "|---|---|---|---|---|---|---|---|---|---|"]
+                  "| model | size (B) | fits the GPU | dialogues | excluded | success | Q [95% CI] | "
+                  "unsafe | p50 / p95 (s) | turns > 2 s | fillers | d vs chosen [95% CI] |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for m in d["candidates"]:
             f = d["figures"][m]
             gpu = (d.get("gpu") or {}).get(m) or {}
@@ -434,10 +490,14 @@ def write_decision(result: dict) -> list[str]:
             dtext = ("chosen" if m == d.get("chosen") else
                      f"{diff['d']} [{diff['ci95'][0]}, {diff['ci95'][1]}]" if diff else "-")
             p50, p95 = f.get("latency_p50_s"), f.get("latency_p95_s")
-            lines.append(f"| {m} | {d['sizes_b'].get(m)} | {fit} | {f['n']} | {f['success']} | "
+            qtext = (f"{f['q']} [{f['q_ci95'][0]}, {f['q_ci95'][1]}]"
+                     if f.get("q") is not None else "-")
+            lines.append(f"| {m} | {d['sizes_b'].get(m)} | {fit} | {f['n']} | "
+                         f"{f.get('excluded', 0)} | {f['success']} | {qtext} | "
+                         f"{f.get('unsafe_dialogues', '-')} | "
                          f"{'-' if p50 is None else round(p50, 2)} / "
                          f"{'-' if p95 is None else round(p95, 2)} | {f.get('turns_over_2s')} | "
-                         f"{f.get('fillers', 0)} | {f['sim_excluded_rate']} | {dtext} |")
+                         f"{f.get('fillers', 0)} | {dtext} |")
         if d.get("not_eligible"):
             lines += ["", "Not eligible: " + "; ".join(f"{m}: {why}"
                                                        for m, why in d["not_eligible"].items())]
@@ -445,7 +505,13 @@ def write_decision(result: dict) -> list[str]:
             verdict = f"none: incomplete runs {d.get('short')}"
         else:
             verdict = d["chosen"] or "none (negative result)"
-        lines += ["", f"**Chosen ({lang}): {verdict}**", ""]
+        bq = d.get("by_q")
+        if bq:
+            lines += ["", f"By task success: {d['by_success']}. By Q: {bq['chosen']} (highest Q "
+                      f"{bq['top']}; tied with it: {', '.join(bq['tied'])}; distinct critical "
+                      f"cases of phase A: {bq['critical_phase_a']}). SMAA first-rank "
+                      f"acceptability: {bq['smaa_first']}."]
+        lines += ["", f"**Chosen ({lang}, by {d.get('decided_by', 'success')}): {verdict}**", ""]
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "decision.json"), "w", encoding="utf-8") as f:
         json.dump(result, f, indent=1)
@@ -500,6 +566,9 @@ def main() -> None:
                            help="Resume phase A begun with other code (recorded in its "
                                 "provenance.json): only when the change cannot alter the runs "
                                 "already saved")
+        if name == "decide":
+            p.add_argument("--by", choices=("success", "q"), default="success",
+                           help="The figure that decides (both choices are reported)")
         if name in ("preflight", "phase-b", "all"):
             p.add_argument("--allow-cloud", action="store_true",
                            help="Paid calls (phase-b: the simulated user; preflight, all: one "

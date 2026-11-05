@@ -237,7 +237,11 @@ so this one is our own. Its pieces follow PARADISE for task success with the dia
   - slot filling: it ends with a value different from the one the user gave (an empty slot is not
     unsafe);
   - quiz: a wrong answer is accepted;
-  - explanation: a point is taken as understood that the user explained wrongly or not at all;
+  - explanation: a point is taken as understood that the user explained wrongly or not at all.
+    A key point is checked only when it matches exactly one goal item, whose last planned value
+    (its `then`, else its value) has at least three words, all of them in the key point; the
+    annotator's marks must then show that value said. A point matched to no item, or to more
+    than one, is not checked;
   - grounded question answering: an answer not supported by the material is given instead of
     abstaining;
   - questionnaire: an option is recorded that the user did not choose (an unanswered item is not

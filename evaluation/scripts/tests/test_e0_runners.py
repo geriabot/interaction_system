@@ -267,12 +267,18 @@ def test_all_stops_after_phase_a(monkeypatch):
 
 # ==== run_e0a: the decision ====
 
-def _units(successes):
-    """{(scenario, persona, rep): unit} from a list of 0/1 per unit (3 personas, 3 reps)."""
+def _units(successes, unsafe=()):
+    """{(scenario, persona, rep): unit} from a list of 0/1 per unit (3 personas, 3 reps; the
+    first unit excluded, the ones in `unsafe` with a silent unsafe error)."""
     out = {}
     for k, s in enumerate(successes):
-        out[(f"s{k // 9}", f"p{(k // 3) % 3}", k % 3 + 1)] = {
-            "success": s, "latencies": [1.0, 3.0], "excluded": k == 0, "fillers": 1}
+        key = (f"s{k // 9}", f"p{(k // 3) % 3}", k % 3 + 1)
+        row = {"model": "m", "scenario": key[0], "persona": key[1], "rep": key[2],
+               "strategy": "quiz", "success": bool(s), "unsafe": ["x"] if k in unsafe else [],
+               "ok": bool(s) and k not in unsafe, "excluded": "off_script" if k == 0 else "",
+               "annotated": True}
+        out[key] = {"success": s, "latencies": [1.0, 3.0], "excluded": k == 0, "fillers": 1,
+                    "row": row}
     return out
 
 
@@ -287,11 +293,14 @@ def test_the_highest_success_among_those_that_fit_the_gpu():
     assert d["state"] == "chosen" and d["chosen"] == "mid:8b"  # big is better but offloads
     assert d["not_eligible"] == {"big:32b": "does not fit the GPU (CPU offload)"}
     diff = d["differences"]["small:4b"]
-    assert diff["d"] == pytest.approx(3 / 18, abs=1e-4) and diff["clusters"] == 6
+    # The excluded unit is left out of the pairs (and of the success)
+    assert diff["d"] == pytest.approx(3 / 17, abs=1e-4) and diff["clusters"] == 6
     assert diff["ci95"][0] <= diff["d"] <= diff["ci95"][1]
     f = d["figures"]["mid:8b"]
     assert f["latency_p50_s"] == 2.0 and f["turns_over_2s"] == 0.5 and f["fillers"] == n
-    assert f["sim_excluded_rate"] == round(1 / 18, 4)  # reported only: every dialogue counts
+    assert f["sim_excluded_rate"] == round(1 / 18, 4) and f["excluded"] == 1
+    assert f["success"] == round(14 / 17, 4) and f["success_all"] == round(15 / 18, 4)
+    assert f["q"] == pytest.approx(100 * (1 + 1 + 0.5) / 3, abs=0.01)  # equal user-type weights
     # A model whose fit was not recorded is not eligible either
     d = run_e0a.decide_language(["mid:8b"], units, n, sizes, {})
     assert d["chosen"] is None and "unknown" in d["not_eligible"]["mid:8b"]
@@ -304,6 +313,26 @@ def test_ties_go_to_the_smaller_model_then_the_name():
     assert d["chosen"] == "c:4b"
     d = run_e0a.decide_language(["b:8b", "a:8b"], units, 18, {"b:8b": 8, "a:8b": 8}, fits)
     assert d["chosen"] == "a:8b"
+
+
+def test_q_is_reported_and_decides_when_asked_with_its_tie_break():
+    fits = {m: {"fits": True} for m in ("a:8b", "b:4b", "c:4b")}
+    # a has the highest success but two unsafe dialogues; b and c are close behind it
+    units = {"a:8b": _units([1] * 18, unsafe=(3, 4)), "b:4b": _units([1] * 17 + [0]),
+             "c:4b": _units([1] * 16 + [0] * 2)}
+    sizes = {"a:8b": 8, "b:4b": 4, "c:4b": 4}
+    critical = {"a:8b": 1, "b:4b": 5, "c:4b": 2}
+    d = run_e0a.decide_language(list(units), units, 18, sizes, fits, critical)
+    assert d["decided_by"] == "success" and d["chosen"] == d["by_success"] == "a:8b"
+    bq = d["by_q"]
+    assert bq["top"] == "b:4b" and set(bq["tied"]) == {"a:8b", "b:4b", "c:4b"}
+    assert bq["chosen"] == "a:8b"  # tied by Q, and the fewest critical cases of phase A
+    assert sum(bq["smaa_first"].values()) == pytest.approx(1)
+    d = run_e0a.decide_language(list(units), units, 18, sizes, fits, critical, by="q")
+    assert d["decided_by"] == "q" and d["chosen"] == "a:8b"
+    # Without the critical counts of phase A the size decides among the tied, then the name
+    d = run_e0a.decide_language(list(units), units, 18, sizes, fits, {}, by="q")
+    assert d["chosen"] == "b:4b"
 
 
 def test_an_incomplete_language_chooses_nothing():
@@ -370,6 +399,7 @@ def test_decide_end_to_end_on_synthetic_records(tmp_path, monkeypatch, catalog_i
     assert result["digests"] == {"a:4b": "sha", "b:8b": "sha"}
     md = (tmp_path / "e0a" / "decision.md").read_text()
     assert "fallback" in md and "Shiwa et al. 2009" in md and "no (CPU offload)" in md
+    assert "By Q:" in md and "Decided by: success" in md
     entry = _catalog(catalog_in_tmp)[-1]
     assert entry["event"] == "decision" and entry["chosen"] == {"en": "b:8b", "es": "a:4b"}
 
