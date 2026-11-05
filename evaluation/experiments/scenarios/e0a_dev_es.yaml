@@ -316,7 +316,7 @@ scenarios:
       dialog_mode: roleplay
       resources_json: >
         [{"name": "escena", "description": "escena del juego de rol",
-          "content": "{\"scenario\": \"Llamas a la puerta del vecino de arriba, que tiene la televisión muy alta por la noche\", \"role\": \"El vecino: al principio un poco a la defensiva, pero razonable\", \"user_goal\": \"Ponerse de acuerdo para tener noches más tranquilas\", \"criteria\": [\"Explica el problema con calma\", \"Propone una solución\"], \"max_exchanges\": 6}"}]
+          "content": "{\"scenario\": \"La persona que practica llama a la puerta del vecino de arriba, que tiene la televisión muy alta por la noche\", \"role\": \"El vecino: al principio un poco a la defensiva, pero razonable\", \"user_goal\": \"Ponerse de acuerdo para tener noches más tranquilas\", \"criteria\": [\"Explica el problema con calma\", \"Propone una solución\"], \"max_exchanges\": 6}"}]
     user_goal: >
       Vives debajo de un vecino que tiene la televisión muy alta pasada la medianoche, y no
       puedes dormir. Explica el problema con calma y con educación, pero no propongas nunca una solución

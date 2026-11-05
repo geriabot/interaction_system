@@ -707,7 +707,7 @@ scenarios:
       dialog_mode: roleplay
       resources_json: >
         [{"name": "escena", "description": "escena del juego de rol",
-          "content": "{\"scenario\": \"Se te ha olvidado el cumpleaños de tu amigo y os encontráis en una cafetería\", \"role\": \"El amigo: dolido, pero dispuesto a hablar\", \"criteria\": [\"Reconoce el error\", \"Se ofrece a compensarlo\"], \"max_exchanges\": 6}"}]
+          "content": "{\"scenario\": \"A la persona que practica se le olvidó el cumpleaños de un amigo, y los dos se encuentran en una cafetería\", \"role\": \"El amigo: dolido, pero dispuesto a hablar\", \"criteria\": [\"Reconoce el error\", \"Se ofrece a compensarlo\"], \"max_exchanges\": 6}"}]
     user_goal: >
       Pide perdón por haber olvidado el cumpleaños de tu amigo y reconoce que fue culpa tuya,
       pero no le ofrezcas nada para compensarlo. Después de dos de tus respuestas, di que quieres
