@@ -7,7 +7,7 @@ request to repeat, a turn not understood, a cancellation, a failure of the LLM o
 limit reached. The questions to the LLM are described in [PROMPTS.md](../PROMPTS.md), and how to
 add a behavior in [ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md).
 
-| Strategies | Shared mechanisms |
+| Dialogue behaviors | Shared mechanisms |
 |---|---|
 | [Slot filling](slot_filling.md) (`slot_filling`) | [Silence](silence.md): waiting for the user without giving up too early |
 | [Explanation](explanation.md) (`explanation`) | [Spoken cancellation](cancellation.md): "stop, forget it", confirmed |
@@ -21,7 +21,7 @@ add a behavior in [ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md
 
 Every behavior follows the same skeleton of turns
 ([ARCHITECTURE.md](../ARCHITECTURE.md#the-action-layer-the-dialogue-behaviors)): the tree of the
-strategy decides what follows each turn, the LLM only answers narrow questions (understand an
+behavior decides what follows each turn, the LLM only answers narrow questions (understand an
 utterance, phrase a reply), and every limit is a counter in the tree. Every conversation ends with
 a closing line and an outcome with its reason, returned in the `DialogTask` result
 ([Endings and outcome](endings.md)).

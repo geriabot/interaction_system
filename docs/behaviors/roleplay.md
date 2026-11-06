@@ -20,7 +20,7 @@ skills `interaction_intelligence/skills/roleplay.py`. [Index](README.md).
 - **Outcome:** `completed` once the scene was evaluated on every criterion, whether the user, the
   scene or the limit ended it; `partial` when the evaluation could not score some criterion (the
   LLM failed), with `Criteria not scored: ...` as the reason and the scores it did give, as other
-  strategies do when an element is left unfinished. A cancellation gives `cancelled`, and a
+  behaviors do when an element is left unfinished. A cancellation gives `cancelled`, and a
   breakdown is not evaluated ([below](#edge-cases)).
 
 The scene is hidden from the context of the other questions, so the character never sees the
@@ -44,7 +44,7 @@ Only `continue` turns count as exchanges: a hint, a request to repeat or a turn 
 does not use up the scene. Every line of the scene makes progress; requests to repeat and turns
 not understood do not, so `max_stalled` of them in a row end the dialogue with a
 [breakdown](no_progress.md). An LLM that is down therefore ends a role play with a breakdown, as
-in every other strategy, instead of letting the scene run to its limit and close without scores.
+in every other behavior, instead of letting the scene run to its limit and close without scores.
 The exchange limit is capped by the request's turn limit so that the user always gets the
 evaluation.
 
