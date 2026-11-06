@@ -16,9 +16,9 @@ how a behavior of the robot's architecture requests a conversation
 
 ## Ports
 
-The input ports carry the fields of the `DialogTask` goal, with the same names and meanings
-([ROS_INTERFACES.md](../docs/ROS_INTERFACES.md#dialogtask-goal)); the output ports carry the
-result.
+The input ports carry fields of the `DialogTask` goal, with the same names and meanings
+([ROS_INTERFACES.md](../docs/ROS_INTERFACES.md#dialogtask-goal)); the goal fields without a port
+take the system's values. The output ports carry the result.
 
 | Port | Direction | Default | Meaning |
 |------|-----------|---------|---------|
@@ -31,7 +31,7 @@ result.
 | `timeout` | in | `300.0` | Seconds after which the node cancels the goal and returns `FAILURE`; set it above the longest conversation the tree expects |
 | `final_frame_json` | out | | The data of the conversation, also when it did not complete |
 | `outcome` | out | | How it ended ([Endings and outcome](../docs/behaviors/endings.md#the-outcomes)). The node writes `error` when it gives up (`timeout`) or the goal is rejected |
-| `failure_reason` | out | | Why it did not complete; `Dialogue timeout` or `Goal rejected by DialoStack` when the node itself fails |
+| `failure_reason` | out | | Why it did not complete; `Dialogue timeout` or `Goal rejected by DialoStack` when the node itself fails, `Dialogue canceled` when the goal was canceled |
 | `total_turns` | out | | User turns |
 
 ## Run the example

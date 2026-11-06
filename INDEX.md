@@ -64,7 +64,8 @@ ros2 topic pub --once /transcription std_msgs/msg/String "{data: 'a large latte'
 ```
 
 [ROS_INTERFACES.md](docs/ROS_INTERFACES.md#dialogtask-goal) describes the goal, the feedback and
-the result, and [INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-strategy) has goals for every
+the result, and
+[INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-dialogue-behavior) has goals for every
 dialogue behavior. The transcripts are written to `/tmp/dialog_conversations.log`
 (`conversation_log_path`).
 
@@ -112,10 +113,10 @@ Cloud models (system, simulated user, judge) are paid: every command that would 
 ## Common checks
 
 ```sh
-ros2 node list                                         # /interaction_orchestrator, /interaction_intelligence, runners
+ros2 node list                                         # /interaction_orchestrator, /interaction_intelligence, runners, /interaction/interpretation_server
 ros2 lifecycle get /interaction_orchestrator           # active
 ros2 action list | grep -E "execute_task|stt_action|tts_action"
-ros2 service list | grep -E "interaction|llm"
+ros2 service list | grep interaction                   # includes /interaction/interpretation/interpret
 curl -s localhost:11434/api/version                    # Ollama answers
 ps -eo pid,cmd | grep -E "mission_executor|interaction_intelligence|interpretation_server"   # leftovers of a previous run
 ```

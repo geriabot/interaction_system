@@ -23,14 +23,15 @@ registering a visitor. Tree `behavior_tree_xml/slot_filling.xml`, skills
 2. **Gathering.** Each turn is understood in one question to the LLM (`extract_slots`): the
    values it gives or corrects, and what the turn does. The frame applies the values
    deterministically, checking types, allowed values, ranges, conditional slots and list
-   operations. A conditional slot that does not apply yet is also offered to the LLM, marked with its condition,
-   so that it can come in the same turn as the value that makes it apply ("a latte with oat
-   milk"); the frame keeps it only if its condition holds once the whole turn is applied ("an
-   espresso with oat milk" keeps no milk). The robot acknowledges what was applied with a fixed
-   phrase, never a generated one, so that it never acknowledges a value it did not get, and asks
-   for what is missing. Only a question for a list slot (`list_str`) says that several values may
-   be given: the code adds that instruction to the prompt for list slots only. Every question speaks to the user directly ("what
-   is your name?", not "the customer's name") and informally ([PROMPTS.md](../PROMPTS.md#placeholders-context-and-caching)).
+   operations. A conditional slot that does not apply yet is also offered to the LLM, marked
+   with its condition, so that it can come in the same turn as the value that makes it apply ("a
+   latte with oat milk"); the frame keeps it only if its condition holds once the whole turn is
+   applied ("an espresso with oat milk" keeps no milk). The robot acknowledges what was applied
+   with a fixed phrase, never a generated one, so that it never acknowledges a value it did not
+   get, and asks for what is missing. Only a question for a list slot (`list_str`) says that
+   several values may be given: the code adds that instruction to the prompt for list slots
+   only. Every question speaks to the user directly ("what is your name?", not "the customer's
+   name") and informally ([PROMPTS.md](../PROMPTS.md#placeholders-context-and-caching)).
 3. **Confirming.** When no slot is missing, the robot reads the frame back, saying which slots
    were left blank, and asks for a yes or no.
 
@@ -65,11 +66,11 @@ count as a failed attempt. Slots conditioned on an unanswered slot are not asked
 condition cannot hold). If the user later gives a value for an unanswered slot, it is recorded.
 
 A closed slot (one with `canonical_values`) takes a value only when the user's words contain it
-(a word of three or more letters, or a number), so that the LLM cannot pick a value from the list
-for words that do not mention it. A correction that applied nothing because it could not be read
-is read again by the extraction of the gathering phase. After a correction, the robot reads the
-frame back as it is recorded (an acknowledgment and the confirmation question), not a free
-sentence about the correction.
+(the whole value, one of its words of three or more letters, or a number), so that the LLM cannot
+pick a value from the list for words that do not mention it. A correction that applied nothing
+because it could not be read is read again by the extraction of the gathering phase. After a
+correction, the robot reads the frame back as it is recorded (an acknowledgment and the
+confirmation question), not a free sentence about the correction.
 
 ## Tree
 
@@ -89,8 +90,8 @@ sentence about the correction.
 
 ## Parameters
 
-`max_attempts` is the number of failed attempts on a slot before it is asked differently. The shared
-limits are described in [What every behavior shares](README.md#what-every-behavior-shares). The
-acknowledgments are `ack_phrases`
-and `ack_enabled`, and the line for a slot left blank is `phrases.slot_skipped`
+`max_attempts` is the number of failed attempts on a slot before it is asked differently. The
+shared limits are described in [What every behavior shares](README.md#what-every-behavior-shares).
+The acknowledgments are `ack_phrases` and `ack_enabled` (per request, `acknowledgments`), and the
+line for a slot left blank is `phrases.slot_skipped`
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)).

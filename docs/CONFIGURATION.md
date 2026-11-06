@@ -141,8 +141,9 @@ them are described in [docs/behaviors](behaviors/README.md).
   waiting longer. A request never gets more than `intelligence_timeout` minus 2 s. An experiment
   that does not test this bound may open it, together with `llm_timeout` and
   `intelligence_timeout`, for all its conditions alike (`model_wait`,
-  [evaluation/README.md](../evaluation/README.md)). E1 opens it, so that the latency of every
-  model, including cloud models that reason, is measured rather than cut.
+  [evaluation/README.md](../evaluation/README.md)). The comparison with the LLM-led conversation
+  opens it, so that the latency of every model, including cloud models that reason, is measured
+  rather than cut.
 - `user_speaking_topic` is published by the lip activity detector of the optional perception
   subsystem. While nothing publishes it, the robot finishes every utterance.
 
@@ -213,10 +214,12 @@ are declared from the files.
   quiz grading, teach-back, the answer from the material and its verification, the answer to "do
   you want to stop?", the questionnaire option, the procedure step and the role-play turn. It
   never reasons when a line is generated. Each of those requests asks the variant `reasoning` of
-  its question, answered on the route with `think` on; a model that cannot reason ignores it. The evaluation decides it per
-  model in E0a (the `@critical` candidates), and a request may switch it on or off
-  (`DialogTask.reasoning`). A reasoning call that returns nothing usable (past its token
-  allowance, or without JSON) is asked again at once without reasoning.
+  its question, answered on the route with `think` on; a model that cannot reason ignores it.
+  The evaluation decides it per model when it chooses the local model (the `@critical`
+  candidates, [EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#e0a-choosing-the-local-model)),
+  and a request may switch it on or off (`DialogTask.reasoning`). A reasoning call that returns
+  nothing usable (past its token allowance, or without JSON) is asked again at once without
+  reasoning.
 - `reasoning_timeout`: reasoning is not cut, so neither `llm_timeout` nor the reply's budget bound
   such a call, and its time is not charged to the budget. Only a hung model reaches
   `reasoning_timeout`; the model is then taken as unresponsive, as with `llm_timeout`, and the
@@ -254,35 +257,35 @@ unless the intelligence's `llm_model` names another. `max_concurrent`, `silent_m
 
 The cloud providers read their API key from the environment when `<provider>.api_key` is left
 empty, which is the recommended setup; a key given here is passed to the interpretation server in
-that variable of its environment, never as a parameter. The variables are `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`
-(a key of the Claude API, which a Claude.ai subscription does not include) and `OPENAI_API_KEY`.
-The interpretation server's backends need no SDK; the former gateway's are listed in its
-[README](../ros2_llm_manager/README.md#providers).
+that variable of its environment, never as a parameter. The variables are `GEMINI_API_KEY`,
+`ANTHROPIC_API_KEY` (a key of the Claude API, which a Claude.ai subscription does not include)
+and `OPENAI_API_KEY`. The interpretation server's backends need no SDK; the former gateway's are
+listed in its [README](../ros2_llm_manager/README.md#providers).
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `default_provider` | string | `ollama` | Provider of the questions when the intelligence's `llm_provider` names none (`gemini`, `ollama`, `claude` or `openai`). |
 | `default_model` | string | `""` | Model of the questions of `default_provider` when the intelligence's `llm_model` names none. Empty: the `<provider>.model` of the default provider. |
-| `max_concurrent` | int | `4` | Maximum number of concurrent inference threads. |
-| `silent_mode` | bool | `false` | Disable informational logs when true. |
-| `ollama.enable` | bool | `true` | Enable the Ollama provider and connect at startup. |
+| `max_concurrent` | int | `4` | The former gateway's maximum number of concurrent inference threads; not used. |
+| `silent_mode` | bool | `false` | The former gateway's informational logs; not used. |
+| `ollama.enable` | bool | `true` | Load `ollama.model` into the Ollama server's memory at the start (`interpretation_warmup`). |
 | `ollama.host` | string | `127.0.0.1` | Ollama server host. |
 | `ollama.port` | int | `11434` | Ollama server port. |
 | `ollama.model` | string | `qwen2.5:7b` | Model loaded into the Ollama server's memory at the start, and the model of the questions when neither `llm_model` nor `default_model` names another. Pull it, or set the model you serve. |
 | `ollama.timeout` | float | `120.0` | Request timeout in seconds for Ollama inference calls: the route's own limit (`timeout_s`). The interaction intelligence stops waiting earlier, at its `llm_timeout`, which the request carries as its budget. |
 | `ollama.think` | bool or string | `false` | Lets reasoning models (`qwen3.5`, `deepseek-r1`…) think before answering; `false` keeps spoken replies fast. A level (`low`, `medium`, `high`) is for models that cannot switch reasoning off (`gpt-oss`). |
 | `ollama.num_ctx` | int | `8192` | Context window of every request, in tokens, sent with each request ([below](#notes-on-the-model-binding)). |
-| `gemini.enable` | bool | `false` | Enable the Gemini provider and connect at startup. |
+| `gemini.enable` | bool | `false` | The former gateway's switch of the Gemini provider; not used: a route names its provider. |
 | `gemini.api_key` | string | `""` | Google Gemini API key. Prefer the `GEMINI_API_KEY` environment variable and leave this empty. |
 | `gemini.model` | string | `gemini-2.5-flash` | Gemini model name. |
 | `gemini.timeout` | float | `60.0` | Request timeout in seconds for Gemini inference calls. |
 | `gemini.base_url` | string | `""` | Optional server with Gemini's REST API instead of Google's; the evaluation's pilot points it at a local stand-in ([PILOT.md](../evaluation/doc/PILOT.md)). Empty: Google's API. |
-| `claude.enable` | bool | `false` | Enable the Anthropic Claude provider and connect at startup (checks the key and model). |
+| `claude.enable` | bool | `false` | The former gateway's switch of the Claude provider; not used: a route names its provider. |
 | `claude.api_key` | string | `""` | Claude API key. Prefer the `ANTHROPIC_API_KEY` environment variable and leave this empty. |
 | `claude.model` | string | `claude-haiku-5-5` | Claude model id. Haiku is the fastest and cheapest; `claude-sonnet-5-5` and `claude-opus-5-5` are more capable and more expensive. |
 | `claude.timeout` | float | `60.0` | Request timeout in seconds for Claude inference calls. |
 | `claude.effort` | string | `low` | Thinking effort: `low`, `medium`, `high`, `xhigh` or `max`. Current Claude models always think; `low` keeps spoken replies fast. Empty omits it (older models). |
-| `openai.enable` | bool | `false` | Enable the OpenAI provider and connect at startup (checks the key and model). |
+| `openai.enable` | bool | `false` | The former gateway's switch of the OpenAI provider; not used: a route names its provider. |
 | `openai.api_key` | string | `""` | OpenAI API key. Prefer the `OPENAI_API_KEY` environment variable and leave this empty. |
 | `openai.model` | string | `gpt-6-luna` | OpenAI model id. `gpt-6-luna` is the fastest and cheapest; `gpt-6.1-sol` and `gpt-6-astra` are more capable. With `base_url`, the model name of that server. |
 | `openai.timeout` | float | `60.0` | Request timeout in seconds for OpenAI inference calls. |
@@ -292,15 +295,15 @@ The interpretation server's backends need no SDK; the former gateway's are liste
 ### Notes on the model binding
 
 - `ollama.think` is the `think` of the route `dialogue` (the route `reasoning` has it on): models
-  without thinking ignore it, and thinking makes replies slower. When the
-  model may think, each request gets 4096 tokens more than its cap, because the reasoning tokens
-  count toward the cap and a short cap would leave the answer empty; in the measurements, no
-  reasoning call of the critical questions needed that many. The evaluation sets the value per
-  model: the value that the model accepts with its reasoning off, or `low` for `gpt-oss`. Phase 1
-  of E0a (`run_e0a.py phase-a`) records it.
+  without thinking ignore it, and thinking makes replies slower. When the model may think, each
+  request gets 4096 tokens more than its cap, because the reasoning tokens count toward the cap
+  and a short cap would leave the answer empty; in the measurements, no reasoning call of the
+  critical questions needed that many. The evaluation sets the value per model: the value that
+  the model accepts with its reasoning off, or `low` for `gpt-oss`, and records it in phase 1 of
+  the model choice (`run_e0a.py phase-a`).
 - `ollama.num_ctx` is sent with each request so that the context window does not depend on the
   server's default, which changes with its version and configuration; a longer prompt is cut
-  silently. Both phases of E0a, the judges and E1 use the same 8192.
+  silently. The experiments of the evaluation use the same 8192.
 
 ## The interpretation server
 
@@ -431,8 +434,8 @@ those of the code.
 ## arm_gesture_manager
 
 Declared in `robots/nao/nao_pose_manager/nao_pose_manager/arm_gesture_manager.py`. The node
-drives the arms of the real NAO. The defaults are those of the code; `arm_gesture_manager.launch.py` passes
-its own launch arguments ([LAUNCH_ARGUMENTS.md](LAUNCH_ARGUMENTS.md#nao)), noted below.
+drives the arms of the real NAO. The defaults are those of the code; `arm_gesture_manager.launch.py`
+passes its own launch arguments ([LAUNCH_ARGUMENTS.md](LAUNCH_ARGUMENTS.md#nao)), noted below.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

@@ -58,8 +58,10 @@ context flags it. Before the detector is used with people, it needs the followin
    signal of emotion. They should be combined with other cues (the words, the voice prosody, the
    course of the conversation) and used to adapt the manner (slower, simpler, reassuring), never
    to state what the person feels.
-6. No debug window. A debug window now opens by default (`show_visualization: true`); it should
-   be off by default on a robot without a screen.
+6. No debug window. The node and `config/params.yaml` default to a debug window
+   (`show_visualization: true`). `interaction_perception.launch.py` turns it off
+   (`visualization:=false`), but `emotion_detector.launch.py` does not; it should be off by
+   default everywhere on a robot without a screen.
 7. An evaluated effect. In the prompts, the emotion was used as a fixed instruction (adapt the
    tone to the emotion). Whether adapting to the detected state improves the conversation should
    be measured against not adapting.
@@ -87,10 +89,11 @@ The arguments of the launch files are in
 [LAUNCH_ARGUMENTS.md](../../docs/LAUNCH_ARGUMENTS.md#the-perception-of-the-user). A camera
 publishing on the configured image topic must be running.
 
-The detectors need `cv_bridge` and their Python packages: `pip install -r requirements.txt`
-(MediaPipe, OpenCV) in the environment that runs them; the emotion detector also needs
-`transformers` and PyTorch (in the pixi environment and in simple_hri's requirements), and Pillow.
-The MediaPipe face landmarker and the emotion classifier download themselves on the first run.
+The detectors need `cv_bridge` and their Python packages, installed with
+`pip install -r requirements.txt` in the environment that runs them: MediaPipe and OpenCV, and,
+for the emotion detector only, `transformers`, PyTorch and Pillow (`transformers` and PyTorch are
+also in the pixi environment and in simple_hri's requirements). The MediaPipe face landmarker and
+the emotion classifier download themselves on the first run.
 
 ## Configuration
 

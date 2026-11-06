@@ -6,18 +6,18 @@ built from a template of `interaction_system_core/interaction_intelligence/confi
 (parameters `prompts.*` of `/interaction_intelligence`) by `PromptBuilder`, asked by
 `LLMDialogClient` and answered by the interaction system's interpretation server, which builds
 the same prompt with `PromptBuilder` from the arguments that the client sends
-([ARCHITECTURE.md](ARCHITECTURE.md#the-interpretation-server)). The trees never write prompts: they ask the
-intelligence a skill, and the skill asks the questions below
+([ARCHITECTURE.md](ARCHITECTURE.md#the-interpretation-server)). The trees never write prompts:
+they ask the intelligence a skill, and the skill asks the questions below
 ([ARCHITECTURE.md](ARCHITECTURE.md#the-interaction-intelligence)). Which model answers each
 question is in [MODELS.md](MODELS.md).
 
 ## Understanding and generation
 
 - **Understanding** questions are classifications or extractions. They are asked with a JSON
-  schema (enforced by the provider; with Ollama, at temperature 0, so the same
-  utterance always gets the same answer), are parsed tolerantly, validated (the slot exists, the
-  value has the slot's type, is allowed and within range), retried once on an unusable answer, and
-  fall back to a safe answer.
+  schema (enforced by the provider; with Ollama, at temperature 0, so the same utterance always
+  gets the same answer), are parsed tolerantly, validated (the slot exists, the value has the
+  slot's type, is allowed and within range), retried once on an unusable answer, and fall back to
+  a safe answer.
 - **Generation** questions ask for one utterance. They are asked without a schema (at the model's
   temperature), are retried when the answer is too short, and fall back to a fixed phrase of the
   conversation's language (the `phrases` of its language file,
@@ -112,8 +112,8 @@ Notes on some of the templates:
   It then chooses `cancel`, `finished` (nothing more to ask or add: the normal end, not a cancel
   request) or `none`.
 - `classify_cancel_reply` reads the answer to the confirmation: `yes`, `no`, `finished` (a normal
-  end, where the strategy lets the user end it) or `other` (the answer does not say whether to
-  stop). Only `yes` stops; `no` and `other` both resume.
+  end, where the dialogue behavior lets the user end it) or `other` (the answer does not say
+  whether to stop). Only `yes` stops; `no` and `other` both resume.
 - `ask_cancel_confirmation`: "yes" means stopping, as `classify_cancel_reply` reads it, and the
   question does not explain how to answer it. After a `no`, the robot says the fixed phrase
   `cancel_no` and repeats its last line, without the `cancel_no` of an earlier denial.
@@ -142,11 +142,11 @@ into the questions, so that what does not depend on the LLM is decided by the co
   register (the familiar form of address where the language has one; English is unaffected). The
   rule describes the register and quotes no phrase or word: with quoted examples, models copied
   them literally (a question for the user's name in tasks that ask for none, a Spanish pronoun in
-  English lines), and a test keeps it free of quotes. Every template that writes a line the user hears has it among its rules (the
-  openings, the next question, the read-back and the closings, the quiz feedback, the procedure,
-  the explanation, the grounded answers, the role play, the cancellation question and its
-  closing). It is the same text in every turn, so it is part of the cached prefix. The LLM-led
-  baseline of the ablations gets the same rule.
+  English lines), and a test keeps it free of quotes. Every template that writes a line the
+  user hears has it among its rules (the openings, the next question, the read-back and the
+  closings, the quiz feedback, the procedure, the explanation, the grounded answers, the role
+  play, the cancellation question and its closing). It is the same text in every turn, so it is
+  part of the cached prefix. The LLM-led baseline of the ablations gets the same rule.
 - `list_slot_rule` is appended to `generate_response` only when the slot asked for is a list,
   because small models applied a list instruction to single-value slots too ("you can tell me
   several options" when asking for a name).
@@ -159,9 +159,8 @@ Templates that use the context get the `[CONTEXT]` block after their fixed instr
 domain, the resources that are not hidden (a role play's scene is hidden), and the user's emotion
 only when `user_state_service` is set (off by default) and the emotion is notable (not neutral,
 confident enough and recent). Each template puts its fixed instructions first and the data of the
-turn last, so that the leading part is the same across turns: providers that cache
-prompt prefixes (Ollama, OpenAI) reuse it. Keep
-new templates in that order.
+turn last, so that the leading part is the same across turns: providers that cache prompt
+prefixes (Ollama, OpenAI) reuse it. Keep new templates in that order.
 
 ## Changing the questions
 
@@ -178,8 +177,8 @@ new templates in that order.
   The templates are written in English for every language: `{language}` is the name of the
   language file (`English`, `Spanish`). The shared address rule names the informal register
   without examples; the role-play templates give Spanish examples of gender-neutral wording. A
-  language with another system of formality or gender may need its own description there. That is a change of the prompts, after
-  which phase 1 of the model choice is run again
+  language with another system of formality or gender may need its own description there. That
+  is a change of the prompts, after which phase 1 of the model choice is run again
   ([ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md#4-the-prompts)).
 
 The prompts and the raw answers are not stored. The skills asked, their labels and their times are

@@ -3,16 +3,18 @@
 One ROS 2 node that puts LLM inference behind a single action and a few session services. It
 serves local models through Ollama and cloud models through Google Gemini, Anthropic Claude,
 OpenAI or any OpenAI-compatible server, with optional stateful (history-keeping) sessions and
-JSON-schema-constrained output. The interaction intelligence is its main client (two stateless
-sessions per conversation, with Ollama), but any node can use it.
-[ARCHITECTURE.md](../docs/ARCHITECTURE.md#the-llm-gateway-ros2_llm_manager) shows how it fits in
-the system.
+JSON-schema-constrained output. The interaction system no longer starts it: its questions are
+asked to behavior_architecture's interpretation server
+([ARCHITECTURE.md](../docs/ARCHITECTURE.md#the-interpretation-server)), whose routes are written
+from this node's parameters (the model binding,
+[CONFIGURATION.md](../docs/CONFIGURATION.md#llm_manager_node)). Any node can still use the
+gateway on its own.
 
 ## Nodes
 
 | Node (ros2 run name) | Description |
 | --- | --- |
-| `llm_manager_node` | The action server and the session services. Its action, services and error topic are in [ROS_INTERFACES.md](../docs/ROS_INTERFACES.md#the-llm-gateway) |
+| `llm_manager_node` | The action server and the session services. Its action (`LlmInference`), services (`CreateSession`, `DeleteSession`, `ListSessions`) and error message (`LlmError`) are defined in `ros2_llm_interfaces` |
 | `llm_cli_client` | Interactive terminal client to test the connection, the sessions and the streaming |
 
 ## Usage

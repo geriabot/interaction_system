@@ -23,7 +23,13 @@ cd ..
 pixi run build
 ```
 
-`evaluation/` (the evaluation) and `paper/` are private submodules until the work is published: without access to them the clone reports that it cannot fetch them and the rest is cloned as usual; the build then needs the same `colcon build` command without the two evaluation packages (`interaction_sim interaction_ablations`), since colcon stops at a package it does not find. A clone made before they became submodules is updated with `git pull && git submodule update --init`.
+`evaluation/` (the evaluation) and `paper/` are git submodules that stay private until the work
+is published. Without access to them, the clone reports that it cannot fetch them (over HTTPS,
+git may first ask for a GitHub user and password: press Enter to skip) and clones the rest as
+usual. `pixi run build` then stops, because colcon does not find the two evaluation
+packages it names: in a `pixi shell`, run the command of the `build` task of `pixi.toml` without
+`interaction_sim interaction_ablations`. An existing clone fetches the submodules with
+`git submodule update --init`.
 
 The first `pixi run` downloads the environment into `<workspace>/.pixi`: about 8 GB, with
 PyTorch, and about 3.5 GB more for the Lyrical one. `pixi run build` builds the interaction
@@ -52,9 +58,9 @@ For ROS 2 Lyrical, use the `lyrical` environment and behavior_architecture's `ly
 (RoboStack's `ros-jazzy-cv-bridge`), and MediaPipe and OpenCV (PyPI, the versions of
 `interaction_perception/interaction_perception/requirements.txt`). To use it, add them with
 `pixi add` ([PIXI.md](PIXI.md#what-the-configuration-contains)); this changes `pixi.toml` and
-`pixi.lock` of the repository. A camera driver is not in the environment either: barge-in in the
-real sessions is future work, and its steps are described in
-[REAL_SESSIONS.md](../evaluation/doc/REAL_SESSIONS.md#barge-in).
+`pixi.lock` of the repository. A camera driver is not in the environment either;
+[REAL_SESSIONS.md](../evaluation/doc/REAL_SESSIONS.md#barge-in) lists the steps to add both for
+barge-in.
 
 ## The web GUI
 

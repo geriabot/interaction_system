@@ -17,7 +17,7 @@ off topic, falls silent, interrupts or wants to stop. A large language model (LL
 user and phrases the robot's replies, but never decides what happens next.
 
 The sections below explain the idea and the design decisions behind it, the architecture the
-system belongs to, and how it processes a request. The [evaluation](evaluation/README.md)
+system belongs to, and how it processes a request. The [evaluation](#running-the-experiments)
 contains the experiments that test each decision, so that anyone can run them again.
 
 A request is a goal of one ROS 2 action. For example, this one starts a conversation that takes a
@@ -62,8 +62,9 @@ The system rests on five design decisions.
 5. Dialogue is a robot capability. The interaction system has the same layers as the robot's
    behavioral control architecture: a finite state machine (FSM) coordinates each request and
    activates the tree of the chosen dialogue behavior. The rest of the robot sees one action and
-   one status topic. Speech recognition, speech synthesis, user perception and the LLM are
-   services that the system uses, and each can be replaced.
+   one status topic. Speech (a sub-capability that the trees call), user perception and the LLM
+   (an external service, asked through behavior_architecture's interpretation server) are
+   separate from the interaction system, and each can be replaced.
 
 The interaction system only holds the conversation. Other robot capabilities move, point or
 gesture; the embodiment layer (e.g. the NAO's gestures and eye LEDs) follows the generic signals
@@ -129,8 +130,8 @@ each turn.
    and back to the blackboard, so the intelligence keeps no state.
 5. Feedback. Every utterance is reported in the action's feedback before it is spoken.
 6. Result. When the tree ends, the FSM returns the result and the intelligence closes the
-   dialogue (its questions in progress and its transcript). `/interaction_system/status` shows `IDLE`
-   again, or `FAILED` if the conversation did not achieve its goal.
+   dialogue (its questions in progress and its transcript). `/interaction_system/status` shows
+   `IDLE` again, or `FAILED` if the conversation did not achieve its goal.
 
 ## The dialogue behaviors
 
@@ -190,13 +191,16 @@ every interface.
 
 The optional fields of the goal are `dialog_mode`, `frame_schema_json`
 ([format](docs/SLOT_SCHEMA.md)), `initial_frame_json` (to resume), `resources_json`, `domain`,
-`skip_intro` (for chained conversations), and the limits `max_turns`, `max_silence` and
-`max_stalled`. A limit left unset takes the system's value.
+`skip_intro` (for chained conversations), and the limits and settings of the shared mechanisms
+(`max_turns`, `max_silence`, `max_stalled` and the others listed in
+[ROS_INTERFACES.md](docs/ROS_INTERFACES.md#dialogtask-goal)). A limit left unset takes the
+system's value.
 
 From a robot's Behavior Tree, the `ExecuteDialog` node of
 [`dialostack_bt_client`](dialostack_bt_client/README.md) sends the goal and writes its result to
-the tree's blackboard. [INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-strategy) has example
-goals for every dialogue behavior. The interaction system has no code for a particular robot;
+the tree's blackboard.
+[INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-dialogue-behavior) has example goals for
+every dialogue behavior. The interaction system has no code for a particular robot;
 what a robot provides (speech, embodiment, user perception) is described in
 [ADDING_A_ROBOT.md](docs/ADDING_A_ROBOT.md).
 
@@ -306,8 +310,8 @@ colcon workspace (e.g. `~/interaction_ws`).
 - An x86-64 PC with Linux: any distribution with pixi, or Ubuntu 24.04 with system ROS 2 Jazzy.
 - An LLM served by [Ollama](https://ollama.com), on this computer or on a GPU server
   ([GPU_SERVER.md](docs/GPU_SERVER.md)). The default model, `qwen2.5:7b`, needs a GPU with about
-  8 GB; the configuration of the experiments, with two 14B models, needs about 24 GB. A cloud
-  provider can be used instead ([MODELS.md](docs/MODELS.md)).
+  8 GB; the experiments use open models that fit a GPU with 24 GB. A cloud provider can be used
+  instead ([MODELS.md](docs/MODELS.md)).
 - A microphone and a speaker.
 - About 8 GB of disk for the pixi environment (about 3.5 GB more for the optional Lyrical one),
   and Internet access on the first run, which downloads the environment and the speech models.
@@ -329,7 +333,8 @@ cd ..
 pixi run build
 ```
 
-`evaluation/` (the evaluation) and `paper/` are private submodules until the work is published: without access to them the clone reports that it cannot fetch them and the rest is cloned as usual; the build then needs the same `colcon build` command without the two evaluation packages (`interaction_sim interaction_ablations`), since colcon stops at a package it does not find. A clone made before they became submodules is updated with `git pull && git submodule update --init`.
+`--recurse-submodules` also fetches the evaluation; without access to it,
+[INSTALL_PIXI.md](docs/INSTALL_PIXI.md#install-and-build) explains how to build.
 
 Then, in every terminal where you run the system:
 
@@ -352,8 +357,8 @@ Run pixi from `<workspace>`, not from inside the repository
    ollama pull qwen2.5:7b
    ```
 2. In a prepared terminal, start the whole stack (speech with simple_hri and the interaction
-   system, with its interpretation server). The first run downloads the speech models into `models/` of the current
-   directory:
+   system, with its interpretation server). The first run downloads the speech models into
+   `models/` of the current directory:
    ```sh
    ros2 launch interaction_system main.launch.py            # language:=es for Spanish
    ```
@@ -394,8 +399,10 @@ cd src/interaction_system/dialostack_gui && npm ci && npm test   # GUI logic (np
 ## Running the experiments
 
 The experiments run the system against simulated users (local or cloud models) with ground
-truth, and with real participants; the scripts score the conversations. The repository includes
-the scenarios, the experiment files and the tools, but not the results.
+truth, and with real participants; the scripts score the conversations. The scenarios, the
+experiment files and the tools (not the results) are in `evaluation/`, a git submodule that stays
+private until the work is published; until then, the links into `evaluation/` in this
+documentation open only with access to it.
 
 The simplest way is the web control panel. It runs an experiment on a hardware profile (a
 *campaign*), first checking that the GPU servers are free, and shows its progress. It can also run

@@ -3,8 +3,7 @@
 This page explains how the interaction system is built and why: the layers of the capability,
 the state machine of a request, the nodes, the processing of one request node by node, how the
 Behavior Trees and the interaction intelligence divide the work, and the interpretation server
-that asks the model. Each
-dialogue behavior and each shared mechanism has its own page in
+that asks the model. Each dialogue behavior and each shared mechanism has its own page in
 [docs/behaviors](behaviors/README.md). The parameters and configuration files are described in
 [CONFIGURATION.md](CONFIGURATION.md), and every topic, service and action in
 [ROS_INTERFACES.md](ROS_INTERFACES.md).
@@ -259,7 +258,7 @@ Every dialogue behavior begins the conversation, runs one user turn per cycle un
 conversation is done or aborted, and concludes with its outcome:
 
 ```text
-begin -> open -> say -> repeat { turn limit -> listen -> (spoken cancellation | the strategy's turn)
+begin -> open -> say -> repeat { turn limit -> listen -> (spoken cancellation | the behavior's turn)
                                  -> count progress -> say }
                      -> conclude
 ```
@@ -316,11 +315,12 @@ rest:
 | `dialogue_id` | Orchestrator | The id of the conversation (the goal's id) |
 | `dialogue` | The intelligence, through `AskIntelligence` | The state of the conversation (JSON): the request, the frame (or the bank, the steps or the scene), the history, and the counters of the dialogue behavior |
 | `behavior`, `skip_intro` | Orchestrator | From the request |
-| `max_turns`, `max_silent_waits`, `max_stalled` | Orchestrator | The limits of the request, or the orchestrator's parameters when the request leaves them unset; `max_silent_waits` is `max_silence` counted in waits of `wait_timeout` (0 = never) |
-| `wait_timeout`, `max_attempts`, `tts_timeout`, `intelligence_timeout`, `reasoning_intelligence_timeout`, `reply_budget`, `opening_budget`, `user_speaking_topic` | Orchestrator | The other limits and the barge-in topic (parameters of the orchestrator) |
+| `max_turns`, `max_silent_waits`, `max_stalled`, `max_attempts`, `max_off_task` | Orchestrator | The limits of the request, or the orchestrator's parameters when the request leaves them unset; `max_silent_waits` is `max_silence` counted in waits of `wait_timeout` (0 = never) |
+| `wait_timeout`, `reply_budget`, `opening_budget` | Orchestrator | The waits of the request, or the orchestrator's parameters when the request leaves them unset |
+| `tts_timeout`, `intelligence_timeout`, `reasoning_intelligence_timeout`, `user_speaking_topic` | Orchestrator | The safety limits and the barge-in topic (parameters of the orchestrator) |
 | `reply_deadline` | Orchestrator (0), `WithFillers` | When the time budget of the reply being prepared ends (steady clock, s; 0 while none is being prepared) |
 | `filler_after_s`, `filler_repeat_s` | Orchestrator | When the conversational fillers are said: `filler_after_s` from the request, or the orchestrator's parameter when the request leaves it unset (0 = none) |
-| `turns`, `timeouts`, `stalled`, `attempts`, `help`, `done`, `progress` | Orchestrator (zero, `false`, `true`), trees | The counters of the conversation, whether it is done, and whether the last turn made progress |
+| `turns`, `timeouts`, `stalled`, `attempts`, `help`, `off_task`, `done`, `progress` | Orchestrator (zero, `false`, `true`), trees | The counters of the conversation, whether it is done, and whether the last turn made progress |
 | `user_text`, `reply`, `label`, `phase`, `data` | Trees | The last utterance of the user, the reply to say, what the last skill found, the phase and the data of the conversation |
 | `spoken`, `last_utterance` | `Speak` | How many utterances were said, and the last one |
 | `error_closing` | `Begin` | The closing line for a failure of the system |
@@ -331,8 +331,9 @@ rest:
 
 Each `AskIntelligence` sends what is left of `reply_deadline` with its request. The counters are,
 in order, the user turns, the silent waits in a row, the turns without progress in a row, the
-attempts per element and the helps with a step. The orchestrator sends the feedback when `spoken`
-changes, and the cancellation and the silence prompts resume with `last_utterance`.
+attempts per element, the helps with a step and the requests outside the task in a row. The
+orchestrator sends the feedback when `spoken` changes, and the cancellation and the silence
+prompts resume with `last_utterance`.
 
 ## The choice of the dialogue behavior
 
@@ -352,8 +353,8 @@ decides by parsing the resources, without the LLM (`interaction_intelligence/sel
 Slot filling and explanation need nothing, so they are always offered. If one dialogue behavior
 is offered, it is chosen; if several are, the LLM chooses among them from their explanations
 (the question `choose_dialogue_behavior` of the interpretation server, with the system's
-template and its answer field `behavior_id`). An answer that is not an offered dialogue behavior falls
-back to slot filling (or to the first offered one). If none is offered, the request is aborted.
+template and its answer field `behavior_id`). An answer that is not an offered dialogue behavior
+falls back to slot filling (or to the first offered one). If none is offered, the request is aborted.
 The orchestrator only accepts an offered dialogue behavior. The catalog is configured as
 described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behaviors).
 
@@ -364,8 +365,8 @@ described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behavio
 - `/interaction/ask_intelligence_for_behavior`: the choice above.
 - `/interaction/ask_intelligence`: one *skill* of a tree, which is either one narrow question to
   the LLM (asked to the interpretation server) or one deterministic operation on the data of the
-  conversation. It receives the state
-  of the conversation and returns it updated, with the reply, a label, the phase and the data.
+  conversation. It receives the state of the conversation and returns it updated, with the reply,
+  a label, the phase and the data.
 
 | Skills | Described in |
 |---|---|

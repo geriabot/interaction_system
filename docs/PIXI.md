@@ -1,7 +1,8 @@
 # pixi in this project
 
-[pixi](https://pixi.sh) creates a self-contained ROS 2 Jazzy environment, from
-[RoboStack](https://robostack.github.io) and conda-forge, with every dependency of the system.
+[pixi](https://pixi.sh) creates a self-contained ROS 2 environment (Jazzy, and optionally
+Lyrical), from [RoboStack](https://robostack.github.io) and conda-forge, with every dependency of
+the system.
 This page explains why the project uses it and how it is configured;
 [INSTALL_PIXI.md](INSTALL_PIXI.md) explains how to install and build with it.
 
@@ -45,10 +46,11 @@ environment created by mistake can be removed with `rm -rf src/interaction_syste
   PyPI (`[pypi-dependencies]`);
 - `PYTHONNOUSERSITE=1` in the activation, so that packages installed in the user's site-packages
   (`pip install --user`) never leak into the environment;
-- the SDKs of the LLM gateway's cloud providers, `openai` and `google-genai` (simple_hri's
+- the SDKs of the former LLM gateway's cloud providers, `openai` and `google-genai` (simple_hri's
   Extract and Yes/No services also use `openai`, but the interaction system does not use them).
-  Claude's SDK, `anthropic`, is not included; to use Claude, add it with
-  `pixi add --pypi anthropic` ([MODELS.md](MODELS.md#cloud-providers));
+  The interpretation server's backends need no SDK, so the cloud models
+  ([MODELS.md](MODELS.md#cloud-providers)) work without them; Claude's SDK, `anthropic`, which
+  only the former gateway would need, is not included;
 - the tasks:
 
 | Task | What it does |

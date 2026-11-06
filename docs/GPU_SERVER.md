@@ -1,9 +1,9 @@
 # Serving the models from a GPU server
 
 The computer that runs the robot's software does not need a GPU: the LLM can run in Ollama on a
-server with one, reached through an SSH tunnel so that the interpretation server finds it at `localhost:11434`,
-its default address. This page sets up Ollama in the user's home on a shared server, without
-`sudo`. [MODELS.md](MODELS.md) explains which model answers each question.
+server with one, reached through an SSH tunnel so that the interpretation server finds it at
+`localhost:11434`, its default address. This page sets up Ollama in the user's home on a shared
+server, without `sudo`. [MODELS.md](MODELS.md) explains which model answers each question.
 
 ## Requirements
 
@@ -38,7 +38,7 @@ mkdir -p ~/ollama_models
 nohup env OLLAMA_MODELS=~/ollama_models OLLAMA_MAX_LOADED_MODELS=2 OLLAMA_NUM_PARALLEL=1 \
   OLLAMA_CONTEXT_LENGTH=8192 ollama serve > ~/ollama.log 2>&1 &
 echo $! > ~/ollama.pid
-ollama pull qwen2.5:7b                         # the default model; the experiments use the one chosen in E0a
+ollama pull qwen2.5:7b                         # the default model (MODELS.md: how to change it)
 ```
 
 | Variable | Value | Why |
@@ -56,8 +56,7 @@ Every request carries its own context length (`ollama.num_ctx`, 8192 by default,
 `OLLAMA_CONTEXT_LENGTH`. Ollama cuts a prompt that does not fit, and the prompts grow with the
 resources of the request (a question bank, the material of grounded question answering). The
 interpretation server's call log (`interpretation_log_dir`) has the prompt tokens of every
-answer. A longer context
-takes more GPU memory.
+answer. A longer context takes more GPU memory.
 
 `ollama serve` listens on `127.0.0.1:11434` only, so the server is not exposed to the network; the
 tunnel reaches it from the robot's computer.
@@ -91,11 +90,11 @@ nvidia-smi                                     # on the server: no other process
 curl -s localhost:11434/api/ps                 # through the tunnel: no models loaded by other work
 ```
 
-The experiment runner makes the same check before each of its parallel runs, and refuses to run on a busy server
-([evaluation/README.md](../evaluation/README.md#hardware-profiles-and-parallel-runs)).
+The experiment runner makes the same check before each of its parallel runs, and refuses to run
+on a busy server ([evaluation/README.md](../evaluation/README.md#hardware-profiles-and-parallel-runs)).
 
 Afterwards, free the GPU. Every request asks Ollama to keep its model loaded indefinitely
-(`keep_alive: -1`), so they stay in GPU memory after the stack stops:
+(`keep_alive: -1`), so the models stay in GPU memory after the stack stops:
 
 ```sh
 ollama ps                                      # on the server: the loaded models

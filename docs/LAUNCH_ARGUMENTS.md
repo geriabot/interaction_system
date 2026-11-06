@@ -10,9 +10,8 @@ and [CONFIGURATION.md](CONFIGURATION.md) lists the parameters of the nodes.
 
 This launch file starts speech (simple_hri) and the interaction system
 (`interaction_system.launch.py`, with its interpretation server), all with the same parameter
-file. The GUI
-starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`, `tts` and
-`whisper_model` of its Configuration page.
+file. The GUI starts it too, with `speech:=none` or with `speech:=simple_hri` and the `stt`,
+`tts` and `whisper_model` of its Configuration page.
 
 | Argument | Default value | Description |
 |---|---|---|

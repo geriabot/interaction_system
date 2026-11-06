@@ -9,10 +9,11 @@ describes what each page does, and
 app talks to two backends:
 
 - The GUI server (`../server.py`), over HTTP (`lib/api.js`). It generates the
-  ROS parameter YAML (for the LLM gateway, the interaction intelligence and the
-  orchestrator), serves the engine defaults (prompts, phrases), starts and stops
-  the engine (`interaction_system main.launch.py`), and exposes microphone and
-  system helpers. The speech choices become launch arguments
+  ROS parameter YAML (the model binding of the interpretation server, the
+  interaction intelligence and the orchestrator), serves the engine defaults
+  (prompts, phrases), starts and stops the engine
+  (`interaction_system main.launch.py`), and exposes microphone and system
+  helpers. The speech choices become launch arguments
   (`speech:=simple_hri stt:=… tts:=… whisper_model:=…`, or `speech:=none` for
   typed text only). All the YAML and parameter generation lives in the server,
   never in the frontend.
@@ -35,22 +36,23 @@ src/
 │   ├── useDialogTimeline                            Topics → timeline reducer actions
 │   ├── usePersistentState / usePopover / useFlash / useLlmError / useImageTopic(s) / useTheme
 ├── lib/                Pure logic + constants (unit-tested with *.test.js)
-│   ├── api.js          The ONLY HTTP client (timeouts, typed ApiError)
+│   ├── api.js          The only HTTP client (timeouts, typed ApiError)
 │   ├── ros.js          Topic/action names + types (single source)
 │   ├── formatters.js   Time/duration formatting (shared by Monitor + export)
 │   ├── prompts.js / strategies.js   Editor metadata + validation/grouping
 │   ├── frames.js       Frame Builder data layer + Builder↔page handoff
 │   ├── sessionExport.js  Timeline → CSV/JSON/Markdown
 │   ├── configProfiles.js  Named configuration profiles (Configuration page)
+│   ├── languages.js    The dialogue languages offered (those with an engine language file)
 │   ├── download.js / status.js  File downloads; how the ROS and engine states are shown
 │   ├── storageKeys.js  localStorage keys (single source)
 │   └── timeline/reducer.js  Pure Monitor state machine (no React/ROS, fully tested)
 └── pages/              One folder per route
     ├── Monitor/        Chat timeline, launch drawer, composer, frame sidebar
-    ├── FrameBuilder/   Build a frame per dialogue behavior (slots / quiz / resources)
+    ├── FrameBuilder/   Build a frame per dialogue behavior (slots / quiz / steps / scene / resources)
     ├── PromptsEditor/  Override the LLM prompt templates
     ├── StrategiesEditor/  Edit each dialogue behavior's fixed phrases (per language)
-    └── ConfigEditor/   Parameter tabs (LLM, Dialogue, STT, TTS) + engine panel
+    └── ConfigEditor/   Parameter tabs (LLM, Dialogue, STT, TTS) + profiles + engine panel
 ```
 
 ## Data flow
@@ -69,10 +71,11 @@ Speech is the simple_hri package, started by `main.launch.py` on the engine
 machine. It listens when the dialogue asks and plays on that machine's speaker,
 so the page carries no audio. The STT tab chooses simple_hri or none (typed text
 only), the STT engine (faster-whisper or Whisper) and the Whisper model; the TTS
-tab chooses the TTS engine (Piper or MMS-TTS). The STT
-language and the TTS voice follow the dialogue language (English or Spanish,
-the ones `main.launch.py` knows). The Monitor's composer publishes typed text on
-`/transcription`, and `/say <text>` speaks through simple_hri's `/tts_action`.
+tab chooses the TTS engine (Piper or MMS-TTS). The STT language and the TTS
+voice follow the dialogue language (one of the languages with a language file
+in the engine, English and Spanish). The Monitor's composer publishes typed
+text on `/transcription`, and `/say <text>` speaks through simple_hri's
+`/tts_action`.
 `ConfigContext.mergeConfig` drops the fields that older versions of the GUI
 saved, so old configurations and profiles still load.
 

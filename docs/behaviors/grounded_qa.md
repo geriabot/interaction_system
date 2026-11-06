@@ -68,13 +68,13 @@ without the question.
 | The user | The robot | Progress |
 |---|---|---|
 | Asks something whose answer is in the material | The answer, verified, then "Is there anything else you'd like to know?" | Yes |
-| Asks something within the topic whose answer is not in the material | "I don't have that information." and the handover, if given (fixed phrases) | Yes |
+| Asks something within the topic whose answer is not in the material | "I don't have that information.", the handover if given, and "Is there anything else you'd like to know?" (fixed phrases) | Yes |
 | Asks something whose drafted answer is not supported by the material | The same abstention: an answer that does not pass the verification is never said | Yes |
-| Asks something outside the task (also help with their own matters: what to buy or choose), or asks for an opinion or a service the robot does not give | "That is outside what we are talking about here, so I can't help you with it; I can only answer questions about the information I have." | Yes |
+| Asks something outside the task (also help with their own matters: what to buy or choose), or asks for an opinion or a service the robot does not give | "That is outside what we are talking about here, so I can't help you with it; I can only answer questions about the information I have." and "Is there anything else you'd like to know?" | Yes |
 | Only reacts, without asking and without saying they have finished ("Thanks, that was helpful", "what a shame", the answer repeated back with its value) | "Is there anything else you'd like to know?" (not recorded as a question) | Yes |
 | Repeats the last answer back with another value, with or without a comment | The last answer again (`detect_wrong_check`; no LLM for the line) | No |
 | Has finished: wants nothing more ("No", "No, thanks", "That will be all", "I have no more questions", "Goodbye") | "Alright. Have a good day!" and the conversation ends (`completed`) | — |
-| Asks to repeat the last answer | The last answer again (no LLM) | No |
+| Asks to repeat the last answer | The last answer again (no LLM), or the invitation to ask if there is none yet | No |
 | Anything else (off-topic noise, unintelligible) | "Could you repeat that?" | No |
 
 Finishing is never a cancellation: the cancellation detector answers "finished" and leaves the
@@ -94,9 +94,10 @@ knows the user wanted something else.
 What the person does has a fourth value, `unclear`, for words that do not make sense as something
 a person could say here (unintelligible speech, a word salad, filler words). Such a turn is not
 understood, whatever the rest of the answer says: the skill returns it with the label `other`, a
-turn without progress, so that a sustained run of them ends as a breakdown. A closing is verified before the dialogue ends (`verify_finished`: did the person say they want
-nothing more? A question of any kind is not), just as an answer is verified before it is said; an
-unverified closing is a turn not understood ("Could you repeat that?").
+turn without progress, so that a sustained run of them ends as a breakdown. A closing is verified
+before the dialogue ends (`verify_finished`: did the person say they want nothing more? A question
+of any kind is not), just as an answer is verified before it is said; an unverified closing is a
+turn not understood ("Could you repeat that?").
 
 ## Tree
 

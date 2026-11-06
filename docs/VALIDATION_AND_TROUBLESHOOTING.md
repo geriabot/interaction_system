@@ -72,12 +72,12 @@ Two tools test the system without audio and without a model:
 
 ### Notes on the common problems
 
-When the LLM calls time out, the warnings of `/interaction_intelligence` say "did not answer" or "no
-call to the model", and the skill trace counts them in `llm_timeouts` and `llm_skipped`. The log
-of `/interaction/interpretation_server` says which cause applies (`model_down`, `timeout`, `budget`), and
-`interpretation_log_dir:=<dir>` records every call with its error. A model that is just slow (a large model, or a
-cloud model that reasons) can spend the budget in normal turns: use a faster one, or raise
-`reply_budget`.
+When the LLM calls time out, the warnings of `/interaction_intelligence` say "did not answer" or
+"no call to the model", and the skill trace counts them in `llm_timeouts` and `llm_skipped`. The
+log of `/interaction/interpretation_server` says which cause applies (`model_down`, `timeout`,
+`budget`), and `interpretation_log_dir:=<dir>` records every call with its error. A model that is
+just slow (a large model, or a cloud model that reasons) can spend the budget in normal turns: use
+a faster one, or raise `reply_budget`.
 
 For `user_silent`, raise `max_silence` (as a parameter, or per request) for tasks in which the
 user needs time. For `breakdown`, raise `max_stalled` per request if the users need more repair.
