@@ -59,6 +59,7 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `answer_from_material` | Understanding | `grounded_qa.answer`: what the person does, what a request is and, if it is answerable, the answer and the sentences that support it |
 | `verify_finished` | Understanding | `grounded_qa.answer`: before a closing, whether the person said they want nothing more |
 | `verify_answer` | Understanding | `grounded_qa.answer`: whether every claim of the drafted answer is supported by the material; an answer that is not is replaced by the abstention |
+| `detect_wrong_check` | Understanding | `grounded_qa.answer`: for a turn read as a reaction after an answer from the material, whether it repeats back a value of that answer with a different value; if so, the last answer is said again |
 | `map_scale_answer` | Understanding | `questionnaire.record`: the option the answer clearly chooses, or `ambiguous`, `meaning`, `refuses`, `repeat`, `other`. The items, the options, the clarifications and the closing are read without the LLM |
 | `detect_cancel_intent`, `classify_cancel_reply` | Understanding | `cancel_check`: the cancel request, and the answer to the confirmation |
 | `ask_cancel_confirmation`, `cancel_confirmed_response` | Generation | `cancel_check`: a short yes/no question whether the user wants to stop, and the closing after a confirmed cancellation |
@@ -89,7 +90,17 @@ Notes on some of the templates:
   the robot gives the answer again instead of letting the mistake pass (models of three families
   answered a wrong check with only the invitation to ask more). Its limit: a wrong check followed
   by a comment ("Seven o'clock? Oh dear, that's late." after 17:00) is still read as a reaction by
-  the models tried, whatever the wording; the plain check is corrected.
+  the models tried, whatever the wording; the plain check is corrected. That case is handled by
+  `detect_wrong_check`.
+- `detect_wrong_check`: a narrow question of its own for the turns `answer_from_material` reads as
+  a reaction, asked only when the last question was answered from the material (it compares the
+  turn with that answer only). It asks whether the turn repeats back a value of the answer (a time,
+  a price, a day, a date, a place, a number) with a different value; the same value in another
+  form (a 12-hour or a 24-hour time, digits or words) is not different, and a comment before or
+  after the value does not change the decision. Its answer is `{"wrong_check": true | false}`: true
+  turns the reaction into a request to repeat (the last answer again). Without a boolean answer
+  after its retries the turn stays a reaction, so the question never leaves the robot worse off
+  than without it. It is not one of the questions on which the model may reason.
 - `verify_answer`: an immediate inference (17:00 is in the afternoon) and an answer with only the
   part asked for count as supported.
 - `detect_cancel_intent` is asked for every utterance that is not exactly a stop command of the

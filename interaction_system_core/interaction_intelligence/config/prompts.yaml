@@ -903,6 +903,27 @@ interaction_intelligence:
         Output strict JSON only:
         {{"supported": true | false, "unsupported": ["the unsupported claims"]}}
 
+      detect_wrong_check: |
+        A robot gave a person an ANSWER, and the person replied without asking
+        anything new. Does the REPLY repeat back a value of the ANSWER (a time,
+        a price, a day, a date, a place, a number, an amount) with a DIFFERENT
+        value from the one the ANSWER gave? A person who does that has
+        misunderstood the ANSWER.
+        - true: the REPLY repeats a value of the ANSWER, as a statement or as a
+          question, and the value differs ("Thursday, then?" when the ANSWER
+          said Tuesday; "Twelve euros, good." when it said 20 euros).
+        - false: the value repeated is the same in another form (a 12-hour or a
+          24-hour time, digits or words: "A quarter to nine" for 20:45), or the
+          REPLY repeats no value of the ANSWER (thanks, a feeling, an opinion).
+        A comment before or after the repeated value ("How nice", "What a
+        pity") does not change the decision: compare only the values.
+        The input is voice-transcribed: tolerate speech recognition errors.
+
+        ANSWER: "{answer}"
+        REPLY: "{user_text}"
+
+        Output strict JSON only: {{"wrong_check": true | false}}
+
       map_scale_answer: |
         A questionnaire item was read to a person, with its answer options. Map
         the person's reply to ONE option, only if the reply clearly chooses it.

@@ -14,11 +14,15 @@ never volunteers information nobody asked for (decided by the author, 2026-10-31
 a question answerable from the material (answered only with it), a question within the task
 whose answer is not in the material (abstention: "I don't have that information", and the
 handover the request offers, if any), something outside the task (declined), a request to
-repeat the last answer, or none of these. Before an answer is said, a second question verifies
-that every claim in it is supported by the material; an answer that is not is replaced by the
-abstention. The phrases of abstention, declining and closing are fixed: no LLM. Asked whether
-they want to stop, a user who says instead that they have no more questions gets the same
-closing (DialogueMode.on_finished: the end of this strategy is the user's to decide).
+repeat the last answer, or none of these. A reaction that repeats back a value of the last
+answer with another value ("Nine euros? Fine." after "It costs 19 euros") is a misunderstanding,
+not a reaction: a question of its own (detect_wrong_check), asked only for a reaction after an
+answer from the material, turns it into a request to repeat, so that the robot says the answer
+again. Before an answer is said, a second question verifies that every claim in it is supported
+by the material; an answer that is not is replaced by the abstention. The phrases of abstention,
+declining and closing are fixed: no LLM. Asked whether they want to stop, a user who says
+instead that they have no more questions gets the same closing (DialogueMode.on_finished: the
+end of this strategy is the user's to decide).
 
 The material: the resources of the request with plain text (a structured resource, such as a
 question bank, is not material). A resource named "handover" holds the sentence that offers a
@@ -94,6 +98,24 @@ def _close(env: SkillEnv, state: dict) -> str:
     return reply
 
 
+def _answer_to_check(state: dict) -> str:
+    """The robot's last answer from the material, the one a check can repeat back ("" when the
+    last question was not answered from the material: an abstention or a decline gives no value
+    to check)."""
+    questions = state.get("questions") or []
+    if questions and questions[-1]["resolution"] == "answered":
+        return questions[-1]["answer"]
+    return ""
+
+
+def _is_wrong_check(env: SkillEnv, state: dict, user_text: str) -> bool:
+    """Whether a turn read as a reaction repeats back a value of the last answer with another
+    value. Only asked when there is an answer to check; a failed question is not a wrong check
+    (the turn stays a reaction, as without it)."""
+    answer = _answer_to_check(state)
+    return bool(answer) and env.llm.detect_wrong_check(user_text, answer) is True
+
+
 def _say(state: dict, reply: str, label: str) -> SkillResult:
     state["history"].append({"role": "assistant", "content": reply})
     return SkillResult(reply=reply, label=label)
@@ -119,12 +141,17 @@ def answer(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     person only reacts, without asking: the invitation to ask more; not recorded as a question),
     "done" (the person has finished: the closing), "repeat" (the last answer again) or "other"
     (not understood). What the person does is read first (llm_client.answer_from_material):
-    only a request reaches the answer."""
+    only a request reaches the answer. A reaction that repeats back the last answer with another
+    value is handled as a request to repeat it (detect_wrong_check)."""
     state["history"].append({"role": "user", "content": inp.user_text})
     result = env.llm.answer_from_material(
         inp.user_text, state["task"], state["material"], state["history"][-6:], env.ctx
     )
     kind, more = result["kind"], env.llm.phrase("qa_more")
+    if kind == "comment" and _is_wrong_check(env, state, inp.user_text):
+        # The person checked the last answer back with another value: they misunderstood it,
+        # and the answer is said again instead of only inviting more questions
+        kind = "repeat"
     if kind == "done":
         # The closing cannot be undone: verified first (provisional, 2026-11-01)
         robot = next((h["content"] for h in reversed(state["history"][:-1])

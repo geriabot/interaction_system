@@ -88,7 +88,7 @@ questions, which are the usual candidates:
 | Quiz | `evaluate_quiz_answer` |
 | Procedure | `classify_step_turn` |
 | Role play | `classify_roleplay_turn`, `evaluate_roleplay`, `roleplay_feedback` |
-| Grounded question answering | `answer_from_material`, `verify_answer` |
+| Grounded question answering | `answer_from_material`, `verify_answer`, `detect_wrong_check` |
 | Questionnaire | `map_scale_answer` |
 | Cancellation (every dialogue behavior) | `detect_cancel_intent`, `classify_cancel_reply` |
 
