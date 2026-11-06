@@ -10,12 +10,19 @@ instructions for a test or a medication, the directions of a route, rules. Tree
 
 ## Why teach-back
 
-Asking "did you understand?" is weak evidence of understanding: people often say yes without having
-understood, and the ones who understand best are the ones who admit gaps. In teach-back, the person
-explains the content back in their own words, and the explainer corrects what is missing or wrong
-and checks again; it is the practice recommended in health communication. A direct question about
-the most important point is the accepted alternative for short content and when the person does not
-want to paraphrase.
+Asking "did you understand?" is weak evidence of understanding. In tutoring, the answers to "Do
+you understand?" proved very misleading (N. K. Person, A. C. Graesser, J. P. Magliano and R. J.
+Kreuz, Learning and Individual Differences 6(2):205–229, 1994, p. 205,
+[doi:10.1016/1041-6080(94)90010-8](https://doi.org/10.1016/1041-6080(94)90010-8)), and patients
+rate their understanding of discharge instructions higher than their physicians do (C. Lin, A.
+Tirosh and A. Landry, Internal and Emergency Medicine 10:993–1002, 2015, p. 995,
+[doi:10.1007/s11739-015-1311-8](https://doi.org/10.1007/s11739-015-1311-8)). In teach-back, the
+person explains the content back in their own words, and the explainer clarifies what is missing
+or wrong and checks again; it is recommended as a health-literacy communication approach in
+several policy documents and position statements (Talevski et al., PLOS ONE 15(4):e0231350, 2020,
+p. 2, [doi:10.1371/journal.pone.0231350](https://doi.org/10.1371/journal.pone.0231350)). For short
+content, and when the person does not want to paraphrase, the behavior asks instead a direct
+question about the most important point.
 
 ## What it needs and returns
 
