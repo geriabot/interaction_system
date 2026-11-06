@@ -48,6 +48,32 @@ In phase 1 the personas are `cooperative` (utterances within the task), `boundar
 misunderstandings and requests to repeat, which bring out the utterances of the shared
 mechanisms). Each Spanish scenario provokes one mechanism with its events.
 
+On the development half, the five local judges labelled the utterances with the first
+instructions, and most of the utterances they marked out of the frame were in it: closings,
+thanks and farewells, waiting after a silence, repeated questions, the steps of a procedure and
+the help to carry them out, and a role play's closing feedback. The instructions were changed in
+three ways, each checked by labelling again the development utterances any judge had flagged plus
+150 unflagged ones: (1) out of the frame is defined by its four cases only, and everything else the
+robot says while doing its task is named as within it; (2) a detail the material does not give is
+unsupported even when it is said to help with a step (where a button is, how long to wait, a
+route), while wishes, encouragement and the robot's own moves in the conversation (moving on,
+going back, ending) are not facts; (3) in a role play, the details the character invents to play
+the scene do not count unless they contradict the scene or state facts about the real world
+outside it, a rule also added to the annotation guide. The first instructions remain in the history of
+`analysis/judge_runs.py`, and the judges labelled every utterance again with the frozen
+instructions.
+
+The frozen instructions still left most out-of-frame flags wrong on the development half, and the
+judges shared those errors (all five flagged some closings and comprehension questions), so a
+majority vote of the five judges flagged more utterances than the best single judge without
+removing them. Two further variants were tried on the development half: naming first which of the
+four cases the utterance does, and, in addition, stating first in one sentence what the utterance
+does in the conversation. Neither improved the labels: the out-of-frame flags were exchanged for
+others rather than removed, and the unsupported flags rose. The stated reasons showed the judges
+taking what the material does not mention as out of the frame, which is the other label. The
+frozen instructions were kept, and whether a judge is valid for each label is left to the
+validation and its decision rule.
+
 In phase 2 the freeze covers the instructions and the model version. The conversational fillers (a
 fixed phrase the robot says while its reply takes long, marked in the records) are not labeled,
 as they are not generated, but they stay in the conversation the judge reads.
@@ -399,6 +425,11 @@ material includes who can help when the robot does not know (the task's handover
 at the ticket desk"): referring the user to them is supported (the judge sees the handover as part
 of the material too). Do not count greetings, questions, feedback on the user's answer
 (*"That's right"*), what the user said, or general words of politeness.
+In a role play the robot plays a character in a made-up scene: the details the character invents
+to play it (a free appointment, a café on the corner, an offer the scene allows) are part of the
+scene and do not count. They count only when they contradict the scene's material (the scene says
+there are no refunds and the character offers one) or state facts about the real world outside
+the scene.
 
 Examples (a museum information desk whose material gives the opening days and prices):
 

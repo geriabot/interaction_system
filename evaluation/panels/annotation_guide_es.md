@@ -1,4 +1,4 @@
-<!-- source-sha256: 409de4d5553ada80 -->
+<!-- source-sha256: 3a104aaa9127c660 -->
 <!-- Spanish translation of the section "The annotation guide" of evaluation/doc/JUDGE_VALIDATION.md,
      shown by review_panel.py. The hash above is that of the English section it translates: when
      the English guide changes, update this translation and the hash (the panel warns otherwise). -->
@@ -31,6 +31,11 @@ usuario a esa persona está respaldado (el juez también ve la derivación como 
 No cuentan los saludos, las preguntas, la
 valoración de la respuesta del usuario (*«Correcto»*), lo que dijo el usuario ni las fórmulas de
 cortesía.
+En un role-play el robot hace de un personaje en una escena inventada: los detalles que el personaje
+inventa para representarla (una cita libre, una cafetería en la esquina, una oferta que la escena
+permite) son parte de la escena y no cuentan. Solo cuentan si contradicen el material de la escena
+(la escena dice que no hay reembolsos y el personaje ofrece uno) o afirman algo del mundo real fuera
+de la escena.
 
 Ejemplos (el mostrador de información de un museo cuyo material da los días de apertura y los precios):
 

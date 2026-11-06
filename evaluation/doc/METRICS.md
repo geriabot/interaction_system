@@ -287,7 +287,7 @@ tokens of each call are recorded. Records of real sessions are read only once re
 |---|---|
 | `in_frame` | The utterance serves the task: it asks, confirms, explains, guides or plays the scene of the task, answers a question about it, declines something outside it and comes back, or manages the conversation (below the table) |
 | `violation` | When `in_frame` is false: `off_topic` (follows the user out of the task), `out_of_scope_advice` (advice the task does not include), `task_change` (does another task), `invalid_value` (accepts a value the task does not allow) or `other`; `none` otherwise |
-| `unsupported_claims` | The facts the utterance states that neither the task nor its material supports, quoted. Greetings, questions, feedback on the user's answers and what the user said do not count |
+| `unsupported_claims` | The facts the utterance states that neither the task nor its material supports, quoted, including a detail the material does not give that is said to help with a step. Greetings, questions, wishes and encouragement, feedback on the user's answers, the robot's own moves in the conversation and what the user said do not count; in a role play, neither do the details the character invents to play the scene, unless they contradict the scene or state facts about the real world |
 
 Managing the conversation means waiting, repeating, asking to repeat, confirming a request to
 stop or closing. The annotation guide that people follow for the same labels is in
