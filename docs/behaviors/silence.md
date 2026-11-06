@@ -5,7 +5,7 @@ data, or doing what the robot asked. The robot waits, says from time to time tha
 there, repeats what it had asked in case it was not heard, and only after a long silence closes
 the conversation, saying so.
 
-Shared by every strategy: subtrees `ListenToUser` and `UserSilent` of `common.xml`, skill
+Shared by every dialogue behavior: subtrees `ListenToUser` and `UserSilent` of `common.xml`, skill
 `silence` (`interaction_intelligence/skills/common.py`). [Index](README.md).
 
 ## How it works
@@ -38,8 +38,8 @@ closes at 90.
 A procedure step may declare its duration (`duration_s`, e.g. 60 s to measure blood
 pressure). While that time has not passed, a silence is the user doing the step: the robot says
 nothing and the wait does not count. Once it has passed, the cycle above starts. The time waited
-on a step restarts when the step changes. Other strategies have no such grace (the hook is
-`DialogueMode.silence_grace`, for new strategies).
+on a step restarts when the step changes. Other behaviors have no such grace (the hook is
+`DialogueMode.silence_grace`, for new behaviors).
 
 ## Trees
 

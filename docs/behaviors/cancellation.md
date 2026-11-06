@@ -3,16 +3,16 @@
 The user can stop a conversation at any moment by saying so ("stop", "cancel", "forget it").
 The robot asks for confirmation first, so that an accidental "stop" does not lose the work, and
 only a yes stops: any other answer resumes the conversation where it was, and never reaches the
-strategy as if it answered the strategy's own question. Finishing is not canceling: a user who
+behavior as if it answered the behavior's own question. Finishing is not canceling: a user who
 says they have nothing more to ask or add ("that will be all", "no more questions") has reached
 the normal end of the task, not abandoned it.
 
-Shared by every strategy: subtree `CancelCheck` of `common.xml`, skill `cancel_check`
+Shared by every dialogue behavior: subtree `CancelCheck` of `common.xml`, skill `cancel_check`
 (`interaction_intelligence/skills/common.py`). [Index](README.md).
 
 ## How it works
 
-Every user turn goes first to `CancelCheck`, before the strategy:
+Every user turn goes first to `CancelCheck`, before the behavior:
 
 1. **Detection.** A local check comes first: an utterance that is exactly one of the stop
    commands of the conversation's language, or one of them repeated, is a cancel request without
@@ -20,7 +20,7 @@ Every user turn goes first to `CancelCheck`, before the strategy:
    question per turn), which chooses among three answers: *cancel* (a request to abandon the
    task), *finished* (the user has finished or has nothing more to ask or add, which is the
    normal end of the task) and *none*. Only "cancel" is a cancel request; "finished" and "none"
-   go to the strategy like any other turn (in grounded question answering, "finished" leads to
+   go to the behavior like any other turn (in grounded question answering, "finished" leads to
    its own closing). The third answer is needed because a choice between "cancel" and "not
    cancel" failed: the LLM took most closings of grounded question answering ("No, I think
    that's all") for cancel requests, although the question said they were not, and a user who
@@ -62,8 +62,8 @@ Every user turn goes first to `CancelCheck`, before the strategy:
 |---|---|---|---|
 | Yes | `confirmed` | A brief generated closing (`cancel_confirmed_response`; fallback "Alright, cancelled."), never a question (below) | Ends: outcome `cancelled`, reason `Cancelled by the user` |
 | No | `denied` | "OK, let's continue." (`cancel_no`) and what it had asked before | Goes on |
-| Finished: they have nothing more to ask or add ("No, I have no more questions"), in a strategy whose end the user decides (grounded question answering) | `finished` | The strategy's own closing (`DialogueMode.on_finished`; grounded QA: "Alright. Have a good day!") | Ends normally: the strategy's own outcome (`completed`), not a cancellation |
-| Finished, in a strategy whose end the user does not decide | `denied` | As for no | Goes on |
+| Finished: they have nothing more to ask or add ("No, I have no more questions"), in a behavior whose end the user decides (grounded question answering) | `finished` | The behavior's own closing (`DialogueMode.on_finished`; grounded QA: "Alright. Have a good day!") | Ends normally: the behavior's own outcome (`completed`), not a cancellation |
+| Finished, in a behavior whose end the user does not decide | `denied` | As for no | Goes on |
 | Anything else ("No, I want to finish the boat", the value it had asked for, "can you repeat?") | `denied` | As for no | Goes on: the robot asks its question again (a value said there is said once more) |
 
 The closing after a confirmed cancellation is the robot's last line, so it must not invite
@@ -71,13 +71,13 @@ another turn: the code replaces a generated closing that contains a question mar
 fallback.
 
 Only a yes stops, and every other answer resumes. An answer that is neither a yes nor a no is not
-passed to the strategy: the LLM tends to take the words after a "no" as content ("No, I want the
-plumber to come"), and the strategy would then record them as a value or as skipping the item.
+passed to the behavior: the LLM tends to take the words after a "no" as content ("No, I want the
+plumber to come"), and the behavior would then record them as a value or as skipping the item.
 Rewording the prompt reduced this for every LLM tested, but not enough in Spanish; with this rule,
 the LLM's reading matters only as to whether the answer is a yes. The cost is one more turn: a
 value said in answer to "do you want to stop?" is asked for again.
 
-When the user did not ask to stop, the label is `none` and the strategy handles the turn.
+When the user did not ask to stop, the label is `none` and the behavior handles the turn.
 
 After a denial, the robot resumes with its last utterance without the "OK, let's continue." of an
 earlier denial, so that repeated denials do not pile up the phrase ("OK, let's continue. OK, let's
@@ -113,13 +113,13 @@ intelligence keeps it in the state of the dialogue (`model_down`), the JSON obje
 with every request. It is kept there because the intelligence keeps no state between requests and
 builds a client per request. A request without a call to the LLM leaves the value unchanged.
 
-### The strategy's own closing, and canceling the goal
+### The behavior's own closing, and canceling the goal
 
-When a strategy has something to give for what was done, a cancellation, whether confirmed or
-immediate, closes with the strategy's own closing instead of the generic one
+When a behavior has something to give for what was done, a cancellation, whether confirmed or
+immediate, closes with the behavior's own closing instead of the generic one
 (`DialogueMode.on_cancel`): the role play gives the evaluation of the exchanges so far when the
 user said at least one line of the scene ([Role play](roleplay.md)). The outcome stays
-`cancelled`; what the strategy recorded (the scores) is in `final_frame_json`.
+`cancelled`; what the behavior recorded (the scores) is in `final_frame_json`.
 
 The requesting behavior can also cancel the goal of `/dialog/execute_task`: the conversation stops
 at once, without a closing line, with the outcome `cancelled` and the reason `Cancelled`.
@@ -131,12 +131,12 @@ robot's last line) and decides whether the words are about this conversation (st
 leaving it) or about something in the task (an answer, a value, a step done), even when a word
 such as "cancel" appears: "I need to cancel my card" in a bank task and "I've pressed the cancel
 button" in a procedure are about the task. Words about the task are never a cancel request,
-whatever the rest of the answer says (the code enforces it), and they go to the strategy without
+whatever the rest of the answer says (the code enforces it), and they go to the behavior without
 a question. A hesitant wish to drop the conversation ("maybe I should just forget about it") is
 "cancel", since the robot confirms it anyway. When the user denies a cancellation, the robot
 resumes with what it had asked, and the same words are not asked about again, as a safety net for
 a false alarm the detector did not catch. The turn that triggered the question is not passed to
-the strategy, because a retracted real request ("forget it", then "no") would reach the strategy
+the behavior, because a retracted real request ("forget it", then "no") would reach the behavior
 and could be read as "skip this item".
 
 ## Tree
@@ -147,7 +147,7 @@ and could be read as "skip this item".
 
 | Situation | What happens |
 |---|---|
-| The LLM fails while detecting the request | No cancellation: the strategy handles the turn. An exact stop command gets the confirmation question (the fixed phrase), or ends the conversation at once if the LLM was already down |
+| The LLM fails while detecting the request | No cancellation: the behavior handles the turn. An exact stop command gets the confirmation question (the fixed phrase), or ends the conversation at once if the LLM was already down |
 | The LLM is known to be down (its last call failed) and the user says an exact stop command | No question: the fixed cancel closing (`cancel_ok`), outcome `cancelled` ([above](#when-the-llm-is-down)) |
 | The LLM fails while classifying the answer to the confirmation | The fallback reads it: exactly a yes word of the language confirms; anything else resumes |
 | The user says a cancel-like word while answering a slot with allowed values | Strict mode: the LLM takes only an explicit request to stop as one; an answer that names an option is not |

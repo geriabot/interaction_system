@@ -30,7 +30,7 @@ One question to the LLM (`classify_step_turn`) against the current step:
 | Wants to skip it | `skip` | The next step (this one skipped) | Yes |
 | Asks something | `question` | Answers it | Yes |
 | Is stuck, did not understand, or something went wrong | `problem` | Helps; the `max_attempts`-th problem on the same step marks it stuck and the procedure goes on | Yes |
-| Asks to hear the step again | `repeat` | Says the step again literally, with fixed phrases and no LLM ("Step n of N: <step>. Tell me when you have done it."), as the other strategies repeat | No |
+| Asks to hear the step again | `repeat` | Says the step again literally, with fixed phrases and no LLM ("Step n of N: <step>. Tell me when you have done it."), as the other behaviors repeat | No |
 | Wants to go back | `back` | The previous step again | Yes |
 | Anything else | `unclear` | Reminds them to say when the step is done | No |
 

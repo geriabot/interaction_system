@@ -4,7 +4,7 @@ When the robot does not understand a turn, or the user asks for something again,
 repair the exchange, but the repairs are bounded: a person who cannot follow is not kept in an
 endless loop of "could you repeat that?". There are two levels.
 
-1. **Per element** (a slot, a question, a step), inside each strategy: repeat, then simplify, then
+1. **Per element** (a slot, a question, a step), inside each behavior: repeat, then simplify, then
    leave that element unfinished and go on.
 2. **For the whole conversation**, shared: after `max_stalled` user turns in a row without
    progress, the robot says that it seems they are not understanding each other and closes the
@@ -16,7 +16,7 @@ The LLM only classifies each turn; the tree counts and decides. Subtrees `NoProg
 
 ## Per element: the recovery ladder
 
-| Strategy | Turn that needs a repair (not always a [turn without progress](#for-the-whole-conversation-the-breakdown-exit)) | 1st repair | 2nd repair | Then |
+| Behavior | Turn that needs a repair (not always a [turn without progress](#for-the-whole-conversation-the-breakdown-exit)) | 1st repair | 2nd repair | Then |
 |---|---|---|---|---|
 | [Slot filling](slot_filling.md) | No value, no question, no "I don't know" | Asks again | After `max_attempts` failed attempts on the slot, asks it differently (a closed question) | One more failed attempt: the slot is left unanswered |
 | [Quiz](quiz.md) | Not an answer (asks to repeat or clarify, did not hear) | The question again, literally | The question in simpler words, without revealing the answer | At `max_attempts`: the question is left unanswered (not graded wrong) |
@@ -33,15 +33,15 @@ unanswered), "skip" for a step. "I don't know" in a quiz is an answer (wrong).
 
 ## For the whole conversation: the breakdown exit
 
-`ListenToUser` sets `progress := true` on every user turn. The strategy's branches for a turn
+`ListenToUser` sets `progress := true` on every user turn. The behavior's branches for a turn
 without progress call `NoProgress` (`stalled += 1; progress := false`), as the condition of an
-if / then / else: *then* the strategy's repair, *else* (`stalled` reached `max_stalled`)
-`EndDialogue` with the reason `breakdown`. After the strategy handled the turn, `CountProgress`
+if / then / else: *then* the behavior's repair, *else* (`stalled` reached `max_stalled`)
+`EndDialogue` with the reason `breakdown`. After the behavior handled the turn, `CountProgress`
 resets `stalled` if the turn had progress.
 
 Turns that count as without progress:
 
-| Strategy | Turns |
+| Behavior | Turns |
 |---|---|
 | Slot filling | Gathering: nothing understood (no value, no question, no skip). Confirming: an unclear answer |
 | Quiz | A reply that is not an answer |
@@ -74,5 +74,5 @@ following; one repetition is harmless, since any turn with progress resets the c
 `max_stalled` and `max_attempts` are parameters of the orchestrator
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); a request can set its own
 `max_stalled` and `max_attempts` ([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). What
-`max_attempts` counts in each strategy is in the table of the
+`max_attempts` counts in each behavior is in the table of the
 [recovery ladder](#per-element-the-recovery-ladder).

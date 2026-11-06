@@ -7,7 +7,7 @@ wait grows, the wording changes with it ("One moment…", "Let me think about it
 "Almost there…", then "Still on it, just a second…" every few seconds), so that a long wait is
 never silent and never the same phrase over and over.
 
-Shared by every strategy: the `WithFillers` node of the trees (`interaction_system_behaviors`),
+Shared by every behavior: the `WithFillers` node of the trees (`interaction_system_behaviors`),
 which wraps what prepares each reply, and the skill `fillers`
 (`interaction_intelligence/skills/common.py`), which gives the phrases. [Index](README.md).
 
@@ -71,8 +71,8 @@ with their time, as robot lines with `"filler": true`.
 
 ### Where it is in the trees, and why there
 
-Every strategy wraps the two places where the robot prepares a reply in `WithFillers`: its
-opening subtree, and the reply to a user turn (the spoken cancellation check and the strategy's
+Every dialogue behavior wraps the two places where the robot prepares a reply in `WithFillers`: its
+opening subtree, and the reply to a user turn (the spoken cancellation check and the behavior's
 turn). `WithFillers` is a decorator: it ticks its child (the questions to the interaction
 intelligence) and, while the child is still running, says the fillers when they are due, through
 the same speech package as `Speak`; when the child ends, it returns the child's result once
@@ -92,7 +92,7 @@ while the intelligence is busy, so they must already be in the tree.
 
 ## Trees
 
-The filler node in a strategy (slot filling; every strategy has the same two):
+The filler node in a behavior (slot filling; every dialogue behavior has the same two):
 
 ![Slot filling, with WithFillers around the opening and the reply to each turn](../../media/bt/slot_filling.svg)
 

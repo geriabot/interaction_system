@@ -10,7 +10,7 @@ museum, a station, a library. Tree `behavior_tree_xml/grounded_qa.xml`, skills
 
 An information-seeking dialogue is where a robot with an LLM is most tempted to invent:
 a question about the topic whose answer is not in the information still gets a fluent answer. So
-the strategy separates three cases (in the material, in the topic but not in the material, outside
+the behavior separates three cases (in the material, in the topic but not in the material, outside
 the task), abstains in the second instead of guessing, and verifies every answer against the
 material before saying it.
 
@@ -78,7 +78,7 @@ without the question.
 | Anything else (off-topic noise, unintelligible) | "Could you repeat that?" | No |
 
 Finishing is never a cancellation: the cancellation detector answers "finished" and leaves the
-turn to the strategy. If the robot did ask "do you want to stop?" and the user answers that they
+turn to the behavior. If the robot did ask "do you want to stop?" and the user answers that they
 have no more questions, the conversation ends with the same closing
 ([Spoken cancellation](cancellation.md)).
 

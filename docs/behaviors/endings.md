@@ -14,7 +14,7 @@ why the mechanisms end a conversation that is going nowhere (sustained misunders
 who keeps asking for something else) instead of prolonging it: a clear ending with its reason is
 what the requesting behavior needs in order to decide.
 
-Shared by every strategy: subtrees `Begin`, `TurnLimit`, `EndDialogue` and `Conclude` of
+Shared by every dialogue behavior: subtrees `Begin`, `TurnLimit`, `EndDialogue` and `Conclude` of
 `common.xml`, skills `begin`, `closing` and `result` (`interaction_intelligence/skills/common.py`).
 [Index](README.md).
 
@@ -22,9 +22,9 @@ Shared by every strategy: subtrees `Begin`, `TurnLimit`, `EndDialogue` and `Conc
 
 | Outcome (`DialogTask.Result.OUTCOME_*`) | Decided by | Closing line | `failure_reason` |
 |---|---|---|---|
-| `completed` | The strategy: every element done | The strategy's own (confirmation, score, summary, feedback) | Empty |
-| `partial` | The strategy: it ended normally, some element left unfinished | The strategy's own | Which elements: `Unanswered slots: ...`, `Steps not done: ...`, and the like |
-| `failed` | The strategy: its goal was not achieved | The strategy's own (e.g. the explanation gives up) | E.g. `Critical points not verified after 3 checks: ...` |
+| `completed` | The behavior: every element done | The behavior's own (confirmation, score, summary, feedback) | Empty |
+| `partial` | The behavior: it ended normally, some element left unfinished | The behavior's own | Which elements: `Unanswered slots: ...`, `Steps not done: ...`, and the like |
+| `failed` | The behavior: its goal was not achieved | The behavior's own (e.g. the explanation gives up) | E.g. `Critical points not verified after 3 checks: ...` |
 | `cancelled` | The user (spoken cancellation, below) or the requesting behavior (action cancel) | Generated, or fixed with the LLM down (below); none when the requesting behavior cancels | `Cancelled by the user` / `Cancelled` |
 | `user_silent` | The tree: `max_silence` reached ([Silence](silence.md)) | Fixed, `close_user_silent` | `The user stayed silent for max_silence seconds` |
 | `breakdown` | The tree: `max_stalled` turns in a row without progress ([Recovery and breakdown](no_progress.md)) | Fixed, `close_breakdown` | `Communication breakdown: max_stalled turns in a row without progress` |
@@ -36,7 +36,7 @@ A spoken cancellation is confirmed by the user, or is immediate when the user sa
 command while the LLM is down. Its closing line is generated (e.g. "Alright, cancelled."), or the
 fixed `cancel_ok` with the LLM down, or the role play's evaluation when the user said a line of the
 scene ([Spoken cancellation](cancellation.md)). A user who says they have finished does not cancel:
-that is the strategy's normal end. The off-task reason is told apart from a misunderstanding so
+that is the behavior's normal end. The off-task reason is told apart from a misunderstanding so
 that the requesting behavior can decide what to do, for example launch the interaction that serves
 what the user asks for.
 
@@ -60,7 +60,7 @@ The `failure_reason` of an `error` says what failed:
 | `The behavior runner <runner> could not be activated` | The runner did not reach the active state (e.g. an invalid tree) |
 | `The interaction system was deactivated` | The orchestrator was deactivated during the conversation |
 | `The interaction intelligence did not answer (<skill>)` | A skill did not answer within `intelligence_timeout`: the intelligence itself failed to answer (an LLM that does not answer is bounded earlier, [below](#the-wait-for-the-model)) |
-| The error of a skill | A skill could not run: e.g. the request lacks what the strategy needs (`The quiz requires ...`), or the slot schema is invalid |
+| The error of a skill | A skill could not run: e.g. the request lacks what the behavior needs (`The quiz requires ...`), or the slot schema is invalid |
 
 ## How it works
 
@@ -76,7 +76,7 @@ The `failure_reason` of an `error` says what failed:
 - `Conclude` runs when the loop stops. If the conversation is not marked as done, the loop
   stopped because a skill failed: the robot says `error_closing` and the ending is `error`. Then
   `result` gives the outcome: the ending decided by the tree if any, `cancelled` if the user
-  canceled, otherwise the strategy's own (`DialogueMode.outcome`). The tree succeeds only if
+  canceled, otherwise the behavior's own (`DialogueMode.outcome`). The tree succeeds only if
   the outcome is `completed`.
 - The orchestrator returns the outcome and the reason: for `error`, the error of the node
   that failed; otherwise the reason given by `result`.
@@ -120,7 +120,7 @@ With a hung LLM, a turn unfolds as follows. The user stops speaking, and the fil
 the rest of that skill falls back at once; the next skill of the same reply waits only for what
 is left of the 20 s, and the rest make no call. The robot starts its fallback line about 20 s
 after the user stopped speaking (the bound is the start of the line, not its end). Whether the
-turn counts as progress follows the strategy's usual rule for that fallback: a turn not understood
+turn counts as progress follows the behavior's usual rule for that fallback: a turn not understood
 does not, so an LLM that stays down ends the conversation as a `breakdown` after `max_stalled`
 turns, each bounded by the budget. In normal operation the budget is not reached: a turn takes a
 few seconds.
@@ -169,7 +169,7 @@ positive.
 
 | Situation | What happens |
 |---|---|
-| The request lacks what the strategy needs (e.g. a quiz without a question bank) | `begin` fails before the robot says anything: outcome `error` with the reason, and no closing line (the conversation never started) |
+| The request lacks what the behavior needs (e.g. a quiz without a question bank) | `begin` fails before the robot says anything: outcome `error` with the reason, and no closing line (the conversation never started) |
 | The LLM is unavailable | The questions fall back: replies to fixed phrases of the language, understanding questions to their safe default (not understood). If the outage lasts, the conversation ends as a `breakdown` |
 | The intelligence does not answer a skill within `intelligence_timeout` | Outcome `error`, with the `error_closing` line |
 | The LLM does not answer (a call hangs) | The call is abandoned after `llm_timeout`; once `reply_budget` is spent, the robot says its fallback line, after the fillers, and the conversation goes on ([above](#the-wait-for-the-model)) |
