@@ -1,0 +1,7 @@
+[submodule "evaluation"]
+	path = evaluation
+	url = ../interaction_system_eval.git
+	branch = devel
+[submodule "paper"]
+	path = paper
+	url = ../interaction_system_paper.git

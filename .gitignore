@@ -33,9 +33,9 @@ evaluation/results/*.csv
 # Environments (pixi/conda)
 .pixi/
 
-# The paper, and the results and private notes of the evaluation (the runs write their results
-# in evaluation/results; evaluation/private holds what stays out of the repository)
-paper/
+# The results and private notes of the evaluation (the runs write their results in
+# evaluation/results; evaluation/private holds what stays out of the repository). evaluation/ and
+# paper/ are submodules with their own ignore rules; these lines cover clones made before.
 evaluation/results/
 evaluation/offline/results/
 evaluation/results_archive/

@@ -1,8 +1,0 @@
-# The question of the LLM-led baseline (the monolithic ablation), added to the interaction
-# system's questions (interaction_intelligence's config/interpretation/questions.yaml) when the
-# ablation runs. Its class is MonolithicTurn of interaction_ablations.interpretation_questions.
-
-questions:
-  monolithic_turn:
-    max_tokens: 600
-    validate: object
