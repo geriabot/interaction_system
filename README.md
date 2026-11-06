@@ -17,7 +17,7 @@ off topic, falls silent, interrupts or wants to stop. A large language model (LL
 user and phrases the robot's replies, but never decides what happens next.
 
 The sections below explain the idea and the design decisions behind it, the architecture the
-system belongs to, and how it processes a request. The [evaluation](evaluation/README.md)
+system belongs to, and how it processes a request. The [evaluation](#running-the-experiments)
 contains the experiments that test each decision, so that anyone can run them again.
 
 A request is a goal of one ROS 2 action. For example, this one starts a conversation that takes a
@@ -63,8 +63,8 @@ The system rests on five design decisions.
    behavioral control architecture: a finite state machine (FSM) coordinates each request and
    activates the tree of the chosen dialogue behavior. The rest of the robot sees one action and
    one status topic. Interpretation, beside the layers, answers the narrow questions they ask; it
-   commands nothing. Speech recognition, speech synthesis, user perception and the LLM are
-   services that the system uses, and each can be replaced.
+   commands nothing. Speech (a sub-capability that the trees call), user perception and the LLM
+   (an external service) are separate from the interaction system, and each can be replaced.
 
 The interaction system only holds the conversation. Other robot capabilities move, point or
 gesture; the embodiment layer (e.g. the NAO's gestures and eye LEDs) follows the generic signals
@@ -93,16 +93,11 @@ inside:
 Beside the layers, and outside their chain of control, is **interpretation**. It turns what
 arrives without structure (the request in natural language, a line of the user) into a validated
 answer to a narrow question that a layer asks: which dialogue behavior fits the request, which
-values of the form a line gives, whether a line asks to stop. It is not a layer: the layers form
-the chain of control, each with authority over the one below, whereas interpretation commands
-nothing; the layers consult it and it answers, and what to do with the answer is always decided by
-the coordination or the action. Nor is it a capability, since it does not have a capability's
-structure (its own coordination and action, and the standard interface). It keeps no state: the
-state of the conversation travels with each question, so every question can be logged, replayed
-and tested on its own. The figure draws it as a column beside the layers that consult it, at each
-level of the architecture that needs one, optional like deliberation (dashed at the robot's
-level, where it would serve deliberation, planning, coordination and action alike). Behind it is
-the LLM, which can be replaced.
+values of the form a line gives, whether a line asks to stop. It commands nothing and keeps no
+state; what to do with each answer is always decided by the coordination or the action layer.
+Behind it is the LLM, which can be replaced.
+[ARCHITECTURE.md](docs/ARCHITECTURE.md#interaction-as-a-capability-with-the-robots-layers-inside)
+explains why interpretation is neither a layer nor a capability.
 
 The next figure shows the nodes of the interaction system and, around them, the behavioral
 control architecture, speech, user perception, the embodiment and the models:
@@ -204,13 +199,16 @@ every interface.
 
 The optional fields of the goal are `dialog_mode`, `frame_schema_json`
 ([format](docs/SLOT_SCHEMA.md)), `initial_frame_json` (to resume), `resources_json`, `domain`,
-`skip_intro` (for chained conversations), and the limits `max_turns`, `max_silence` and
-`max_stalled`. A limit left unset takes the system's value.
+`skip_intro` (for chained conversations), and the limits and settings of the shared mechanisms
+(`max_turns`, `max_silence`, `max_stalled` and the others listed in
+[ROS_INTERFACES.md](docs/ROS_INTERFACES.md#dialogtask-goal)). A limit left unset takes the
+system's value.
 
 From a robot's Behavior Tree, the `ExecuteDialog` node of
 [`dialostack_bt_client`](dialostack_bt_client/README.md) sends the goal and writes its result to
-the tree's blackboard. [INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-strategy) has example
-goals for every dialogue behavior. The interaction system has no code for a particular robot;
+the tree's blackboard.
+[INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-dialogue-behavior) has example goals for
+every dialogue behavior. The interaction system has no code for a particular robot;
 what a robot provides (speech, embodiment, user perception) is described in
 [ADDING_A_ROBOT.md](docs/ADDING_A_ROBOT.md).
 
@@ -320,8 +318,8 @@ colcon workspace (e.g. `~/interaction_ws`).
 - An x86-64 PC with Linux: any distribution with pixi, or Ubuntu 24.04 with system ROS 2 Jazzy.
 - An LLM served by [Ollama](https://ollama.com), on this computer or on a GPU server
   ([GPU_SERVER.md](docs/GPU_SERVER.md)). The default model, `qwen2.5:7b`, needs a GPU with about
-  8 GB; the configuration of the experiments, with two 14B models, needs about 24 GB. A cloud
-  provider can be used instead ([MODELS.md](docs/MODELS.md)).
+  8 GB; the experiments use open models that fit a GPU with 24 GB. A cloud provider can be used
+  instead ([MODELS.md](docs/MODELS.md)).
 - A microphone and a speaker.
 - About 8 GB of disk for the pixi environment (about 3.5 GB more for the optional Lyrical one),
   and Internet access on the first run, which downloads the environment and the speech models.
@@ -343,7 +341,8 @@ cd ..
 pixi run build
 ```
 
-`evaluation/` (the evaluation) and `paper/` are private submodules until the work is published: without access to them the clone reports that it cannot fetch them and the rest is cloned as usual; the build then needs the same `colcon build` command without the two evaluation packages (`interaction_sim interaction_ablations`), since colcon stops at a package it does not find. A clone made before they became submodules is updated with `git pull && git submodule update --init`.
+`--recurse-submodules` also fetches the evaluation; without access to it,
+[INSTALL_PIXI.md](docs/INSTALL_PIXI.md#install-and-build) explains how to build.
 
 Then, in every terminal where you run the system:
 
@@ -409,8 +408,10 @@ cd src/interaction_system/dialostack_gui && npm ci && npm test   # GUI logic (np
 ## Running the experiments
 
 The experiments run the system against simulated users (local or cloud models) with ground
-truth, and with real participants; the scripts score the conversations. The repository includes
-the scenarios, the experiment files and the tools, but not the results.
+truth, and with real participants; the scripts score the conversations. The scenarios, the
+experiment files and the tools (not the results) are in `evaluation/`, a git submodule that stays
+private until the work is published; until then, the links into `evaluation/` in this
+documentation open only with access to it.
 
 The simplest way is the web control panel. It runs an experiment on a hardware profile (a
 *campaign*), first checking that the GPU servers are free, and shows its progress. It can also run

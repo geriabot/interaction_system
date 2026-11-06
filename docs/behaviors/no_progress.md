@@ -73,5 +73,6 @@ following; one repetition is harmless, since any turn with progress resets the c
 
 `max_stalled` and `max_attempts` are parameters of the orchestrator
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); a request can set its own
-`max_stalled` ([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). What `max_attempts`
-counts in each strategy is in the table of the [recovery ladder](#per-element-the-recovery-ladder).
+`max_stalled` and `max_attempts` ([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). What
+`max_attempts` counts in each strategy is in the table of the
+[recovery ladder](#per-element-the-recovery-ladder).

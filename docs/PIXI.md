@@ -1,7 +1,8 @@
 # pixi in this project
 
-[pixi](https://pixi.sh) creates a self-contained ROS 2 Jazzy environment, from
-[RoboStack](https://robostack.github.io) and conda-forge, with every dependency of the system.
+[pixi](https://pixi.sh) creates a self-contained ROS 2 environment (Jazzy, and optionally
+Lyrical), from [RoboStack](https://robostack.github.io) and conda-forge, with every dependency of
+the system.
 This page explains why the project uses it and how it is configured;
 [INSTALL_PIXI.md](INSTALL_PIXI.md) explains how to install and build with it.
 

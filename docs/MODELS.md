@@ -9,7 +9,7 @@ serve the models from a shared GPU server in [GPU_SERVER.md](GPU_SERVER.md).
 
 | Model | Node | What it does | How it is chosen |
 |---|---|---|---|
-| The LLM | `/llm_manager_node` (the gateway), asked by `/interaction_intelligence` | Every question of the conversation: the choice of the strategy, the understanding of each turn, the phrasing of each utterance | `ollama.model` of `llm_manager_node`, or `llm_provider` and `llm_model` of `interaction_intelligence` ([below](#the-local-model)) |
+| The LLM | `/llm_manager_node` (the gateway), asked by `/interaction_intelligence` | Every question of the conversation: the choice of the dialogue behavior, the understanding of each turn, the phrasing of each utterance | `ollama.model` of `llm_manager_node`, or `llm_provider` and `llm_model` of `interaction_intelligence` ([below](#the-local-model)) |
 | A second LLM (optional) | The same | The questions routed to it, e.g. the slot extraction | `routes` of `interaction_intelligence` ([below](#one-model-per-question-routes)) |
 | Speech-to-text | simple_hri `stt_service_node` | Transcribes the user: faster-whisper with Silero VAD (default) or Whisper | `stt:=`, `whisper_model:=` of `main.launch.py` ([SPEECH.md](SPEECH.md)) |
 | Text-to-speech | simple_hri `tts_service_node` | Says the robot's utterances: a Piper voice of the language (default) or MMS-TTS | `tts:=`, `language:=` ([SPEECH.md](SPEECH.md)) |
@@ -80,9 +80,9 @@ interaction_intelligence:
 The key is the method that calls the LLM, not the skill or the template. The understanding
 questions, which are the usual candidates:
 
-| Strategy | Methods |
+| Dialogue behavior | Methods |
 |---|---|
-| The choice of the strategy | `choose_dialogue_behavior` |
+| The choice of the dialogue behavior | `choose_dialogue_behavior` |
 | Slot filling | `create_frame`, `audit_frame` (a schema designed from the task), `extract_turn` (the values and the act of each turn; its template is `extract_slots`), `classify_intent` (the confirmation) |
 | Explanation | `extract_key_points`, `judge_teach_back` |
 | Quiz | `evaluate_quiz_answer` |
@@ -90,7 +90,7 @@ questions, which are the usual candidates:
 | Role play | `classify_roleplay_turn`, `evaluate_roleplay`, `roleplay_feedback` |
 | Grounded question answering | `answer_from_material`, `verify_answer` |
 | Questionnaire | `map_scale_answer` |
-| Cancellation (every strategy) | `detect_cancel_intent`, `classify_cancel_reply` |
+| Cancellation (every dialogue behavior) | `detect_cancel_intent`, `classify_cancel_reply` |
 
 A generation method (e.g. `generate_response`) can be routed too; it then uses the generation
 session of the routed model. `extract_slots` is accepted as another name of `extract_turn`. An

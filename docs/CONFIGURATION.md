@@ -140,8 +140,9 @@ them are described in [docs/behaviors](behaviors/README.md).
   waiting longer. A request never gets more than `intelligence_timeout` minus 2 s. An experiment
   that does not test this bound may open it, together with `llm_timeout` and
   `intelligence_timeout`, for all its conditions alike (`model_wait`,
-  [evaluation/README.md](../evaluation/README.md)). E1 opens it, so that the latency of every
-  model, including cloud models that reason, is measured rather than cut.
+  [evaluation/README.md](../evaluation/README.md)). The comparison with the LLM-led conversation
+  opens it, so that the latency of every model, including cloud models that reason, is measured
+  rather than cut.
 - `user_speaking_topic` is published by the lip activity detector of the optional perception
   subsystem. While nothing publishes it, the robot finishes every utterance.
 
@@ -209,8 +210,9 @@ are declared from the files.
   you want to stop?", the questionnaire option, the procedure step and the role-play turn. It
   never reasons when a line is generated. The setting is sent with each of those requests (`think`
   of `LlmInference`), and a model that cannot reason ignores it. The evaluation decides it per
-  model in E0a (the `@critical` candidates), and a request may switch it on or off
-  (`DialogTask.reasoning`). A reasoning call that returns nothing usable (past its token
+  model when it chooses the local model (the `@critical` candidates,
+  [EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#e0a-choosing-the-local-model)), and a request
+  may switch it on or off (`DialogTask.reasoning`). A reasoning call that returns nothing usable (past its token
   allowance, or without JSON) is asked again at once without reasoning.
 - `reasoning_timeout`: reasoning is not cut, so neither `llm_timeout` nor the reply's budget bound
   such a call, and its time is not charged to the budget. Only a hung model reaches
@@ -282,11 +284,11 @@ Their Python SDKs are listed in the [gateway's README](../ros2_llm_manager/READM
   model may think, each request gets 4096 tokens more than its cap, because the reasoning tokens
   count toward the cap and a short cap would leave the answer empty; in the measurements, no
   reasoning call of the critical questions needed that many. The evaluation sets the value per
-  model: the value that the model accepts with its reasoning off, or `low` for `gpt-oss`. Phase 1
-  of E0a (`run_e0a.py phase-a`) records it.
+  model: the value that the model accepts with its reasoning off, or `low` for `gpt-oss`, and
+  records it in phase 1 of the model choice (`run_e0a.py phase-a`).
 - `ollama.num_ctx` is sent with each request so that the context window does not depend on the
   server's default, which changes with its version and configuration; a longer prompt is cut
-  silently. Both phases of E0a, the judges and E1 use the same 8192.
+  silently. The experiments of the evaluation use the same 8192.
 
 ## simple_hri's speech nodes
 
@@ -385,8 +387,8 @@ those of the code.
 ## arm_gesture_manager
 
 Declared in `robots/nao/nao_pose_manager/nao_pose_manager/arm_gesture_manager.py`. The node
-drives the arms of the real NAO. The defaults are those of the code; `arm_gesture_manager.launch.py` passes
-its own launch arguments ([LAUNCH_ARGUMENTS.md](LAUNCH_ARGUMENTS.md#nao)), noted below.
+drives the arms of the real NAO. The defaults are those of the code; `arm_gesture_manager.launch.py`
+passes its own launch arguments ([LAUNCH_ARGUMENTS.md](LAUNCH_ARGUMENTS.md#nao)), noted below.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |

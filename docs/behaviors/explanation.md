@@ -10,12 +10,12 @@ instructions for a test or a medication, the directions of a route, rules. Tree
 
 ## Why teach-back
 
-Asking "did you understand?" is weak evidence of understanding: people often say yes without
-having understood, and the ones who understand best are the ones who admit gaps. In teach-back,
-the person explains the content back in their own words, and the explainer corrects what is
-missing or wrong and checks again; it is the practice recommended in health communication. A direct question
-about the most important point is the accepted alternative for short content and when the person
-does not want to paraphrase.
+Asking "did you understand?" is weak evidence of understanding: people often say yes without having
+understood, and the ones who understand best are the ones who admit gaps. In teach-back, the person
+explains the content back in their own words, and the explainer corrects what is missing or wrong
+and checks again; it is the practice recommended in health communication. A direct question about
+the most important point is the accepted alternative for short content and when the person does not
+want to paraphrase.
 
 ## What it needs and returns
 
@@ -50,9 +50,9 @@ does not want to paraphrase.
    different time, dose, place or order is wrong. A point said back correctly stays verified and
    is no longer sent to the judge, which judges only the points still to verify: with a verified
    point in the list, the LLM could put the content of another point in the verified point's
-   entry and lose that other point. A point said only in part, with nothing false, is `incomplete` and is
-   handled as missing, never as wrong: the robot confirms the part said and asks only for the
-   rest, and an incomplete point alone is not progress.
+   entry and lose that other point. A point said only in part, with nothing false, is
+   `incomplete` and is handled as missing, never as wrong: the robot confirms the part said and
+   asks only for the rest, and an incomplete point alone is not progress.
 3. A reply that says some points back correctly and none wrongly makes progress: the robot
    confirms them and asks only for the critical points still missing, without explaining them
    again ("Good, you remember the green flag. And what does the red one mean?"). Otherwise the
@@ -72,10 +72,10 @@ does not want to paraphrase.
 | Anything else (off-topic, unintelligible) | `other` | Asks the last check again | No, but a turn without progress ([Recovery](no_progress.md)) |
 
 After `max_attempts` failed checks (by default 3 checks, that is, 2 repairs), the robot closes by
-reminding the user of the critical points ("No worries, feel free to ask me again. Let me remind you of the
-most important points: ...", fixed phrases and the points themselves) with the outcome `failed`.
-The answer to the direct question of the fallback is judged the same way as a teach-back, so a
-correct answer verifies that point; the other critical points still have to be said back.
+reminding the user of the critical points ("No worries, feel free to ask me again. Let me remind
+you of the most important points: ...", fixed phrases and the points themselves) with the outcome
+`failed`. The answer to the direct question of the fallback is judged the same way as a teach-back,
+so a correct answer verifies that point; the other critical points still have to be said back.
 
 A restatement in which no key point is correct, incomplete or wrong (nothing of the explanation
 was said, e.g. unintelligible speech) is a turn without progress, not a failed check; an answer

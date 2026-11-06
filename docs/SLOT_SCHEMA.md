@@ -1,8 +1,8 @@
 # Slot schema reference
 
-The slot schema that the slot-filling strategy accepts in the `frame_schema_json` field of the
-`/dialog/execute_task` goal: the fields of a slot, numeric bounds, conditional slots, unanswered
-slots and the validation errors. How the strategy uses the frame turn by turn is in
+The slot schema that the slot-filling dialogue behavior accepts in the `frame_schema_json` field
+of the `/dialog/execute_task` goal: the fields of a slot, numeric bounds, conditional slots,
+unanswered slots and the validation errors. How slot filling uses the frame turn by turn is in
 [slot filling](behaviors/slot_filling.md).
 
 When `frame_schema_json` is empty, the LLM designs the schema from the task

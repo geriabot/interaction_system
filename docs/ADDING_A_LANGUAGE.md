@@ -12,7 +12,7 @@ to be evaluated too.
 | [1. The language file](#1-the-language-file) | Yes | `config/languages/<language>.yaml` of `interaction_intelligence`: phrases, commands, words, speech settings |
 | [2. The language name](#2-the-language-name) | Yes | What the parameter `language` and the launch argument `language` say |
 | [3. Speech](#3-speech) | Yes, with voice | The recognition language and a Piper (or MMS-TTS) voice, in the same file |
-| [4. The prompts](#4-the-prompts) | Check | One English set for every language; the address rule may need an example |
+| [4. The prompts](#4-the-prompts) | Check | One English set for every language; the address rule may need a description of the language's formality |
 | [5. The GUI](#5-the-gui) | No | It offers the languages with a file by itself |
 | [6. The evaluation](#6-the-evaluation) | Only to evaluate the language | Scenarios, datasets, personas, panels |
 | [7. Checking it](#7-checking-it) | Yes | The tests, then a conversation |
@@ -37,7 +37,7 @@ the English one, and so does the test `test/test_languages.py`.
 | `asr_noise_phrases` | list | Filler words and recurrent hallucinations of the recognizer ("thanks for watching") that are never a turn ([below](#words-shared-across-languages)) | The transcriptions |
 | `ack_phrases` | list | Acknowledgments said after slot filling takes a value ("Noted.") | Slot filling |
 | `filler_phrases` | list | Conversational fillers said while the reply is prepared, in the order of the ladder: five, one per step (2, 5, 9 and 14 s) and the one that repeats ("Hmm…", "One moment…"…) | [Fillers](behaviors/fillers.md) |
-| `phrases` | mapping | Every fixed phrase: the fallback of each generated line, the silence prompts, the closings of the endings, the fixed parts of the strategies ("Step {n} of {total}: {step}") | Every strategy and mechanism |
+| `phrases` | mapping | Every fixed phrase: the fallback of each generated line, the silence prompts, the closings of the endings, the fixed parts of the dialogue behaviors ("Step {n} of {total}: {step}") | Every dialogue behavior and mechanism |
 
 ### Fixed phrases
 
@@ -100,8 +100,8 @@ The parameter `language` of the intelligence (`app_params.yaml`) and the launch 
 case: `language: French`, `language:=fr`. The prompts receive the `name`. A language without a
 file stops the intelligence and the launch at once, with the list of languages: there is no
 fallback to English, because the fixed phrases would then be said in a language other than that
-of the generated lines and the user's stop commands would not be recognized, which only a session with
-a user would reveal.
+of the generated lines and the user's stop commands would not be recognized, which only a session
+with a user would reveal.
 
 ## 3. Speech
 
@@ -160,9 +160,9 @@ its code, `en`, `es`, and the experiment files by its name):
 | Phase 1 datasets of the model choice | `offline/datasets/phase_a/*.json` (each case has `language`: `en`/`es`), `offline/datasets/wording.json` | At least 25 cases per dataset in the new language, traps included; the code in `offline/core/phase_a.py` (`LANGUAGES`) and `offline/core/dataset_check.py` (the list of languages) |
 | Wording checks | `offline/benchmarks/bench_wording.py` (per-language tables: plurals, the formal register) | Its tables for the language |
 | Scoring | `analysis/key_facts.py` (stop words, yes/no, times), `analysis/strategy_checks.py` (number words), `analysis/score_runs.py` (articles) | The words of the language |
-| Simulated speech | `simulation/interaction_sim/asr_noise.py` (English sound-alike confusions and fillers) | A table of the language, if the noise experiment runs in it |
-| Simulated user | `simulation/interaction_sim/llm_user.py` (its fallback lines when its model fails are English) | Lines in the language |
-| LLM-led baseline | `ablations/interaction_ablations/skills.py` (its fallback reply is English) | A line in the language, if the baseline runs in it |
+| Simulated speech | `simulation/interaction_sim/interaction_sim/asr_noise.py` (English sound-alike confusions and fillers) | A table of the language, if the noise experiment runs in it |
+| Simulated user | `simulation/interaction_sim/interaction_sim/llm_user.py` (its fallback lines when its model fails are English) | Lines in the language |
+| LLM-led baseline | `ablations/interaction_ablations/interaction_ablations/skills.py` (its fallback reply is English) | A line in the language, if the baseline runs in it |
 | Test panel (the Tests tab of the control panel) | `real/campaigns.py` (`VOICES`), `scripts/test_panel.py` (sample question, tester card, ordinals), `scripts/test_panel_examples.yaml`, `scripts/sim_checks.py` (happy-path lines), `scripts/control_panel.py` | Their entries for the language |
 | Real sessions | `real/sessions_es.yaml` (all the text the participants read), `real/make_cards.py` | A sessions file in the language |
 | Review panel | `panels/review_panel.py` (the languages of the sheets) | The code of the language |
@@ -185,6 +185,6 @@ ROS_DOMAIN_ID=77 python -m pytest src/interaction_system/evaluation/simulation/i
 
 `test_spanish_model_failures.py` runs the system in Spanish with the model failing: the Spanish
 fixed phrases are said and an exact Spanish stop command cancels without the model. A copy with
-the new language checks the same for it. Finally, hold a conversation of each strategy in the
-language and listen to the fixed phrases (stop the model to hear them: the fallbacks, the
+the new language checks the same for it. Finally, hold a conversation of each dialogue behavior
+in the language and listen to the fixed phrases (stop the model to hear them: the fallbacks, the
 closings).

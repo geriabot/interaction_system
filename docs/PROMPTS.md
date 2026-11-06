@@ -1,9 +1,9 @@
 # The questions to the LLM
 
 This page describes the questions the interaction system asks the LLM: the template of each,
-the skill that asks it, how its answer is handled, and how to change them. Every question is built from a template of
-`interaction_system_core/interaction_intelligence/config/prompts.yaml` (parameters `prompts.*` of
-`/interaction_intelligence`) by `PromptBuilder`, and asked by `LLMDialogClient` in the
+the skill that asks it, how its answer is handled, and how to change them. Every question is
+built from a template of `interaction_system_core/interaction_intelligence/config/prompts.yaml`
+(parameters `prompts.*` of `/interaction_intelligence`) by `PromptBuilder`, and asked by `LLMDialogClient` in the
 conversation's understanding or generation session. The trees never write prompts: they ask the
 intelligence a skill, and the skill asks the questions below
 ([ARCHITECTURE.md](ARCHITECTURE.md#the-interaction-intelligence)). Which model answers each
@@ -99,7 +99,7 @@ Notes on some of the templates:
   It then chooses `cancel`, `finished` (nothing more to ask or add: the normal end, not a cancel
   request) or `none`.
 - `classify_cancel_reply` reads the answer to the confirmation: `yes`, `no`, `finished` (a normal
-  end, where the strategy lets the user end it) or `other` (the answer does not say whether to
+  end, where the dialogue behavior lets the user end it) or `other` (the answer does not say whether to
   stop). Only `yes` stops; `no` and `other` both resume.
 - `ask_cancel_confirmation`: "yes" means stopping, as `classify_cancel_reply` reads it, and the
   question does not explain how to answer it. After a `no`, the robot says the fixed phrase
@@ -129,10 +129,10 @@ into the questions, so that what does not depend on the LLM is decided by the co
   register (the familiar form of address where the language has one; English is unaffected). The
   rule describes the register and quotes no phrase or word: with quoted examples, models copied
   them literally (a question for the user's name in tasks that ask for none, a Spanish pronoun in
-  English lines), and a test keeps it free of quotes. Every template that writes a line the user hears has it among its rules (the
-  openings, the next question, the read-back and the closings, the quiz feedback, the procedure,
-  the explanation, the grounded answers, the role play, the cancellation question and its
-  closing). It is the same text in every turn, so it is part of the cached prefix. The LLM-led
+  English lines), and a test keeps it free of quotes. Every template that writes a line the
+  user hears has it among its rules (the openings, the next question, the read-back and the
+  closings, the quiz feedback, the procedure, the explanation, the grounded answers, the role
+  play, the cancellation question and its closing). It is the same text in every turn, so it is part of the cached prefix. The LLM-led
   baseline of the ablations gets the same rule.
 - `list_slot_rule` is appended to `generate_response` only when the slot asked for is a list,
   because small models applied a list instruction to single-value slots too ("you can tell me
@@ -165,8 +165,8 @@ new templates in that order.
   The templates are written in English for every language: `{language}` is the name of the
   language file (`English`, `Spanish`). The shared address rule names the informal register
   without examples; the role-play templates give Spanish examples of gender-neutral wording. A
-  language with another system of formality or gender may need its own description there. That is a change of the prompts, after
-  which phase 1 of the model choice is run again
+  language with another system of formality or gender may need its own description there. That
+  is a change of the prompts, after which phase 1 of the model choice is run again
   ([ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md#4-the-prompts)).
 
 The prompts and the raw answers are not stored. The skills asked, their labels and their times are

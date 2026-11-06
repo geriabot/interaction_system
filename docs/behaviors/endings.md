@@ -33,12 +33,12 @@ Shared by every strategy: subtrees `Begin`, `TurnLimit`, `EndDialogue` and `Conc
 | `error` | A failure of the system, or a request that cannot run | Fixed, `close_error` ("I'm sorry, something went wrong and I have to stop here."), when the conversation had started | What failed (below) |
 
 A spoken cancellation is confirmed by the user, or is immediate when the user says an exact stop
-command while the LLM is down. Its closing line is generated (e.g. "Alright, cancelled."), or the fixed
-`cancel_ok` with the LLM down, or the role play's evaluation when the user said a line of the
-scene ([Spoken cancellation](cancellation.md)). A user who says they have finished does not
-cancel: that is the strategy's normal end. The off-task reason is told apart from a
-misunderstanding so that the requesting behavior can decide what to do, for example launch the
-interaction that serves what the user asks for.
+command while the LLM is down. Its closing line is generated (e.g. "Alright, cancelled."), or the
+fixed `cancel_ok` with the LLM down, or the role play's evaluation when the user said a line of the
+scene ([Spoken cancellation](cancellation.md)). A user who says they have finished does not cancel:
+that is the strategy's normal end. The off-task reason is told apart from a misunderstanding so
+that the requesting behavior can decide what to do, for example launch the interaction that serves
+what the user asks for.
 
 Only `completed` is a success (`success` is `true` and the goal succeeds); every other outcome
 aborts the goal, except the cancellation by the requesting behavior, which returns `canceled`.

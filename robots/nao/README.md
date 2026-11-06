@@ -42,10 +42,10 @@ bridge on the robot. The simulation path does not need it.
 
 ## Usage
 
-These packages are neither in pixi's `build` task nor in the package list of the README's build,
-so build them with colcon (`--packages-select nao_description nao_pose_manager`). The
-simulation also needs `xacro`, `joint_state_publisher_gui` and RViz, which the pixi environment
-(`ros-base`) does not include.
+These packages are neither in pixi's `build` task nor in the package list of the native build
+([INSTALL_NATIVE.md](../../docs/INSTALL_NATIVE.md)), so build them with colcon
+(`--packages-select nao_description nao_pose_manager`). The simulation also needs `xacro`,
+`joint_state_publisher_gui` and RViz, which the pixi environment (`ros-base`) does not include.
 
 Simulation (RViz + pose tooling, no robot):
 
@@ -64,8 +64,13 @@ ros2 launch nao_pose_manager arm_gesture_manager.launch.py
 1. Launch the sim: `ros2 launch nao_pose_manager nao_sim.launch.py`.
 2. Pose the robot with the `joint_state_publisher_gui` sliders in RViz.
 3. Type a pose name in the `gui_trigger` window (or press `s` in `keyboard_trigger`).
-4. `pose_saver` writes the named pose into `config/nao_saved_poses.yaml`.
-5. Preview saved poses by clicking them in the `pose_tester` window.
+4. `pose_saver` writes the named pose into `nao_saved_poses.yaml` in the directory the launch was
+   started from.
+5. Preview the poses saved there by clicking them in the `pose_tester` window, which reads the
+   same file.
+6. To use the poses in the gestures, copy the file into `nao_pose_manager/config/` and rebuild the
+   package: `gesture_manager` (in the simulation) and `arm_gesture_manager` read the installed
+   `config/nao_saved_poses.yaml` (`poses_file`).
 
 ## Configuration
 

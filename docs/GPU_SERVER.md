@@ -38,7 +38,7 @@ mkdir -p ~/ollama_models
 nohup env OLLAMA_MODELS=~/ollama_models OLLAMA_MAX_LOADED_MODELS=2 OLLAMA_NUM_PARALLEL=1 \
   OLLAMA_CONTEXT_LENGTH=8192 ollama serve > ~/ollama.log 2>&1 &
 echo $! > ~/ollama.pid
-ollama pull qwen2.5:7b                         # the default model; the experiments use the one chosen in E0a
+ollama pull qwen2.5:7b                         # the default model (MODELS.md: how to change it)
 ```
 
 | Variable | Value | Why |
@@ -90,8 +90,8 @@ nvidia-smi                                     # on the server: no other process
 curl -s localhost:11434/api/ps                 # through the tunnel: no models loaded by other work
 ```
 
-The experiment runner makes the same check before each of its parallel runs, and refuses to run on a busy server
-([evaluation/README.md](../evaluation/README.md#hardware-profiles-and-parallel-runs)).
+The experiment runner makes the same check before each of its parallel runs, and refuses to run
+on a busy server ([evaluation/README.md](../evaluation/README.md#hardware-profiles-and-parallel-runs)).
 
 Afterwards, free the GPU. The gateway asks Ollama to keep its models loaded indefinitely
 (`keep_alive: -1`), so they stay in GPU memory after the stack stops:

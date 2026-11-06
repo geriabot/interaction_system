@@ -54,8 +54,9 @@ The interaction system publishes generic signals that the robot's nodes can foll
 | `/interaction_system/status` | `interaction_system_interfaces/msg/InteractionSystemStatus` | The state of the system and the phase of the conversation: an idle pose, a listening light |
 | `/barge_in` | `ros2_dialog_interfaces/msg/BargeIn` | The user cut the robot off (experimental, not validated) |
 
-`/is_speaking` is published by the `Speak` and `WithFillers` nodes of the trees, not by the speech package, so an
-embodiment written for it works with simple_hri and with the robot's own speech alike.
+`/is_speaking` is published by the `Speak` and `WithFillers` nodes of the trees, not by the speech
+package, so an embodiment written for it works with simple_hri and with the robot's own speech
+alike.
 
 ## User perception
 
@@ -105,8 +106,9 @@ simulation in RViz in the [NAO README](../robots/nao/README.md#usage).
    the robot's speech serving `/stt_action`, `/tts_action` and `/listened_text`.
 2. Start the stack (`main.launch.py`, with `speech:=none` for the robot's own speech) and check
    the speech alone ([SPEECH.md](SPEECH.md#testing-the-speech-alone)).
-3. Ask for a conversation from a terminal ([INTEGRATING.md](INTEGRATING.md#goals-for-every-strategy)),
-   then from the robot's behaviors ([INTEGRATING.md](INTEGRATING.md#from-a-behavior-tree-of-the-robot)).
+3. Ask for a conversation from a terminal
+   ([INTEGRATING.md](INTEGRATING.md#goals-for-every-dialogue-behavior)), then from the robot's
+   behaviors ([INTEGRATING.md](INTEGRATING.md#from-a-behavior-tree-of-the-robot)).
 4. Optionally, write the embodiment: a node that subscribes to `/is_speaking` (and
    `/interaction_system/status`) and drives the robot's gestures or lights, as
    `nao_pose_manager` does.

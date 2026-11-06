@@ -4,7 +4,8 @@ One ROS 2 node that puts LLM inference behind a single action and a few session 
 serves local models through Ollama and cloud models through Google Gemini, Anthropic Claude,
 OpenAI or any OpenAI-compatible server, with optional stateful (history-keeping) sessions and
 JSON-schema-constrained output. The interaction intelligence is its main client (two stateless
-sessions per conversation, with Ollama), but any node can use it.
+sessions per conversation, one for understanding and one for generation, plus a pair for each other
+model that some questions are routed to; Ollama by default), but any node can use it.
 [ARCHITECTURE.md](../docs/ARCHITECTURE.md#the-llm-gateway-ros2_llm_manager) shows how it fits in
 the system.
 

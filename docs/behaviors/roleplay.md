@@ -32,7 +32,7 @@ One question to the LLM (`classify_roleplay_turn`):
 
 | The user | Label | The robot |
 |---|---|---|
-| A line of the scene | `continue` | The character replies (a line that repeats an earlier question is asked again once) |
+| A line of the scene | `continue` | The character replies (a generated line that repeats one of the character's earlier questions is generated again once) |
 | Did not hear or understand the character's last line, or asks to hear it again | `repeat` | The first time, the character's last line literally (no LLM, the request kept out of the scene's transcript); after that, the character says it again in different words. A turn without progress |
 | Asks for help | `coach` | A hint out of character, kept out of the scene's transcript |
 | Wants to stop the practice | `end` | Steps out of the role and evaluates |
@@ -77,9 +77,10 @@ the exchanges so far: the feedback and the scores, with `ended_by` `user`, go in
 `final_frame_json`, and the outcome is `cancelled` by the user. Before the first line there is
 nothing to score, so the robot says the cancel closing; it does the same when no criterion can be
 scored because the LLM fails. "I want to stop the practice" said inside the scene is `end`: the
-scene is evaluated and the outcome is the scene's. The English introduction tells the user to say
-"finish" rather than "stop", which is an exact stop command, so that ending the practice leads
-straight to the evaluation without the confirmation question.
+scene is evaluated and the outcome is the scene's. The introduction tells the user how to finish
+the practice, and its fixed English phrase says "finish" rather than "stop", which is an exact stop
+command, so that ending the practice leads straight to the evaluation without the confirmation
+question.
 
 ## Parameters
 

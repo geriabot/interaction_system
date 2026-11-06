@@ -66,8 +66,8 @@ turn, unchanged, because discarding the utterance would lose what the user said.
 
 `wait_timeout` and `max_silence` are parameters of the orchestrator
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)); a request can set its own
-`max_silence` ([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). The phrases are
-`phrases.timeout`, `phrases.silence_ready` and `phrases.close_user_silent` of the intelligence
-(`timeout_prompt` also sets the first one,
+`wait_timeout` and `max_silence` ([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). The
+phrases are `phrases.timeout`, `phrases.silence_ready` and `phrases.close_user_silent` of the
+intelligence (`timeout_prompt` also sets the first one,
 [CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)); `duration_s` is a field of a
 procedure step ([Procedure](procedure.md#what-it-needs-and-returns)).

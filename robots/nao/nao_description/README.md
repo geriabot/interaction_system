@@ -1,5 +1,8 @@
 # nao_description
 
+The NAO V40 robot model (URDF) and an RViz bringup, vendored from Kenji Brameld's
+`nao_description` package (Apache 2.0; the URDF is BSD, see `NOTICE`).
+
 ## Setup
 
 To install the 3d model meshes for the NAO, in this nao_description package directory,
@@ -19,7 +22,7 @@ To visualize the urdf robot in rviz, run
 
 ## Environment
 
-Tested for ROS2 FOXY, on Ubuntu 20.04
+The upstream package was tested with ROS 2 Foxy on Ubuntu 20.04.
 
 ## Using in another launch file
 

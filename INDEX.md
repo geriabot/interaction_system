@@ -65,7 +65,8 @@ ros2 topic pub --once /transcription std_msgs/msg/String "{data: 'a large latte'
 ```
 
 [ROS_INTERFACES.md](docs/ROS_INTERFACES.md#dialogtask-goal) describes the goal, the feedback and
-the result, and [INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-strategy) has goals for every
+the result, and
+[INTEGRATING.md](docs/INTEGRATING.md#goals-for-every-dialogue-behavior) has goals for every
 dialogue behavior. The transcripts are written to `/tmp/dialog_conversations.log`
 (`conversation_log_path`).
 

@@ -1,10 +1,9 @@
 # Adding a dialogue behavior
 
 This page explains how to add a dialogue behavior (a conversation strategy) without changing the
-existing code.
-A dialogue behavior is a Behavior Tree that holds the control (its phases, counters and limits),
-the skills of the interaction intelligence that it asks (the narrow questions to the LLM and the
-operations on its data), and an entry in the catalog. The skills are loaded from your own Python
+existing code. A dialogue behavior is a Behavior Tree that holds the control (its phases, counters
+and limits), the skills of the interaction intelligence that it asks (the narrow questions to the
+LLM and the operations on its data), and an entry in the catalog. The skills are loaded from your own Python
 module, the tree from your own package, and the catalog and the runtime are configuration files
 ([CONFIGURATION.md](CONFIGURATION.md#configuration-files)).
 
@@ -13,7 +12,8 @@ answers.
 
 ## 1. The skills
 
-A Python module (in your own ament_python package) registers the strategy's mode and its skills:
+A Python module (in your own ament_python package) registers the dialogue behavior's mode and its
+skills:
 
 ```python
 # my_survey/skills.py
@@ -25,7 +25,7 @@ from interaction_intelligence.utils import parse_loose_json
 
 def _init(env: SkillEnv, state: dict) -> None:
     """Called by `begin`: prepare the state from the request; raise ValueError if it lacks
-    what the strategy needs."""
+    what the dialogue behavior needs."""
     for resource in state["resources"]:
         items = parse_loose_json(resource["content"])
         if isinstance(items, list) and items:
@@ -107,9 +107,11 @@ The `DialogueMode` tells the system:
 | `init` | Prepare the state from the request (called by `begin`) |
 | `phase`, `data` | The phase and the data of the conversation (the feedback and the result) |
 | `succeeded` | Whether it succeeded (used when there is no `outcome`) |
-| `outcome` | `(outcome, reason)` when the strategy itself ended the conversation: `completed`, `partial` (an element left unfinished; the reason says which) or `failed` |
+| `outcome` | `(outcome, reason)` when the dialogue behavior itself ended the conversation: `completed`, `partial` (an element left unfinished; the reason says which) or `failed` |
 | `strict_cancel` | Whether a cancel request must be explicit (e.g. while the user answers a closed-choice question) |
 | `silence_grace` | Seconds the user may stay silent on the current element without being prompted (e.g. a procedure step that takes time; 0 by default) ([silence](behaviors/silence.md)) |
+| `on_cancel` | Optional: the closing line when the user confirms a cancellation and the dialogue behavior has something to give for what was done (the role play: its evaluation); `""` for the generic closing. The outcome stays `cancelled` |
+| `on_finished` | Optional: the closing line when the user, asked whether they want to stop, says instead that they have finished (grounded question answering). It records the normal end, with the dialogue behavior's own outcome |
 
 The shared endings (`cancelled`, `user_silent`, `breakdown`, `turn_limit`, `error`) are decided by
 the shared subtrees, not by `outcome` ([Endings and outcome](behaviors/endings.md)).
@@ -196,7 +198,7 @@ mechanism ([docs/behaviors](behaviors/README.md)):
   `filler_after_s` ([Conversational fillers](behaviors/fillers.md));
 - `TurnLimit`, `ListenToUser`, `UserSilent` and `CancelCheck` handle the turn limit, the
   silences and the spoken cancellation;
-- `CountProgress` after the strategy's turn, and `NoProgress` as the condition of an
+- `CountProgress` after the dialogue behavior's turn, and `NoProgress` as the condition of an
   `IfThenElse` in every branch of a turn without progress (then: the recovery; else:
   `EndDialogue` with `reason="breakdown"`), give the exit on a communication breakdown;
 - `Conclude` says the closing line if the conversation ended on a failure, and asks the
@@ -204,8 +206,8 @@ mechanism ([docs/behaviors](behaviors/README.md)):
 
 Every branch that ends the conversation by itself sets `done := true` after a reply that closes
 it (here the last answer's "Thank you, that is all."), so that no conversation ends in silence.
-The nodes available are `AskIntelligence`, `Speak`, `Listen` and `WithFillers` (their ports are in the
-`TreeNodesModel` of `common.xml`) and the BehaviorTree.CPP built-ins. The blackboard keys the
+The nodes available are `AskIntelligence`, `Speak`, `Listen` and `WithFillers` (their ports are
+in the `TreeNodesModel` of `common.xml`) and the BehaviorTree.CPP built-ins. The blackboard keys the
 orchestrator writes (the request, the limits, the counters) are listed in
 [ARCHITECTURE.md](ARCHITECTURE.md#the-blackboard).
 

@@ -29,15 +29,16 @@ From a robot behavior, send a goal to the action `/dialog/execute_task`
 
 - `task_description` says what the conversation is for, in natural language, with any useful
   context ("You are a care robot. Register the patient for the physiotherapy session").
-- `dialog_mode` names the strategy; left empty, the system chooses
+- `dialog_mode` names the dialogue behavior; left empty, the system chooses
   ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)).
 - `frame_schema_json`, `initial_frame_json`, `resources_json`, `domain` and `skip_intro` are
-  optional; what each strategy needs in `resources_json` is on its page
+  optional; what each dialogue behavior needs in `resources_json` is on its page
   ([docs/behaviors](behaviors/README.md)).
 - The limits `max_turns`, `max_silence` (seconds) and `max_stalled` (turns in a row without
   progress) are optional: leave them at `USE_DEFAULT` / `USE_DEFAULT_SECONDS` to use the system's
   values, set `UNLIMITED` (0) to remove one, or give the value the task needs (e.g. a longer
-  `max_silence` for a task in which the user must look something up).
+  `max_silence` for a task in which the user must look something up). The other limits and
+  settings of the shared mechanisms travel in the goal in the same way.
 
 The result says how the conversation ended (`outcome`; `success` is true only for `completed`),
 its data (`final_frame_json`, also when it did not complete), why it did not complete
@@ -94,7 +95,7 @@ any other capability; behavior_architecture's runners already put the `rclcpp::N
 `ExecuteDialog` needs on the blackboard. Since the interaction system is itself built on
 behavior_architecture, both can run in the same robot, each with its own `mission_executor`.
 
-## Goals for every strategy
+## Goals for every dialogue behavior
 
 **Slot filling** collects data and confirms it:
 
@@ -162,7 +163,7 @@ ros2 action send_goal /dialog/execute_task ros2_dialog_interfaces/action/DialogT
     resources_json: '[{\"name\": \"instrument\", \"description\": \"survey\", \"content\": \"{\\\"options\\\": [\\\"Not at all\\\", \\\"A little\\\", \\\"Quite\\\", \\\"Very much\\\"], \\\"items\\\": [\\\"I enjoyed the visit\\\", \\\"I would recommend the museum\\\"]}\"}]'}"
 ```
 
-Without `dialog_mode`, the system offers slot filling, explanation and every strategy whose
+Without `dialog_mode`, the system offers slot filling, explanation and every dialogue behavior whose
 needs the resources provide (a question bank, steps, a scene, plain-text material, an
 instrument), and the LLM chooses among them from the task
 ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)).

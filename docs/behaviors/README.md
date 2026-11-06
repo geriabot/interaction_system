@@ -28,9 +28,9 @@ a closing line and an outcome with its reason, returned in the `DialogTask` resu
 
 The limits of a conversation are parameters of the orchestrator
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_orchestrator)), and a request can set its own
-`max_turns`, `max_silence` and `max_stalled`
-([ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). Reaching the turn limit and a failure
-of the system end the conversation in the same way in every behavior
+(`max_turns`, `max_silence`, `max_stalled`, `max_attempts`, `max_off_task`, `wait_timeout`, the
+fillers and the time budgets; [ROS_INTERFACES.md](../ROS_INTERFACES.md#dialogtask-goal)). Reaching
+the turn limit and a failure of the system end the conversation in the same way in every behavior
 ([Endings and outcome](endings.md)).
 
 ## How to read the figures
