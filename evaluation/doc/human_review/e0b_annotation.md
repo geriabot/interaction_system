@@ -185,6 +185,56 @@ python3 evaluation/panels/review_panel.py annotate --annotator "Your Name" --she
 
 When you finish, send the coordinator the files listed on the final screen.
 
+## Annotating through the repository
+
+When the annotator works on their own computer and the files travel through the repository, the
+sheet is in `evaluation/annotation/e0b/`, one file per language (`sheet_b_en.csv`,
+`sheet_b_es.csv`). Only the sheet of that annotator is in the repository; the other annotator's
+sheet, the key of the sample and the judges' labels are not, and are added only when both
+annotators have finished.
+
+1. Get the repository with its submodules, or update it if you have it. `evaluation/` is a private
+   submodule (`geriabot/interaction_system_eval`): your GitHub account needs access to it.
+
+   ```sh
+   git clone --recurse-submodules git@github.com:geriabot/interaction_system.git
+   cd interaction_system/evaluation && git switch main && cd ..
+   ```
+
+   If you already have it: `git pull && git submodule update --init`, then
+   `cd evaluation && git switch main && git pull && cd ..`. Python 3.10 or newer is enough: no ROS,
+   no pixi, no other package.
+2. From the root of the repository, open the English sheet:
+
+   ```sh
+   python3 evaluation/panels/review_panel.py annotate --annotator "Annotator B" --csv evaluation/annotation/e0b/sheet_b_en.csv
+   ```
+
+   The evaluation will be published with the work, so the annotator is named after the
+   sheet (`"Annotator B"`), not by their name, which the progress file would publish; the coordinator keeps who annotated each
+   sheet. Open the address the terminal shows (`http://localhost:8098` or the number it prints). Do the
+   short practice, then the sheet, in as many sittings as you like: the panel keeps your progress
+   (`sheet_b_en.progress.json`, beside the sheet) and goes on where you left off when you run the
+   same command again.
+3. When the panel shows the final screen, do the same with the Spanish sheet
+   (`--csv evaluation/annotation/e0b/sheet_b_es.csv`).
+4. Send your work back with only your files, and nothing else. The files are in the `evaluation`
+   submodule, so the commit is made there:
+
+   ```sh
+   cd evaluation
+   git add annotation/e0b/sheet_b_en.csv annotation/e0b/sheet_b_en.progress.json \
+           annotation/e0b/sheet_b_es.csv annotation/e0b/sheet_b_es.progress.json
+   git commit -m "E0b: annotation of sheet B"
+   git push
+   ```
+
+   If `git push` is refused because the repository changed meanwhile, run `git pull --rebase` and
+   `git push` again.
+
+The [rules](#rules) hold: work alone, do not open any other
+file of the evaluation, and do not edit the sheet by hand.
+
 ## For the coordinator
 
 ### Prepare
