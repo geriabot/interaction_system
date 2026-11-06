@@ -336,12 +336,14 @@ curl -fsSL https://pixi.sh/install.sh | sh          # once; then open a new term
 pixi global install vcstool                         # once
 
 mkdir -p <workspace>/src && cd <workspace>/src
-git clone https://github.com/geriabot/interaction_system.git
+git clone --recurse-submodules https://github.com/geriabot/interaction_system.git
 vcs import . < interaction_system/thirdparty.repos  # behavior_architecture and simple_hri
 cd ..
 ./src/interaction_system/pixi/setup_workspace.sh    # once: links pixi.toml and pixi.lock here
 pixi run build
 ```
+
+`evaluation/` (the evaluation) and `paper/` are private submodules until the work is published: without access to them the clone reports that it cannot fetch them and the rest is cloned as usual; the build then needs the same `colcon build` command without the two evaluation packages (`interaction_sim interaction_ablations`), since colcon stops at a package it does not find. A clone made before they became submodules is updated with `git pull && git submodule update --init`.
 
 Then, in every terminal where you run the system:
 
