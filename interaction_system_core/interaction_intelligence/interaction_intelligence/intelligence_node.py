@@ -62,6 +62,7 @@ from rclpy.time import Time
 from std_msgs.msg import String
 
 from behavior_architecture.srv import CancelInterpretation, Interpret
+from ros2_llm_interfaces.msg import LlmError
 from interaction_system_interfaces.srv import AskForDialogueBehavior, AskIntelligence
 from interaction_perception_msgs.srv import GetUserState
 
@@ -75,6 +76,11 @@ from .selection import choose_behavior
 from .skills import SkillEnv, SkillInput, get_mode, get_skill
 from .skills.common import parse_resources
 from .utils import clean_user_input
+
+# The interpretation server's reasons for a fallback answer that are failures of the model (not
+# a decline or a cancel), as the error types of /llm/error
+FAILURE_TYPES = {"timeout": "timeout", "budget": "timeout", "model_down": "connection",
+                 "invalid": "api"}
 
 _LOGGERS = (
     "InteractionIntelligence",
@@ -112,6 +118,9 @@ class InteractionIntelligence(Node):
                   or posixpath.join(posixpath.dirname(service), "cancel"))
         self._interpret = self.create_client(Interpret, service, callback_group=self._cb)
         self._cancel = self.create_client(CancelInterpretation, cancel, callback_group=self._cb)
+        # A question the model could not answer, for the operators and the GUI's Monitor: the
+        # dialogue goes on with its fixed fallback, so without this signal the failure is silent
+        self._error_pub = self.create_publisher(LlmError, "/llm/error", 10)
 
         self.create_service(
             AskIntelligence, "/interaction/ask_intelligence", self._on_ask, callback_group=self._cb
@@ -539,6 +548,8 @@ class InteractionIntelligence(Node):
         started = time.monotonic()
         if not self._interpret.wait_for_service(timeout_sec=min(5.0, timeout)):
             self.get_logger().error("The interpretation server is not available.")
+            self._report_error(dialogue_id, "connection",
+                               "The interpretation server is not available.")
             return None
         remaining = max(timeout - (time.monotonic() - started), 0.0)
         try:
@@ -552,13 +563,31 @@ class InteractionIntelligence(Node):
             external_cancel=lambda: dialogue_id in self._finished,
         )
         if response is None:
+            if dialogue_id not in self._finished:
+                self._report_error(dialogue_id, "timeout",
+                                   f"{fields['question']}: no answer in time")
             return None
         if not response.success or response.source == "invalid":
             self.get_logger().error(
                 f"{fields['question']}: no answer from the model "
                 f"({response.fallback_reason or 'malformed request'}): {response.message}")
+            detail = response.message or response.fallback_reason or "malformed request"
+            self._report_error(dialogue_id, "api", f"{fields['question']}: {detail}")
             return None
+        if response.source == "fallback" and response.fallback_reason in FAILURE_TYPES:
+            detail = response.message or response.fallback_reason
+            self._report_error(dialogue_id, FAILURE_TYPES[response.fallback_reason],
+                               f"{fields['question']}: {detail}")
         return answer_text(response.success, response.answer, response.source)
+
+    def _report_error(self, dialogue_id: str, error_type: str, message: str) -> None:
+        """Publish a failed question on /llm/error (best effort: never raises)."""
+        try:
+            self._error_pub.publish(LlmError(
+                provider="interpretation", model="", session_id=dialogue_id, code=0,
+                error_type=error_type, message=message))
+        except Exception as exc:
+            self.get_logger().warning(f"Could not publish the error: {exc}")
 
     def _call_sync(self, client, request, timeout_secs: float,
                    external_cancel: Callable[[], bool] | None = None):

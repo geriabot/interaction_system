@@ -118,6 +118,7 @@ control cycle (the voice and the listening are halted) and returns `canceled` wi
 | `/interaction/user_utterance` | topic `std_msgs/String` | `/interaction_intelligence` | `Listen` | The transcriptions that are not noise |
 | `/interaction/user_turn` | topic `std_msgs/String` | `Listen` | `/interaction_intelligence` (transcript) | The utterances taken as turns |
 | `/interaction/skill_trace` | topic `std_msgs/String` (JSON) | `/interaction_intelligence` | tools, evaluation | Every skill asked, with its timing and its LLM calls (fields below the table) |
+| `/llm/error` | topic `ros2_llm_interfaces/msg/LlmError` | `/interaction_intelligence` | the GUI's Monitor | A question the model could not answer (the interpretation server unavailable, no answer in time, the model down, an invalid answer); the conversation goes on with its fallback |
 | lifecycle services of `/interaction_orchestrator` and the runners | `lifecycle_msgs` | | `mission_executor` | Activation |
 
 The JSON of `/interaction/skill_trace` has `dialogue_id`, `skill`, `label`, `success`, `time_s`,
