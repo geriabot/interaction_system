@@ -6,8 +6,8 @@
 """
 InteractionIntelligence: the node that asks the LLM what the interaction system needs.
 
-The orchestrator asks it which dialogue behavior fits a request; the Behavior Trees ask it
-their skills (understand an utterance, phrase a reply, apply what was understood to the data
+The orchestrator asks it, before any conversation, which dialogue behavior a request needs and
+whether the request carries its material (selection.py); the Behavior Trees ask it their skills (understand an utterance, phrase a reply, apply what was understood to the data
 of the dialogue). It builds each question from the prompt templates, sends it to the LLM
 gateway (ros2_llm_manager, an external service), parses the answer and falls back to a safe
 deterministic answer when the model fails. It keeps no state of the dialogue between calls.
@@ -67,7 +67,7 @@ from .languages import LanguageFileError, UnknownLanguageError, load_language
 from .llm_client import (CallLimits, LLMDialogClient, default_ack_phrases,
                          default_filler_phrases, default_timeout_prompt)
 from .prompt_builder import PromptBuilder
-from .selection import choose_behavior
+from .selection import choice_context, decide_behavior
 from .skills import SkillEnv, SkillInput, get_mode, get_skill
 from .skills.common import parse_resources
 from .utils import clean_user_input
@@ -429,23 +429,26 @@ class InteractionIntelligence(Node):
         resources = parse_resources(req.resources_json)
         selection_id = f"select_{time.monotonic_ns()}"
         try:
-            ctx = DialogContext(
-                resources=[Resource(**r) for r in resources], domain=req.domain
-            )
+            ctx = choice_context(req.domain)
             ctx.update_user_state(self._current_user_state())
-            chosen, offered = choose_behavior(
+            decision = decide_behavior(
                 self._llm_for(selection_id, CallLimits(
                     self._llm_timeout, reasoning_timeout=self._reasoning_timeout)),
-                req.task_description, behaviors, resources, ctx
+                req.task_description, behaviors, resources, ctx, req.dialog_mode
             )
             res.success = True
-            res.behavior_id = chosen
-            res.offered_ids = offered
-            name = next((b["name"] for b in behaviors if b["behavior_id"] == chosen), "none")
-            self._log(f"Dialogue behavior for '{req.task_description[:60]}': {name}")
+            res.behavior_id = decision.behavior_id
+            res.feasible = decision.feasible
+            res.reason = decision.reason
+            name = next(
+                (b["name"] for b in behaviors if b["behavior_id"] == decision.behavior_id), "none")
+            self._log(
+                f"Dialogue behavior for '{req.task_description[:60]}': {name}"
+                + ("" if decision.feasible else f" (not feasible: {decision.reason})"))
         except Exception as exc:
             res.success = False
             res.behavior_id = -1
+            res.feasible = False
             res.message = str(exc)
             self.get_logger().error(f"Choosing the dialogue behavior failed: {exc}")
         finally:

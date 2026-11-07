@@ -73,7 +73,8 @@ public:
         "did not complete"),
       BT::OutputPort<std::string>(
         "outcome", "How it ended: completed, partial, failed, cancelled, user_silent, "
-        "breakdown, turn_limit or error (only completed succeeds)"),
+        "breakdown, turn_limit, error or not_feasible (refused before any conversation; only "
+        "completed succeeds)"),
       BT::OutputPort<std::string>(
         "failure_reason", "Why it did not complete"),
       BT::OutputPort<int>(

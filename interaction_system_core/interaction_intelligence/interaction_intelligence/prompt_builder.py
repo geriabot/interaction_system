@@ -136,8 +136,9 @@ class PromptBuilder:
     def choose_dialogue_behavior(
         self, task: str, behaviors: list[dict], ctx: DialogContext | None = None
     ) -> tuple[str, dict]:
-        """behaviors: the offered ones, {behavior_id, name, explanation}."""
-        ids = [b["behavior_id"] for b in behaviors]
+        """behaviors: the whole catalog, {behavior_id, name, explanation}; -1 answers that
+        none fits the task."""
+        ids = [b["behavior_id"] for b in behaviors] + [-1]
         schema = {
             "type": "object",
             "properties": {"behavior_id": {"type": "integer", "enum": ids}},

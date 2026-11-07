@@ -263,20 +263,15 @@ InteractionOrchestrator::setting_behavior_action()
   const auto goal = goal_handle_->get_goal();
   const std::string mode = trim(goal->dialog_mode);
 
-  // The request names the behavior: no question to the intelligence
-  if (!mode.empty()) {
-    const auto * behavior = behavior_by_mode(mode);
-    if (!behavior) {
-      finish(
-        false, false, "Unknown dialog mode '" + mode + "'. Available: " + available_modes());
-      return;
-    }
-    chosen_behavior_ = behavior->behavior_id;
-    state_ = InteractionState::SETTING_BEHAVIOR_INPUT;
+  // A mode the catalog does not have is a malformed request, not a task that cannot be done
+  if (!mode.empty() && !behavior_by_mode(mode)) {
+    finish(false, false, "Unknown dialog mode '" + mode + "'. Available: " + available_modes());
     return;
   }
 
-  // The intelligence chooses among the behaviors whose needs the request provides
+  // The intelligence decides: the behavior the task needs (the named one, or chosen by the LLM
+  // over the whole catalog) and whether the request carries its material. Asked also when the
+  // request names the behavior, so that the material is checked by the same code in both cases
   if (!behavior_request_sent_) {
     if (!behavior_client_->service_is_ready()) {
       if (std::chrono::steady_clock::now() > deadline_) {
@@ -288,6 +283,7 @@ InteractionOrchestrator::setting_behavior_action()
     request->task_description = goal->task_description;
     request->domain = goal->domain;
     request->resources_json = goal->resources_json;
+    request->dialog_mode = mode;
     for (const auto & [id, behavior] : catalog_) {
       interaction_system_interfaces::msg::DialogueBehaviorDetails details;
       details.behavior_id = static_cast<int8_t>(behavior.behavior_id);
@@ -312,14 +308,22 @@ InteractionOrchestrator::setting_behavior_action()
     return;
   }
   const int chosen = response->behavior_id;
-  const auto offered = std::find(
-    response->offered_ids.begin(), response->offered_ids.end(), chosen);
-  if (chosen < 0 || offered == response->offered_ids.end() || !catalog_.count(chosen)) {
-    finish(false, false, "No dialogue behavior fits the request");
+  // Not feasible: no behavior fits the task, or the request lacks its material. The request
+  // ends before any conversation, with the reason
+  if (chosen < 0 || !response->feasible) {
+    finish(
+      false, false,
+      response->reason.empty() ? "No dialogue behavior fits the task" : response->reason,
+      DialogTask::Result::OUTCOME_NOT_FEASIBLE);
+    return;
+  }
+  if (!catalog_.count(chosen)) {
+    finish(false, false, "Choosing the dialogue behavior failed: unknown behavior " +
+      std::to_string(chosen));
     return;
   }
   chosen_behavior_ = chosen;
-  RCLCPP_INFO(get_logger(), "Dialogue behavior chosen: %s", catalog_[chosen].name.c_str());
+  RCLCPP_INFO(get_logger(), "Dialogue behavior: %s", catalog_[chosen].name.c_str());
   state_ = InteractionState::SETTING_BEHAVIOR_INPUT;
 }
 
@@ -537,7 +541,10 @@ InteractionOrchestrator::finish(
 {
   deactivate_all_runners();
 
-  const int turns = bb<int>("turns", 0);
+  // Before ACTING the blackboard still holds the previous dialogue: a request that ends there
+  // (not feasible, a malformed request, the intelligence missing) had no turns and no data
+  const bool started = state_ == InteractionState::ACTING;
+  const int turns = started ? bb<int>("turns", 0) : 0;
   auto result = std::make_shared<DialogTask::Result>();
   result->success = success;
   if (canceled) {
@@ -548,7 +555,7 @@ InteractionOrchestrator::finish(
     result->outcome = success ?
       DialogTask::Result::OUTCOME_COMPLETED : DialogTask::Result::OUTCOME_ERROR;
   }
-  result->final_frame_json = bb<std::string>("data", "{}");
+  result->final_frame_json = started ? bb<std::string>("data", "{}") : "{}";
   result->failure_reason = failure_reason;
   result->total_turns = turns;
 
@@ -573,7 +580,7 @@ InteractionOrchestrator::finish(
     auto request = std::make_shared<AskIntelligence::Request>();
     request->dialogue_id = dialogue_id_;
     request->skill = "finish";
-    request->state = bb<std::string>("dialogue", "");
+    request->state = started ? bb<std::string>("dialogue", "") : "";
     request->option = result->outcome + (failure_reason.empty() ? "" : " (" + failure_reason + ")");
     request->number = turns;
     intelligence_client_->async_send_request(request);

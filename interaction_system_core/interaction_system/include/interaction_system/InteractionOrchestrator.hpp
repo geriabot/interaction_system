@@ -33,7 +33,7 @@ const char INTERACTION_ORCHESTRATOR_NAME[] = "interaction_orchestrator";
 enum class InteractionState
 {
   IDLE = 0,
-  SETTING_BEHAVIOR_ACTION = 1,  // choosing the dialogue behavior
+  SETTING_BEHAVIOR_ACTION = 1,  // deciding the dialogue behavior and whether the request can run
   SETTING_BEHAVIOR_INPUT = 2,   // writing the request to the blackboard
   ACTING = 3                    // the behavior's tree runs the dialogue
 };
@@ -52,9 +52,12 @@ struct DialogueBehavior
 /**
  * The coordination layer of the interaction system: the finite state machine of a request.
  *
- * Serves the /dialog/execute_task action. A request names its dialogue behavior with
- * dialog_mode, or the interaction intelligence chooses it among those of the catalog whose
- * needs the request provides. The request is written to the blackboard and the behavior's
+ * Serves the /dialog/execute_task action. The first phase of every request decides its dialogue
+ * behavior, before any conversation: the request names it with dialog_mode, or the interaction
+ * intelligence chooses it from the task description over the whole catalog (or none fits); then
+ * the intelligence checks, without the LLM, that the request carries the material of that
+ * behavior. A request that no behavior fits, or that lacks the material, ends there (outcome
+ * not_feasible, no turns). Otherwise the request is written to the blackboard and the behavior's
  * runner (its Behavior Tree) is activated; the orchestrator sends the feedback of the dialogue
  * on each utterance and the result when the tree ends. One dialogue at a time: another
  * request is rejected while one runs (one microphone, one voice). Publishes

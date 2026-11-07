@@ -34,7 +34,9 @@
                                 # many seconds; 0 = none after the ladder
 
     # The catalog of dialogue behaviors. A request names one with dialog_mode, or the
-    # intelligence chooses among those whose needs the request provides
+    # intelligence chooses the one the task needs, over the whole catalog (or none). Either way
+    # the request must provide its needs (what the intelligence's selection.py checks:
+    # question_bank, steps, scene, material, instrument, reference); otherwise it is not feasible
     dialogue_behaviors:
       behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire"]
 
@@ -42,28 +44,28 @@
         behavior_id: 0
         mode: "slot_filling"
         needs: [""]
-        explanation: "The robot COLLECTS specific structured data from the user (form filling, order taking, registration, booking, reservation, preference selection), then reads it back for confirmation. Also when the task combines informing the user with collecting a preference or decision: the collection is primary."
+        explanation: "The robot COLLECTS specific structured data from the user (form filling, order taking, registration, booking, reservation, preference selection) that it must record, then reads it back for confirmation. Not for the items of a questionnaire or a rating scale. Also when the task combines informing the user with collecting a preference or decision: the collection is primary."
         node_name: "interaction_slot_filling"  # As in interaction_behaviors_config.yaml
 
       Explanation:
         behavior_id: 1
         mode: "explanation"
-        needs: [""]
-        explanation: "The robot EXPLAINS something to the user and checks that they understood it, answering their questions and explaining again if needed. Only when there is nothing to collect from the user."
+        needs: ["reference"]  # a reference text or the key points (what is explained)
+        explanation: "The robot EXPLAINS something to the user (what it is, or how to do it before the user does it) and checks that they understood it, answering their questions and explaining again if needed. Only when there is nothing to collect from the user."
         node_name: "interaction_explanation"
 
       Quiz:
         behavior_id: 2
         mode: "quiz"
         needs: ["question_bank"]
-        explanation: "The robot ASKS the questions of a question bank, grades each answer of the user and gives the score: tests, quizzes, cognitive exercises, trivia."
+        explanation: "The robot ASKS the questions of a question bank, grades each answer of the user and gives the score: questions with a right answer, to check what the user knows or remembers (tests, quizzes, cognitive exercises, trivia)."
         node_name: "interaction_quiz"
 
       Procedure:
         behavior_id: 3
         mode: "procedure"
         needs: ["steps"]
-        explanation: "The robot GUIDES the user step by step through a procedure while the user does it, helping when the user is stuck and repeating, going back or skipping steps on request: exercises, assembly, recipes, checklists."
+        explanation: "The robot GUIDES the user step by step through a procedure while the user does it (not steps the robot carries out by itself), helping when the user is stuck and repeating, going back or skipping steps on request: physical exercises, assembly, recipes, checklists."
         node_name: "interaction_procedure"
 
       Roleplay:
@@ -84,5 +86,5 @@
         behavior_id: 6
         mode: "questionnaire"
         needs: ["instrument"]
-        explanation: "The robot ADMINISTERS a standardized questionnaire or survey (a satisfaction survey, a rating scale, a validated instrument): it reads each item and its answer options as written, records the option the user chooses and computes the score."
+        explanation: "The robot ADMINISTERS a standardized questionnaire or survey (a satisfaction survey, a rating scale, screening questions, a validated instrument): it reads each item and its answer options as written, records the option the user chooses and computes the score."
         node_name: "interaction_questionnaire"

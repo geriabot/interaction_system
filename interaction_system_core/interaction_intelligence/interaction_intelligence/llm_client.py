@@ -315,18 +315,22 @@ class LLMDialogClient:
 
     def choose_dialogue_behavior(
         self, task: str, behaviors: list[dict], ctx: DialogContext | None = None
-    ) -> int:
-        """The id of the behavior chosen among `behaviors`, or -1 if the LLM gave none."""
+    ) -> int | None:
+        """The id of the behavior of `behaviors` the task needs, -1 when the model answers that
+        none fits, or None when the model gives no valid answer."""
         prompt, schema = self._pb.choose_dialogue_behavior(task, behaviors, ctx)
+        valid = {b["behavior_id"] for b in behaviors} | {-1}
         for _ in range(self.MAX_RETRIES):
             raw = self._call_nlu(prompt, schema, max_tokens=50)
             if not raw:
                 continue
             try:
-                return int(parse_loose_json(raw).get("behavior_id", -1))
+                chosen = int(parse_loose_json(raw).get("behavior_id"))
             except Exception:
                 continue
-        return -1
+            if chosen in valid:
+                return chosen
+        return None
 
     def create_frame(self, task: str, ctx: DialogContext | None = None) -> DialogFrame | None:
         prompt, schema = self._pb.create_frame(task, ctx)

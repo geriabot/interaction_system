@@ -22,7 +22,8 @@ critical points (outcome failed).
 
 The key points come in the resources of the request (a resource whose content is a JSON object
 with "key_points": strings, critical, or {"point", "critical"}); without them the LLM lists them
-from the task and the material when the dialogue begins. State keys: "history", "attempts",
+from the task and the reference text (the plain-text resources) when the dialogue begins. A
+request with neither is refused before the dialogue (selection.py: the need "reference"). State keys: "history", "attempts",
 "key_points" ([{point, critical, status: pending | correct | incomplete | wrong, said}]),
 "check_mode"
 (teach_back or targeted), "last_check" (the last check asked), "self_reported" (the user said they

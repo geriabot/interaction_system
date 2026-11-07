@@ -51,19 +51,29 @@ interaction_intelligence:
         {{"mode": "slot_filling" | "explanation"}}
 
       choose_dialogue_behavior: |
-        Choose how the robot must hold the conversation to carry out the task.
+        Decide whether, in this phase of the task, the robot holds one of the
+        conversations below with the user, and which one. First ask yourself what the
+        robot itself does in this phase; if that is not one of these conversations,
+        answer -1.
 
         Dialogue behaviors:
         {behaviors}
+        - -1: None. The phase needs none of these conversations: the robot acts on its
+          own (moving, handling or operating something), even if it says something
+          meanwhile; or it only speaks, without expecting answers; or it talks with
+          the user with no goal of the list.
 
-        Choose by what the task asks the robot to achieve with the user. When the task
-        combines informing the user with collecting a preference or decision, the
-        collection is primary.
+        Choose by what the task asks the robot to achieve with the user in this phase.
+        When the task combines informing the user with collecting a preference or
+        decision, the collection is primary. Choose what the task needs even if the
+        material that behavior uses is not mentioned: whether it was provided is
+        checked later. A behavior fits only if the robot holds that conversation with
+        the user in this phase; otherwise answer -1.
 
         TASK: "{task}"
 
         Output strict JSON only:
-        {{"behavior_id": <the number of the behavior>}}
+        {{"behavior_id": <the number of the behavior, or -1 if none fits>}}
 
       create_frame: |
         Design the minimum slot schema needed to complete the task.

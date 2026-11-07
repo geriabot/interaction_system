@@ -6,6 +6,9 @@ float64 USE_DEFAULT_SECONDS = -1.0
 int32   UNLIMITED = 0
 
 string task_description    # Natural-language description of what the robot must accomplish.
+                            # When dialog_mode is empty, the dialogue behavior is chosen
+                            # from it: describe the phase the robot is in, e.g. "Gait speed
+                            # test: explaining the walk to the participant".
 string frame_schema_json   # Optional. JSON slot schema {"slots":[{name,type,...}]}.
                             # When non-empty, bypasses LLM frame generation entirely.
                             # Slot fields: name (str), type (str|int|float|bool|list_str),
@@ -21,10 +24,13 @@ string initial_frame_json  # Optional JSON object pre-filling slot values (resum
                             # Applied after frame creation, whether from schema or LLM.
 string dialog_mode          # "slot_filling" | "explanation" | "quiz" | "procedure" |
                             # "roleplay" | "grounded_qa" | "questionnaire". Empty: the system
-                            # chooses among the behaviors whose needs the request provides
-                            # (quiz: a question bank; procedure: the steps; roleplay: the
-                            # scene; grounded_qa: a plain-text material; questionnaire: an
-                            # instrument), from the task description.
+                            # chooses the behavior the task description needs, over the
+                            # whole catalog, or none. Named or chosen, the request must carry
+                            # that behavior's material (explanation: a reference text or key
+                            # points; quiz: a question bank; procedure: the steps; roleplay:
+                            # the scene; grounded_qa: a plain-text material; questionnaire: an
+                            # instrument; slot_filling: none). Otherwise the request ends
+                            # before any conversation with outcome not_feasible.
 string resources_json       # JSON array of {name, description, content} objects.
                             # For quiz mode, the first parseable resource must be a JSON
                             # list of {"question","answer"} objects.
@@ -36,8 +42,10 @@ string resources_json       # JSON array of {name, description, content} objects
                             # For roleplay mode, the first parseable resource must be a
                             # JSON object {"scenario","role","criteria":[...]} with
                             # optional "user_goal" and "max_exchanges".
-                            # For explanation, optionally a resource whose content is
-                            # {"key_points": [...]} (strings, or {"point","critical"}).
+                            # For explanation, the content to explain: a resource whose
+                            # content is {"key_points": [...]} (strings, or
+                            # {"point","critical"}), and/or plain-text resources (the
+                            # reference text the key points are listed from when not given).
                             # For grounded_qa, the plain-text resources are the material the
                             # robot answers from; a resource named "handover" holds the
                             # sentence that offers a person when the answer is not there.
@@ -99,6 +107,9 @@ string OUTCOME_USER_SILENT = "user_silent" # The user stayed silent max_silence 
 string OUTCOME_BREAKDOWN = "breakdown"     # max_stalled user turns in a row without progress
 string OUTCOME_TURN_LIMIT = "turn_limit"   # max_turns reached
 string OUTCOME_ERROR = "error"             # A failure of the system (the LLM, speech, the request)
+string OUTCOME_NOT_FEASIBLE = "not_feasible" # Refused before any conversation (total_turns 0):
+                                           # no dialogue behavior fits the task, or the request
+                                           # lacks the material of the behavior it needs
 bool   success
 string outcome
 string final_frame_json
