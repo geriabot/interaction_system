@@ -24,8 +24,8 @@ the fillers are marked `filler`; the GUI also reads `/robot_utterance`.
 
 | Field | Type | Meaning |
 |---|---|---|
-| `task_description` | `string` | What the robot must accomplish, in natural language. Required |
-| `dialog_mode` | `string` | `slot_filling`, `explanation`, `quiz`, `procedure`, `roleplay`, `grounded_qa` or `questionnaire`; empty: the system chooses ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
+| `task_description` | `string` | What the robot must accomplish, in natural language; without `dialog_mode`, best as the phase the robot is in (e.g. "Gait speed test: explaining the walk to the participant"). Required |
+| `dialog_mode` | `string` | `slot_filling`, `explanation`, `quiz`, `procedure`, `roleplay`, `grounded_qa` or `questionnaire`; empty: the system chooses the one the task needs, or none. Named or chosen, the request must carry its material, or it ends with outcome `not_feasible` ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
 | `frame_schema_json` | `string` | Slot filling: the slot schema ([SLOT_SCHEMA.md](SLOT_SCHEMA.md)); empty: the LLM designs it from the task |
 | `initial_frame_json` | `string` | Slot filling: a JSON object of values that pre-fill the frame (to resume) |
 | `resources_json` | `string` | A JSON array of `{name, description, content}`: reference text for any dialogue behavior, and what each dialogue behavior needs (formats below the table) |
@@ -43,8 +43,8 @@ the fillers are marked `filler`; the GUI also reads `/robot_utterance`.
 | `reply_budget`, `opening_budget` | `float64` | Seconds the intelligence may spend asking the LLM for a reply (the opening) before it answers with the fallbacks ([the wait for the model](behaviors/endings.md#the-wait-for-the-model)); `0`: no budget. Default `-1.0` |
 | `acknowledgments` | `int32` | Whether the robot prefixes its replies with a short acknowledgment ("Noted."): `1` yes, `0` no. Default `-1` |
 
-The `resources_json` entries follow the format on the page of each dialogue behavior: the key
-points ([explanation](behaviors/explanation.md#what-it-needs-and-returns)), the question bank
+The `resources_json` entries follow the format on the page of each dialogue behavior: the
+reference text or the key points ([explanation](behaviors/explanation.md#what-it-needs-and-returns)), the question bank
 ([quiz](behaviors/quiz.md#what-it-needs-and-returns)), the steps
 ([procedure](behaviors/procedure.md#what-it-needs-and-returns)), the scene
 ([role play](behaviors/roleplay.md#what-it-needs-and-returns)), the material and the `handover`
@@ -93,7 +93,10 @@ filler, which is not an utterance of the conversation):
 The outcome constants are `DialogTask.Result.OUTCOME_COMPLETED` (`completed`),
 `OUTCOME_PARTIAL` (`partial`), `OUTCOME_FAILED` (`failed`), `OUTCOME_CANCELLED` (`cancelled`),
 `OUTCOME_USER_SILENT` (`user_silent`), `OUTCOME_BREAKDOWN` (`breakdown`), `OUTCOME_TURN_LIMIT`
-(`turn_limit`) and `OUTCOME_ERROR` (`error`).
+(`turn_limit`), `OUTCOME_ERROR` (`error`) and `OUTCOME_NOT_FEASIBLE` (`not_feasible`: refused
+before any conversation, with `total_turns` 0, because no dialogue behavior fits the task or the
+request lacks the material of the one it needs;
+[ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)).
 
 The goal is rejected when another conversation is being prepared or run. A goal that completes
 succeeds, and any other outcome aborts it. Canceling the goal stops the conversation within a
@@ -104,7 +107,7 @@ control cycle (the voice and the listening are halted) and returns `canceled` wi
 
 | Field | Type | Meaning |
 |---|---|---|
-| `status` | `int8` | `IDLE` (0), `REASONING` (1: choosing the dialogue behavior, preparing the request), `RUNNING` (2), `FAILED` (3: the last conversation did not succeed; until the next request) |
+| `status` | `int8` | `IDLE` (0), `REASONING` (1: deciding the dialogue behavior and checking the material, preparing the request), `RUNNING` (2), `FAILED` (3: the last conversation did not succeed; until the next request) |
 | `behavior` | `string` | The running dialogue behavior (e.g. `SlotFilling`), while `RUNNING` |
 | `phase` | `string` | Its phase, while `RUNNING` |
 
@@ -112,7 +115,7 @@ control cycle (the voice and the listening are halted) and returns `canceled` wi
 
 | Name | Type | Server / publisher | Client / subscriber | Purpose |
 |---|---|---|---|---|
-| `/interaction/ask_intelligence_for_behavior` | service `interaction_system_interfaces/srv/AskForDialogueBehavior` | `/interaction_intelligence` | `/interaction_orchestrator` | Which dialogue behavior fits a request without `dialog_mode` |
+| `/interaction/ask_intelligence_for_behavior` | service `interaction_system_interfaces/srv/AskForDialogueBehavior` | `/interaction_intelligence` | `/interaction_orchestrator` | The first phase of every request: the dialogue behavior it needs (chosen by the LLM when `dialog_mode` is empty) and whether it carries its material |
 | `/interaction/ask_intelligence` | service `interaction_system_interfaces/srv/AskIntelligence` | `/interaction_intelligence` | `AskIntelligence` (tree node), `/interaction_orchestrator` (`finish`) | One skill of a tree |
 | `/behavior_status` | topic `std_msgs/String` | behavior runners | `/interaction_orchestrator` | `RUNNING`, `SUCCESS`, `FAILURE`, `DEACTIVATED` |
 | `/interaction/user_utterance` | topic `std_msgs/String` | `/interaction_intelligence` | `Listen` | The transcriptions that are not noise |
@@ -124,10 +127,12 @@ The JSON of `/interaction/skill_trace` has `dialogue_id`, `skill`, `label`, `suc
 `message`, `budget_s` (the time budget the skill got; 0: none), `llm_timeouts` (its calls to the
 LLM that timed out) and `llm_skipped` (its calls that were not made).
 
-`AskForDialogueBehavior`: request `task_description`, `domain`, `resources_json`, `behaviors`
-(`DialogueBehaviorDetails[]`: `behavior_id` (`int8`), `name`, `mode`, `explanation`, `needs`);
-response `success`, `message`, `behavior_id` (`int8`, `-1` if none can be offered),
-`offered_ids` (`int8[]`).
+`AskForDialogueBehavior`: request `task_description`, `domain`, `resources_json`, `dialog_mode`
+(empty: choose it from the task), `behaviors` (`DialogueBehaviorDetails[]`: `behavior_id`
+(`int8`), `name`, `mode`, `explanation`, `needs`); response `success` (`false`: the decision
+itself failed, with `message`), `message`, `behavior_id` (`int8`: the behavior the task needs, `-1`
+if none fits), `feasible` (`bool`: the request carries its material) and `reason` (why it is not
+feasible, the `failure_reason` of the request).
 
 `AskIntelligence`: request `dialogue_id`, `skill`, `state` (JSON), `user_text`, `option`, `number`
 (`int32`), `args` (JSON), `budget_s` (`float64`); response `success`, `message`, `state`, `reply`,

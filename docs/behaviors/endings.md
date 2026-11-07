@@ -30,7 +30,8 @@ Shared by every dialogue behavior: subtrees `Begin`, `TurnLimit`, `EndDialogue` 
 | `breakdown` | The tree: `max_stalled` turns in a row without progress ([Recovery and breakdown](no_progress.md)) | Fixed, `close_breakdown` | `Communication breakdown: max_stalled turns in a row without progress` |
 | `breakdown` (off task) | The tree of grounded QA: `max_off_task` requests in a row outside the task ([grounded QA](grounded_qa.md)) | Fixed, `close_off_task` | `Off-task: max_off_task requests outside the task in a row` |
 | `turn_limit` | The tree: `max_turns` reached | Fixed, `close_turn_limit` | `Max turns reached` |
-| `error` | A failure of the system, or a request that cannot run | Fixed, `close_error` ("I'm sorry, something went wrong and I have to stop here."), when the conversation had started | What failed (below) |
+| `error` | A failure of the system, or a malformed request | Fixed, `close_error` ("I'm sorry, something went wrong and I have to stop here."), when the conversation had started | What failed (below) |
+| `not_feasible` | The first phase of the request, before any conversation: no dialogue behavior fits the task, or the request lacks the material of the one it needs ([the choice of the dialogue behavior](../ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) | None: nothing is said, and `total_turns` is 0 | `No dialogue behavior fits the task`, or `The task needs <behavior>, but no <material> was provided` (e.g. `The task needs a procedure, but no steps were provided`) |
 
 A spoken cancellation is confirmed by the user, or is immediate when the user says an exact stop
 command while the LLM is down. Its closing line is generated (e.g. "Alright, cancelled."), or the
@@ -54,13 +55,12 @@ The `failure_reason` of an `error` says what failed:
 | `failure_reason` | Cause |
 |---|---|
 | `Unknown dialog mode 'x'. Available: [...]` | `dialog_mode` is not in the catalog |
-| `No dialogue behavior fits the request` | Without `dialog_mode`, no behavior of the catalog is offered for the request |
-| `Choosing the dialogue behavior failed: ...` | The service that chooses the behavior failed |
+| `Choosing the dialogue behavior failed: ...` | The service that decides the behavior failed, or the LLM gave no valid answer |
 | `The interaction intelligence is not available` | `/interaction/ask_intelligence_for_behavior` did not appear in time |
 | `The behavior runner <runner> could not be activated` | The runner did not reach the active state (e.g. an invalid tree) |
 | `The interaction system was deactivated` | The orchestrator was deactivated during the conversation |
 | `The interaction intelligence did not answer (<skill>)` | A skill did not answer within `intelligence_timeout`: the intelligence itself failed to answer (an LLM that does not answer is bounded earlier, [below](#the-wait-for-the-model)) |
-| The error of a skill | A skill could not run: e.g. the request lacks what the behavior needs (`The quiz requires ...`), or the slot schema is invalid |
+| The error of a skill | A skill could not run: e.g. the material parses but the behavior cannot use it (a role-play scene without criteria), or the slot schema is invalid |
 
 ## How it works
 

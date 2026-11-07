@@ -90,7 +90,7 @@ when, the exact commands).
 ```sh
 python3 scripts/control_panel.py                                                    # all of it from a web page: http://localhost:8095 (#tests: try a scenario as the user)
 python offline/run_eval.py --config offline/config_ollama.yaml --benchmark all       # the questions to the LLM, offline
-python offline/benchmarks/bench_behavior_choice.py --config offline/config_ollama.yaml   # the choice of the dialogue behavior
+python offline/benchmarks/bench_behavior_choice.py --split test --model <model>        # S1: the choice of the dialogue behavior
 python offline/run_models.py --config offline/config_ollama.yaml --models <m1>,<m2> --reps 3
 python scripts/run_experiment.py experiments/<experiment>.yaml --dry-run           # list the dialogues
 python scripts/run_experiment.py experiments/<experiment>.yaml                     # run them

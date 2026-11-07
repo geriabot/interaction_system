@@ -243,8 +243,9 @@ The fields are described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-d
 
 A request with `dialog_mode: survey` runs it; without `dialog_mode`, the intelligence may choose it
 from its explanation. A new kind of *need* (a resource the behavior requires) is added in
-`interaction_intelligence/selection.py` (`NEEDS`); a need that is not there is never provided, so
-the behavior is then never offered.
+`interaction_intelligence/selection.py` (`NEEDS`, and the wording of the refusal in `MISSING`); a
+need that is not there is never provided, so every request for the behavior is then refused as
+`not_feasible`.
 
 ## 4. Test it
 

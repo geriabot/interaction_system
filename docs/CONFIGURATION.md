@@ -69,7 +69,7 @@ The parameters `dialogue_behaviors.*` of `/interaction_orchestrator`, in
 | `behaviors` | string[] | The dialogue behaviors to load; each has a block with its name |
 | `<Behavior>.behavior_id` | int | Its unique id, which is also the answer to the choice of the dialogue behavior (`0` to `6` ship) |
 | `<Behavior>.mode` | string | The `dialog_mode` it implements |
-| `<Behavior>.needs` | string[] | What the request must provide for the dialogue behavior to be offered: `question_bank`, `steps`, `scene`, `material`, `instrument`; `[""]` for none ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
+| `<Behavior>.needs` | string[] | What the request must provide for the dialogue behavior to run: `reference`, `question_bank`, `steps`, `scene`, `material`, `instrument`; `[""]` for none. A request without it, whether it names the behavior or the LLM chose it, ends with outcome `not_feasible` ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
 | `<Behavior>.explanation` | string | What the LLM reads to choose it |
 | `<Behavior>.node_name` | string | Its runner, as named in `interaction_behaviors_config.yaml` |
 

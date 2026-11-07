@@ -52,8 +52,9 @@ Two tools test the system without audio and without a model:
 |---|---|
 | The goal is rejected | Another conversation is running (one at a time). Cancel it, or wait for its result |
 | The goal is aborted at once with `Unknown dialog mode` | `dialog_mode` is not a mode of the catalog. Leave it empty to let the system choose |
-| Aborted with `No dialogue behavior fits the request` | No dialogue behavior of the catalog is offered for the request (none whose needs it provides) |
-| Aborted with a message about the resources (`The quiz requires...`) | The dialogue behavior needs a resource that the request does not have or that does not parse ([ROS_INTERFACES.md](ROS_INTERFACES.md#dialogtask-goal)) |
+| Aborted with outcome `not_feasible` and `No dialogue behavior fits the task` | Without `dialog_mode`, the LLM found no dialogue behavior of the catalog for the task. Describe the task as the phase the robot is in, or name the behavior with `dialog_mode` |
+| Aborted with outcome `not_feasible` and `The task needs ..., but no ... was provided` | The request lacks the material of its dialogue behavior, or it does not parse (e.g. an explanation without a reference text or key points, a quiz without a question bank) ([ROS_INTERFACES.md](ROS_INTERFACES.md#dialogtask-goal)) |
+| Aborted with a message about the resources (`The quiz requires...`) | The material parses but the behavior cannot use it (e.g. a role-play scene without criteria) ([ROS_INTERFACES.md](ROS_INTERFACES.md#dialogtask-goal)) |
 | Aborted with `The interaction intelligence is not available` | `/interaction_intelligence` is not running (check its log: a malformed prompt template stops it at startup) |
 | The robot speaks the fixed phrases ("Could you repeat that?") | The LLM does not answer: Ollama is not reachable, the model is not pulled (`ollama.model`), or the calls time out (`llm_timeout`, or the reply's `reply_budget`). See [below](#notes-on-the-common-problems) |
 | `LLM Manager connection failed` | `/llm_manager_node` is not running or its provider did not connect at startup |

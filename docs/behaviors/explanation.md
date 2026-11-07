@@ -26,9 +26,9 @@ question about the most important point.
 
 ## What it needs and returns
 
-- **Needs:** nothing. A reference text in the resources is optional (the explanation and the
-  answers use it as the ground truth). The key points can come in a resource whose content is
-  a JSON object:
+- **Needs:** the content to explain: a reference text (a plain-text resource), the key points, or
+  both. The explanation and the answers use the reference text as the ground truth. The key
+  points can come in a resource whose content is a JSON object:
 
   ```json
   {"key_points": ["No solid food from midnight",
@@ -39,7 +39,12 @@ question about the most important point.
   A string is a critical point; `{"point", "critical"}` marks it explicitly. Critical points are
   the ones the person needs to do the task safely and correctly (times, doses, places, what must
   not be done). Without key points in the request, the LLM lists them from the task and the
-  material when the dialogue begins (`extract_key_points`).
+  reference text when the dialogue begins (`extract_key_points`). A request with neither is
+  refused before any conversation (outcome `not_feasible`, "The task needs an explanation, but no
+  reference text or key points were provided"): the robot checks the user's understanding against
+  the key points, so they must come from content that someone provided, not from what the model
+  believes about the topic
+  ([the choice of the dialogue behavior](../ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)).
 - **Returns:** `{attempts, completed, checks, self_reported, key_points}`, with the status of
   each key point (`correct`, `incomplete` with the part said, `wrong` with what the person said,
   or `pending`) and whether the

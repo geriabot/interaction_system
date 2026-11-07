@@ -55,10 +55,12 @@ The system rests on five design decisions.
    Every conversation ends with a closing line and an outcome with its reason, so the requesting
    behavior knows why it ended and can act on it. A new dialogue behavior is a new tree and its
    questions, not a change to the system.
-4. The dialogue behavior is chosen from the task. A request can name its dialogue behavior, or
-   the system chooses one. A dialogue behavior is offered only if the request provides what it
-   needs (a quiz needs a question bank, a procedure its steps, a role play its scene), and the LLM
-   chooses among the offered ones from their descriptions.
+4. The dialogue behavior is decided before any conversation. A request can name its dialogue
+   behavior, or the LLM chooses, over the whole catalog, the one that the task needs, or none.
+   Then a deterministic check verifies that the request carries the material of that behavior
+   (a quiz needs a question bank, a procedure its steps, a role play its scene, an explanation
+   its reference text or key points). A request that no behavior fits, or that lacks the
+   material, is refused with its reason (outcome `not_feasible`) before the robot says anything.
 5. Dialogue is a robot capability. The interaction system has the same layers as the robot's
    behavioral control architecture: a finite state machine (FSM) coordinates each request and
    activates the tree of the chosen dialogue behavior. The rest of the robot sees one action and
@@ -86,13 +88,13 @@ inside:
 | Deliberation, planning | Decide the goals, when needed | Not needed: the goal comes in the request |
 | Coordination | An FSM, the task plan | An FSM, the life of a request: `IDLE`, `SETTING_BEHAVIOR_ACTION`, `SETTING_BEHAVIOR_INPUT`, `ACTING` |
 | Action | The behavior forest | One tree per dialogue behavior; only the chosen one is active |
-| Interpretation (beside the layers) | Optional, consulted by any layer | Consulted by the FSM (which dialogue behavior) and by the trees (understanding, phrasing); it asks the LLM and controls nothing |
+| Interpretation (beside the layers) | Optional, consulted by any layer | Consulted by the FSM (which dialogue behavior, and whether the request can run) and by the trees (understanding, phrasing); it asks the LLM and controls nothing |
 | Capabilities | Perception, navigation, attention, interaction... | User perception (lip activity for barge-in, experimental; emotion, preliminary) and, planned, emotion expression; speaking and listening go through speech (simple_hri), a low-level sub-capability that the trees call |
 | External service | — | The LLM, behind interpretation; it can be replaced |
 
 Beside the layers, and outside their chain of control, is **interpretation**. It turns what
 arrives without structure (the request in natural language, a line of the user) into a validated
-answer to a narrow question that a layer asks: which dialogue behavior fits the request, which
+answer to a narrow question that a layer asks: which dialogue behavior the request needs, which
 values of the form a line gives, whether a line asks to stop. It commands nothing and keeps no
 state; what to do with each answer is always decided by the coordination or the action layer.
 Behind it is the LLM, which can be replaced.
@@ -118,17 +120,19 @@ the reasons for it.
 
 The figure follows one request, and one user turn of the conversation that it starts. The columns
 are the states of the FSM. Question 1 chooses the dialogue behavior when the request does not name
-it and more than one fits; question 2 is the narrow question that the dialogue behavior asks on
-each turn.
+it; question 2 is the narrow question that the dialogue behavior asks on each turn.
 
 1. Request. A robot behavior sends a `DialogTask` goal to `/dialog/execute_task` with the task.
    The goal can also carry the dialogue behavior (`dialog_mode`), a slot schema, values to resume
-   from, resources (a question bank, the steps, a scene, reference text), a domain and the limits
+   from, resources (a question bank, the steps, a scene, reference text, key points), a domain and the limits
    of the conversation (turns, seconds of silence, turns without progress). One conversation runs
    at a time; another request is rejected while one runs.
-2. Choice of the dialogue behavior. If the request names it, it is used. Otherwise the
-   intelligence offers the dialogue behaviors whose needs the request provides and, if there is
-   more than one, the LLM chooses.
+2. Choice of the dialogue behavior, the first phase of every request. If the request names it,
+   it is used; otherwise the LLM chooses, over the whole catalog, the one that the task
+   description needs, or none. Then, in both cases, the intelligence checks without the LLM that
+   the request carries the material of that behavior. If no behavior fits, or the material is
+   missing, the request ends here: `success` false, outcome `not_feasible`, no turns, and a
+   `failure_reason` such as "The task needs a procedure, but no steps were provided".
 3. Request to the blackboard. The FSM writes the request, the limits and the counters to the
    blackboard of the behaviors and activates the tree of the dialogue behavior.
 4. Conversation. The tree opens the conversation (`begin` builds the dialogue state from the
@@ -149,7 +153,7 @@ and the trees are in `interaction_system_behaviors/behavior_tree_xml`.
 | Dialogue behavior (`dialog_mode`) | The robot... | Needs from the request | Returns |
 |---|---|---|---|
 | `slot_filling` | Asks for the data it needs, accepts corrections, validates types, allowed values, ranges and conditions, then reads the data back for confirmation | Nothing (the schema is optional) | The frame as JSON |
-| `explanation` | Explains a topic, checks with teach-back that it was understood, and answers questions | Nothing (reference text and key points are optional) | The status of each key point |
+| `explanation` | Explains a topic, checks with teach-back that it was understood, and answers questions | A reference text, the key points, or both | The status of each key point |
 | `quiz` | Asks the questions of a bank, grades each spoken answer and gives the score | A question bank | The result of each question |
 | `procedure` | Guides through steps, helps when the user is stuck, and repeats, goes back or skips on request | The steps | The outcome of each step |
 | `roleplay` | Plays a character in a scene, gives hints on request, then scores the user on each criterion of a rubric (1 to 5) | The scene and its rubric | The scores and the feedback |
@@ -179,9 +183,11 @@ Barge-in uses the lip activity that user perception provides; without it, the ro
 each utterance.
 
 The result's `outcome` is one of `completed` (the only success), `partial`, `failed`,
-`cancelled`, `user_silent`, `breakdown`, `turn_limit` and `error`, and `failure_reason` says why.
-`partial` means that the conversation ended normally with an element left unfinished: an
-unanswered slot or question, or a skipped or stuck step. Each dialogue behavior and mechanism is
+`cancelled`, `user_silent`, `breakdown`, `turn_limit`, `error` and `not_feasible`, and
+`failure_reason` says why. `partial` means that the conversation ended normally with an element
+left unfinished: an unanswered slot or question, or a skipped or stuck step. `not_feasible` means
+that no conversation took place: no dialogue behavior fits the task, or the request lacks the
+material of the one it needs. Each dialogue behavior and mechanism is
 described in detail, with its Behavior Tree, in [docs/behaviors](docs/behaviors/README.md).
 
 ## Using it from robot behaviors

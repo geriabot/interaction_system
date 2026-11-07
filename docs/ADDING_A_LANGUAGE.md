@@ -154,7 +154,7 @@ its code, `en`, `es`, and the experiment files by its name):
 
 | Piece | Where | What a new language needs |
 |---|---|---|
-| Scenarios | `experiments/scenarios/*_es.yaml` (the Spanish versions: same ids, same events, translated text and values) | A translated file per scenario set to run (e.g. `e4_fr.yaml`); events that rely on an exact stop command use one of the new language |
+| Scenarios | `experiments/scenarios/*_es.yaml` (the Spanish versions: same ids, same events, translated text and values) | A translated file per scenario set to run (e.g. `e3_fr.yaml`); events that rely on an exact stop command use one of the new language |
 | Experiments | `experiments/*.yaml`, key `language:` (the name) | Experiment files that point to those scenarios |
 | Personas | `experiments/personas.yaml` | Nothing: the descriptions are in English and the simulated user speaks the experiment's language |
 | Phase 1 datasets of the model choice | `offline/datasets/phase_a/*.json` (each case has `language`: `en`/`es`), `offline/datasets/wording.json` | At least 25 cases per dataset in the new language, traps included; the code in `offline/core/phase_a.py` (`LANGUAGES`) and `offline/core/dataset_check.py` (the list of languages) |

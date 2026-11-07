@@ -86,9 +86,9 @@ The fields of the goal, the feedback and the result are listed in
 stateDiagram-v2
   [*] --> IDLE
   IDLE --> SETTING_BEHAVIOR_ACTION: a DialogTask goal
-  SETTING_BEHAVIOR_ACTION --> SETTING_BEHAVIOR_INPUT: dialog_mode names a behavior of the catalog
-  SETTING_BEHAVIOR_ACTION --> SETTING_BEHAVIOR_INPUT: the intelligence chose one of the offered behaviors
-  SETTING_BEHAVIOR_ACTION --> IDLE: unknown mode, nothing offered, intelligence not available, or canceled (aborted / canceled)
+  SETTING_BEHAVIOR_ACTION --> SETTING_BEHAVIOR_INPUT: the behavior (named, or chosen from the task) and its material in the request
+  SETTING_BEHAVIOR_ACTION --> IDLE: no behavior fits, or its material is missing (aborted, not_feasible)
+  SETTING_BEHAVIOR_ACTION --> IDLE: unknown mode, intelligence not available or failed, or canceled (aborted / canceled)
   SETTING_BEHAVIOR_INPUT --> ACTING: the request, the limits and the counters in the blackboard
   ACTING --> IDLE: the tree ends (succeeded or aborted)
   ACTING --> IDLE: the goal is canceled (canceled)
@@ -98,7 +98,7 @@ stateDiagram-v2
 | State | What it does | Published as |
 |---|---|---|
 | `IDLE` | Nothing active; takes the next accepted goal | `IDLE`, or `FAILED` after a conversation that did not succeed |
-| `SETTING_BEHAVIOR_ACTION` | Chooses the dialogue behavior: the one `dialog_mode` names, or the one the intelligence chooses ([below](#the-choice-of-the-dialogue-behavior)) | `REASONING` |
+| `SETTING_BEHAVIOR_ACTION` | The first phase of every request: decides the dialogue behavior (the one `dialog_mode` names, or the one the intelligence chooses from the task) and, through the intelligence, checks that the request carries its material; otherwise ends the request with outcome `not_feasible` ([below](#the-choice-of-the-dialogue-behavior)) | `REASONING` |
 | `SETTING_BEHAVIOR_INPUT` | Writes the request (as JSON), the limits and the counters to the blackboard | `REASONING` |
 | `ACTING` | Activates the runner of the dialogue behavior, sends the feedback on every new utterance, and sends the result when the tree ends | `RUNNING` (with the dialogue behavior and its phase) |
 
@@ -145,14 +145,15 @@ or in VS Code with the Draw.io Integration extension, and save it to the same fi
 
 | Block | Node | What it does |
 |---|---|---|
-| Interaction system (`interaction_system`) | `/interaction_orchestrator` | Serves `/dialog/execute_task`, chooses the dialogue behavior, activates its runner, writes the request to the blackboard, sends the feedback and the result, and publishes `/interaction_system/status` |
+| Interaction system (`interaction_system`) | `/interaction_orchestrator` | Serves `/dialog/execute_task`, decides the dialogue behavior (or refuses the request), activates its runner, writes the request to the blackboard, sends the feedback and the result, and publishes `/interaction_system/status` |
 | | Behavior runners (`/interaction_slot_filling`, `/interaction_explanation`, `/interaction_quiz`, `/interaction_procedure`, `/interaction_roleplay`, `/interaction_grounded_qa`, `/interaction_questionnaire`) | One lifecycle node per dialogue behavior, which ticks its Behavior Tree while active |
-| | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior with the LLM, applies what was understood to the state of the conversation, and writes the transcript |
+| | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior with the LLM, checks the material of the request, applies what was understood to the state of the conversation, and writes the transcript |
 | LLM gateway (`ros2_llm_manager`) | `/llm_manager_node` | One inference action and session services in front of Ollama and cloud providers |
 | Speech sub-capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and speaks on request ([SPEECH.md](SPEECH.md)) |
 | Perception (`interaction_perception`) | `/user_state_server`, `/emotion_detector`, `/lip_activity_detector_node` | The state of the user, served on request; the lip activity as a stream for barge-in |
 
-The orchestrator chooses the dialogue behavior from the request or by asking the intelligence. It
+The orchestrator decides the dialogue behavior by asking the intelligence, which uses the one the
+request names or chooses it from the task, and checks the material of the request. It
 is a plugin of `behavior_architecture` (`mission_executor`), loaded from
 `libinteraction_system.so`. Each behavior runner ticks its tree every 50 ms
 (`control_period_ms`) and reports the result on `/behavior_status`; the tree nodes
@@ -167,9 +168,9 @@ also cleans the transcriptions (drops noise).
 ![The interaction pipeline: the processing of one request, and one user turn of the conversation](../media/interaction_pipeline.drawio.svg)
 
 The columns of the figure are the states of the state machine of `/interaction_orchestrator`. In
-`SETTING_BEHAVIOR_ACTION`, unless the request names its dialogue behavior, the orchestrator asks
-the intelligence. The intelligence filters the catalog by the material of the request and, if
-more than one dialogue behavior passes, asks question 1
+`SETTING_BEHAVIOR_ACTION`, the orchestrator asks the intelligence. Unless the request names its
+dialogue behavior, the intelligence asks question 1 over the whole catalog; then it checks,
+without the LLM, that the request carries the material of that behavior
 ([below](#the-choice-of-the-dialogue-behavior)). Everything in `ACTING` is the Behavior Tree of
 the chosen dialogue behavior: one user turn per cycle, with question 2, the narrow question of
 the dialogue behavior, at its center.
@@ -317,7 +318,7 @@ A filler is not a turn and changes no counter ([Conversational fillers](behavior
 | [Standardized questionnaire](behaviors/questionnaire.md) (`questionnaire`) | Reads an instrument word for word, maps each answer to an option and computes the score in code |
 
 The outcomes (`completed`, `partial`, `failed`, `cancelled`, `user_silent`, `breakdown`,
-`turn_limit`, `error`) are defined in [Endings and outcome](behaviors/endings.md).
+`turn_limit`, `error`, `not_feasible`) are defined in [Endings and outcome](behaviors/endings.md).
 
 ### The blackboard
 
@@ -351,31 +352,54 @@ changes, and the cancellation and the silence prompts resume with `last_utteranc
 
 ## The choice of the dialogue behavior
 
-A request without `dialog_mode` is resolved by `/interaction/ask_intelligence_for_behavior`. The
-orchestrator sends its catalog, with the explanation and the needs of each dialogue behavior. The
-intelligence offers only the dialogue behaviors whose needs the request provides, which it
-decides by parsing the resources, without the LLM (`interaction_intelligence/selection.py`):
+The first phase of every request decides its dialogue behavior, before the robot says anything.
+The orchestrator asks `/interaction/ask_intelligence_for_behavior`, with the task, the domain,
+the resources, the `dialog_mode` of the request and its catalog (the explanation and the needs
+of each dialogue behavior). The intelligence decides in two steps
+(`interaction_intelligence/selection.py`):
 
-| Need | The request provides it when its resources have |
-|---|---|
-| `question_bank` | A JSON list of `{question, answer}` (quiz) |
-| `steps` | A JSON list of steps (procedure) |
-| `scene` | A JSON object with `scenario` and `role` (role play); the scenario names the user in the third person ("The user knocks on..."), never as "you", since the model reads it next to the role it plays |
-| `material` | A resource with plain text, not JSON and not named `handover` (grounded question answering) |
-| `instrument` | A JSON object with a list `items`, each item with answer options (questionnaire) |
+1. **The behavior the task needs**, only when the request does not name it (`dialog_mode`
+   empty). The LLM reads the task and the explanations of the whole catalog and answers the
+   behavior that the task needs, or that none fits (prompt `choose_dialogue_behavior`). The task
+   is best described as the phase the robot is in ("Gait speed test: explaining the walk to the
+   participant"). The question carries the domain but not the resources: the LLM decides what
+   the task needs, not what can run with what was attached.
+2. **The check of the material**, always, also when the request names the behavior. The
+   intelligence parses the resources, without the LLM, and checks that they provide every need of
+   that behavior:
 
-Slot filling and explanation need nothing, so they are always offered. If one dialogue behavior
-is offered, it is chosen; if several are, the LLM chooses among them from their explanations
-(prompt `choose_dialogue_behavior`). An answer that is not an offered dialogue behavior falls
-back to slot filling (or to the first offered one). If none is offered, the request is aborted.
-The orchestrator only accepts an offered dialogue behavior. The catalog is configured as
-described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behaviors).
+| Need | Of | The request provides it when its resources have |
+|---|---|---|
+| `reference` | Explanation | A plain-text resource (the reference text the key points are listed from), or a JSON object with a list `key_points` |
+| `question_bank` | Quiz | A JSON list of `{question, answer}` |
+| `steps` | Procedure | A JSON list of steps |
+| `scene` | Role play | A JSON object with `scenario` and `role`; the scenario names the user in the third person ("The user knocks on..."), never as "you", since the model reads it next to the role it plays |
+| `material` | Grounded question answering | A resource with plain text, not JSON and not named `handover` |
+| `instrument` | Questionnaire | A JSON object with a list `items`, each item with answer options |
+
+Only slot filling needs nothing: its schema, when not given, is designed from the task. An
+explanation needs its content because the robot verifies the user's understanding against key
+points: without a reference text or the key points, the model would explain and check what it
+believes the topic to be, which nobody has reviewed.
+
+If the LLM answers that no behavior fits, or the request lacks a need of the behavior, the
+request is **not feasible**: it ends at once with `success` false, outcome `not_feasible`,
+`total_turns` 0 and a `failure_reason` that says which: "No dialogue behavior fits the task", or
+"The task needs a procedure, but no steps were provided". The behavior that the task needs is
+never replaced by another that happens to run with the resources, because that conversation would
+not do what the requesting behavior asked for; the refusal lets it fix the request instead. If
+the LLM gives no valid answer after its retries, or the service fails, the request ends with
+outcome `error` ("Choosing the dialogue behavior failed: ..."): a failure of the system, not of
+the request. A `dialog_mode` that is not in the catalog is a malformed request (outcome `error`).
+The catalog is configured as described in
+[CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behaviors).
 
 ## The interaction intelligence
 
 `/interaction_intelligence` answers two services:
 
-- `/interaction/ask_intelligence_for_behavior`: the choice above.
+- `/interaction/ask_intelligence_for_behavior`: the choice of the dialogue behavior and the check
+  of the material above.
 - `/interaction/ask_intelligence`: one *skill* of a tree, which is either one narrow question to
   the LLM or one deterministic operation on the data of the conversation. It receives the state
   of the conversation and returns it updated, with the reply, a label, the phase and the data.
