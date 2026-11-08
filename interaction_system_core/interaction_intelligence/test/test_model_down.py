@@ -13,8 +13,8 @@
     to be down, an exact stop command ends the conversation at once, without the confirmation
     question, with the fixed cancel closing;
   - in the role play, a confirmed cancellation closes the practice with the evaluation of what
-    was done when the user said at least one line of the scene (outcome cancelled, the scores in
-    the data); with less, the cancel closing;
+    was done when the user said at least one line of the scene (the outcome is the role play's
+    own, completed); with less, the cancel closing (cancelled);
   - a transcription is noise only when the whole utterance is noise phrases."""
 
 import json
@@ -258,7 +258,8 @@ def test_a_confirmed_cancel_after_a_line_of_the_scene_gives_the_evaluation():
     assert (result.label, result.reply) == ("confirmed", "[feedback user]")
     data = get_mode("roleplay").data(state)
     assert data["ended_by"] == "user" and len(data["scores"]) == 2 and data["average"] == 3
-    assert get_skill("result")(env, state, SkillInput()).label == "cancelled"
+    # Stopping the practice the robot invited the user to finish is its normal end
+    assert get_skill("result")(env, state, SkillInput()).label == "completed"
 
 
 def test_a_confirmed_cancel_before_any_line_is_a_plain_cancel():
@@ -272,6 +273,7 @@ def test_a_confirmed_cancel_before_any_line_is_a_plain_cancel():
 def test_a_cancel_whose_evaluation_fails_says_the_cancel_closing():
     env, state = roleplay(Roleplay(scores=False), lines=2)
     assert confirm_cancel(env, state).reply == "[cancelled]"
+    assert get_skill("result")(env, state, SkillInput()).label == "cancelled"
 
 
 def test_with_the_model_down_a_command_in_the_scene_also_gives_the_evaluation():

@@ -68,14 +68,22 @@ class DialogueMode:
 
     on_cancel(env, state) -> the closing line when the user's cancellation is confirmed and
     the strategy has something to give for what was done (the role play: its evaluation), or
-    "" for the generic cancel closing. The outcome stays "cancelled"; what the strategy
-    recorded is in the data.
+    "" for the generic cancel closing. With its own closing the stop is a normal end and the
+    outcome is the strategy's own (decided by the author, 2026-11-08); with the generic one it
+    is "cancelled".
 
     on_finished(env, state) -> the strategy's own closing line when the user, asked whether
     they want to stop, says instead that they have finished (nothing more to ask or add), for
     the strategies whose end the user decides (grounded question answering); it records the
     normal end (the outcome is the strategy's own, e.g. completed). None: the turn goes to the
-    strategy like any other (decided by the author, 2026-10-31: finishing is not cancelling)."""
+    strategy like any other (decided by the author, 2026-10-31: finishing is not cancelling).
+
+    on_silent_end(env, state) -> the strategy's own closing line when the user's silence would
+    end the dialogue (max_silent_waits) and the strategy can close what was done as a normal
+    end (the role play: its evaluation, once the user said a line of the scene), or "" for the
+    ending user_silent. When it closes, the outcome is the strategy's own (E1 development,
+    2026-11-07: a user who leaves the practice in silence after the scene still gets, and the
+    record still keeps, its evaluation, as after a cancellation)."""
 
     init: Callable[[SkillEnv, dict], None]
     phase: Callable[[dict], str]
@@ -86,6 +94,7 @@ class DialogueMode:
     silence_grace: Callable[[dict], float] = lambda state: 0.0
     on_cancel: Callable[[SkillEnv, dict], str] | None = None
     on_finished: Callable[[SkillEnv, dict], str] | None = None
+    on_silent_end: Callable[[SkillEnv, dict], str] | None = None
 
 
 Skill = Callable[[SkillEnv, dict, SkillInput], SkillResult]

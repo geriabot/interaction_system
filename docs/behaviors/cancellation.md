@@ -118,8 +118,10 @@ builds a client per request. A request without a call to the LLM leaves the valu
 When a behavior has something to give for what was done, a cancellation, whether confirmed or
 immediate, closes with the behavior's own closing instead of the generic one
 (`DialogueMode.on_cancel`): the role play gives the evaluation of the exchanges so far when the
-user said at least one line of the scene ([Role play](roleplay.md)). The outcome stays
-`cancelled`; what the behavior recorded (the scores) is in `final_frame_json`.
+user said at least one line of the scene ([Role play](roleplay.md)). The stop is then the end
+the user chose, not an abandoned task: the outcome is the behavior's own (`completed` when every
+criterion was scored), and what it recorded (the scores) is in `final_frame_json`. With the
+generic closing the outcome is `cancelled`.
 
 The requesting behavior can also cancel the goal of `/dialog/execute_task`: the conversation stops
 at once, without a closing line, with the outcome `cancelled` and the reason `Cancelled`.

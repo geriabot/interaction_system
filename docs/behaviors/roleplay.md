@@ -20,8 +20,9 @@ skills `interaction_intelligence/skills/roleplay.py`. [Index](README.md).
 - **Outcome:** `completed` once the scene was evaluated on every criterion, whether the user, the
   scene or the limit ended it; `partial` when the evaluation could not score some criterion (the
   LLM failed), with `Criteria not scored: ...` as the reason and the scores it did give, as other
-  behaviors do when an element is left unfinished. A cancellation gives `cancelled`, and a
-  breakdown is not evaluated ([below](#edge-cases)).
+  behaviors do when an element is left unfinished. A cancellation closed with the evaluation
+  is a normal end; one before any line of the scene gives `cancelled`, and a breakdown is not
+  evaluated ([below](#edge-cases)).
 
 The scene is hidden from the context of the other questions, so the character never sees the
 rubric.
@@ -63,7 +64,7 @@ a hint and to finish.
 |---|---|
 | Silence | [Silence](silence.md) |
 | `max_stalled` requests to repeat or turns not understood in a row | [Breakdown](no_progress.md): closing line, outcome `breakdown`, no evaluation |
-| "Stop" (spoken cancellation) | [Spoken cancellation](cancellation.md); then the evaluation of the exchanges so far, outcome `cancelled` (below) |
+| "Stop" (spoken cancellation) | [Spoken cancellation](cancellation.md); then the evaluation of the exchanges so far, with the scene's outcome (below) |
 | The LLM fails to classify a turn | `unclear`: the robot asks to repeat, a turn without progress; a sustained failure ends as a breakdown |
 | The LLM fails to evaluate the scene (some or every criterion) | The feedback says the scores obtained (or only the fixed closing phrase); outcome `partial`, `Criteria not scored: ...` |
 | The LLM fails to generate a line | A fixed phrase of the language (the character's: "Go on, I'm listening.") |
@@ -74,10 +75,13 @@ Once a cancellation is confirmed, or made at once because the LLM is down, stopp
 lead to the same place, so that a user who stops still gets the evaluation of what was done. When
 the user has said at least one line of the scene, the robot steps out of the role and evaluates
 the exchanges so far: the feedback and the scores, with `ended_by` `user`, go in
-`final_frame_json`, and the outcome is `cancelled` by the user. Before the first line there is
-nothing to score, so the robot says the cancel closing; it does the same when no criterion can be
-scored because the LLM fails. "I want to stop the practice" said inside the scene is `end`: the
-scene is evaluated and the outcome is the scene's. The introduction tells the user how to finish
+`final_frame_json`, and the outcome is the scene's (`completed` when every criterion was
+scored): the introduction invites the user to finish whenever they want, so stopping is a normal
+end. Before the first line there is nothing to score, so the robot says the cancel closing and the
+outcome is `cancelled`; it does the same when no criterion can be scored because the LLM fails.
+"I want to stop the practice" is usually taken by the spoken cancellation, which runs before the
+scene reads the turn, and confirmed; when the scene reads it, it is `end`, without the question.
+Either way the scene is evaluated and the outcome is the scene's. The introduction tells the user how to finish
 the practice, and its fixed English phrase says "finish" rather than "stop", which is an exact stop
 command, so that ending the practice leads straight to the evaluation without the confirmation
 question.

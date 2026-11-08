@@ -66,8 +66,10 @@
   <!-- The user said nothing for wait_timeout seconds. Silence is not abandonment: the robot
        says it is waiting, repeats what it had asked, or stays quiet (the silence skill
        chooses, with fixed phrases); a step that takes time (wait) is not counted. After
-       max_silent_waits waits in a row (max_silence seconds; 0 = never) the robot says the
-       closing line and the dialogue ends (user_silent) -->
+       max_silent_waits waits in a row (max_silence seconds; 0 = never) the strategy may close
+       the dialogue itself (silent_end: the role play gives its evaluation once the user said a
+       line of the scene; its own outcome); otherwise the robot says the closing line and the
+       dialogue ends (user_silent) -->
   <BehaviorTree ID="UserSilent">
     <Sequence>
       <AskIntelligence skill="silence" number="{timeouts}" option="{last_utterance}"/>
@@ -82,7 +84,14 @@
               <Speak text="{reply}"/>
             </Fallback>
             <Sequence>
-              <SubTree ID="EndDialogue" _autoremap="true" reason="user_silent"/>
+              <Fallback>
+                <Sequence>
+                  <AskIntelligence skill="silent_end"/>
+                  <ScriptCondition code="label == 'closed'"/>
+                  <Script code="done := true"/>
+                </Sequence>
+                <SubTree ID="EndDialogue" _autoremap="true" reason="user_silent"/>
+              </Fallback>
               <Speak text="{reply}"/>
             </Sequence>
           </IfThenElse>

@@ -110,7 +110,7 @@ The `DialogueMode` tells the system:
 | `outcome` | `(outcome, reason)` when the dialogue behavior itself ended the conversation: `completed`, `partial` (an element left unfinished; the reason says which) or `failed` |
 | `strict_cancel` | Whether a cancel request must be explicit (e.g. while the user answers a closed-choice question) |
 | `silence_grace` | Seconds the user may stay silent on the current element without being prompted (e.g. a procedure step that takes time; 0 by default) ([silence](behaviors/silence.md)) |
-| `on_cancel` | Optional: the closing line when the user confirms a cancellation and the dialogue behavior has something to give for what was done (the role play: its evaluation); `""` for the generic closing. The outcome stays `cancelled` |
+| `on_cancel` | Optional: the closing line when the user confirms a cancellation and the dialogue behavior has something to give for what was done (the role play: its evaluation); `""` for the generic closing. With its own closing the outcome is the dialogue behavior's own; with the generic one, `cancelled` |
 | `on_finished` | Optional: the closing line when the user, asked whether they want to stop, says instead that they have finished (grounded question answering). It records the normal end, with the dialogue behavior's own outcome |
 
 The shared endings (`cancelled`, `user_silent`, `breakdown`, `turn_limit`, `error`) are decided by

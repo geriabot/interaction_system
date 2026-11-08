@@ -161,9 +161,15 @@ def user_finished(env: SkillEnv, state: dict) -> SkillResult | None:
 
 
 def _strategy_closing(env: SkillEnv, state: dict) -> str:
-    """The strategy's own closing for a confirmed cancellation ("": the generic one)."""
+    """The strategy's own closing for a confirmed cancellation ("": the generic one). When the
+    strategy closes what was done (the role play: its evaluation), the stop is the end the user
+    chose, not an abandoned task: the outcome is the strategy's own, not "cancelled" (decided by
+    the author, 2026-11-08: the role play invites the user to finish whenever they want)."""
     hook = get_mode(state["mode"]).on_cancel
-    return (hook(env, state) or "") if hook else ""
+    closing = (hook(env, state) or "") if hook else ""
+    if closing:
+        state["user_cancelled"] = False
+    return closing
 
 
 @skill("silence")
@@ -190,6 +196,17 @@ def silence(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     if inp.number % 2 == 0:
         return SkillResult(label="quiet")
     return SkillResult(reply=env.llm.phrase("silence_ready"), label="prompt")
+
+
+@skill("silent_end")
+def silent_end(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
+    """The user's silence is about to end the dialogue (max_silent_waits): the strategy may
+    close it itself (DialogueMode.on_silent_end). label: "closed" (reply: the strategy's own
+    closing; the outcome is the strategy's) or "none" (the tree ends the dialogue as
+    user_silent)."""
+    hook = get_mode(state["mode"]).on_silent_end
+    reply = (hook(env, state) or "") if hook else ""
+    return SkillResult(reply=reply, label="closed" if reply else "none")
 
 
 @skill("fillers")
