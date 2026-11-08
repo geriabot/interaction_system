@@ -174,7 +174,7 @@ def answer(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
                                    "answer": ""})
         return _say(state, f"{env.llm.phrase('qa_decline')} {more}", "declined")
     if kind == "answerable" and result["answer"] and env.llm.verify_answer(
-            result["answer"], state["material"], env.ctx):
+            result["answer"], state["material"], env.ctx, question=inp.user_text):
         state["last_answer"] = result["answer"]
         state["questions"].append({"question": inp.user_text, "resolution": "answered",
                                    "answer": result["answer"]})

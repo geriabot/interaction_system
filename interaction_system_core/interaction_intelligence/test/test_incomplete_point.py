@@ -114,10 +114,17 @@ def test_the_repair_keeps_the_right_part_and_speaks_to_the_person():
     prompt = pb.repair_explanation("Laundrette", [
         {"point": POINTS[1], "status": "incomplete", "said": "I pay 5 euros"},
         {"point": POINTS[2], "status": "wrong", "said": "60 degrees"}], [POINTS[0]])
-    assert 'said only this part, which is right: "I pay 5 euros"' in prompt
+    assert 'said only this part, right but INCOMPLETE: "I pay 5 euros"' in prompt
     assert 'the person said instead: "60 degrees"' in prompt
     assert "Speak TO the person" in prompt and "never say it was wrong" in prompt
 
+
+
+def test_a_point_not_mentioned_is_never_attributed_to_the_person():
+    prompt = PromptBuilder(prompts()).repair_explanation("Laundrette", [
+        {"point": POINTS[0], "status": "pending", "said": ""}], [])
+    assert f"- {POINTS[0]} (the person did not mention it)" in prompt
+    assert "never say that they said it or got it right" in " ".join(prompt.split())
 
 def test_the_verification_accepts_an_immediate_inference():
     text = prompts()["verify_answer"]

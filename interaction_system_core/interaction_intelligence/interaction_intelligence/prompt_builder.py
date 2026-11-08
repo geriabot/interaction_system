@@ -39,7 +39,8 @@ _log = logging.getLogger("PromptBuilder")  # TRACE
 _ROLEPLAY_ENDINGS = {
     "user": "the user asked to stop",
     "scene": "the scene reached its natural end",
-    "limit": "the time for the practice ran out",
+    "limit": "the practice reached the length planned for it (say nothing of a timer)",
+    "silence": "the user stopped answering after their last line of the scene",
 }
 
 
@@ -264,7 +265,12 @@ class PromptBuilder:
         slot_type = frame.slot_type(slot)
         line = f"  - {slot} (type: {slot_type})"
         if slot_type == "list_str":
-            line += " [LIST — accumulates across turns; user may add, remove with _remove, or replace with _replace]"
+            # The list says what it holds, as the other slots do: without it the model took the
+            # options the robot had just listed for values already given and extracted nothing
+            held = ("empty — needs a value" if frame.is_empty(slot)
+                    else f"currently holds {frame.current_value(slot)!r}")
+            line += (f" [LIST — {held}; accumulates across turns; user may add, remove with "
+                     f"_remove, or replace with _replace]")
         elif not frame.is_empty(slot):
             line += f" [ALREADY FILLED with {frame.current_value(slot)!r} — extract only if the user is explicitly correcting it]"
         else:
@@ -528,7 +534,8 @@ class PromptBuilder:
                   "required": ["finished"]}
         return self._t("verify_finished", user_text=user_text, robot=robot), schema
 
-    def verify_answer(self, answer: str, material: list[dict]) -> tuple[str, dict]:
+    def verify_answer(self, answer: str, material: list[dict],
+                      question: str = "") -> tuple[str, dict]:
         schema = {
             "type": "object",
             "properties": {"supported": {"type": "boolean"},
@@ -536,7 +543,7 @@ class PromptBuilder:
             "required": ["supported", "unsupported"],
         }
         return self._t("verify_answer", material=self._fmt_material(material),
-                       answer=answer), schema
+                       question=question or "(not given)", answer=answer), schema
 
     def detect_wrong_check(self, user_text: str, answer: str) -> tuple[str, dict]:
         schema = {"type": "object", "properties": {"wrong_check": {"type": "boolean"}},
@@ -551,11 +558,13 @@ class PromptBuilder:
             "properties": {
                 "kind": {"type": "string", "enum": [
                     "option", "ambiguous", "meaning", "refuses", "repeat", "other"]},
-                "option": {"type": "integer"},
+                "option": {"type": "string"},
             },
             "required": ["kind", "option"],
         }
-        opts = "\n".join(f"{i + 1}. {o}" for i, o in enumerate(options))
+        # The options by their label, not numbered: a number before a scale of numbers ("5. 4")
+        # was answered with the label for the position (E1 development, 2026-11-07)
+        opts = "\n".join(f"- {o}" for o in options)
         return self._t("map_scale_answer", item=item, options=opts, user_text=user_text), schema
 
     # ==== PROCEDURE ====
@@ -833,13 +842,18 @@ class PromptBuilder:
 
 
 def _said_note(point: dict) -> str:
-    """What the person said of a key point to explain again: a wrong content (to correct) or
-    a right but incomplete part (to confirm and complete, never to correct)."""
+    """What the person said of a key point to explain again: a wrong content (to correct), a
+    right but incomplete part (to confirm and complete, never to correct), or nothing (to
+    explain, never to attribute to them)."""
     said = point.get("said")
     if not said:
-        return ""
+        # Without a mark the model took a point the person never mentioned for one they said
+        # ("You said ... that's right"; E1 development, round 3)
+        return " (the person did not mention it)"
     if point.get("status") == "wrong":
         return f" (the person said instead: \"{said}\")"
     if point.get("status") == "incomplete":
-        return f" (the person said only this part, which is right: \"{said}\")"
+        # "Right" alone made the model confirm the point as complete and ask again, so the
+        # person never learnt what was missing
+        return f" (the person said only this part, right but INCOMPLETE: \"{said}\")"
     return ""

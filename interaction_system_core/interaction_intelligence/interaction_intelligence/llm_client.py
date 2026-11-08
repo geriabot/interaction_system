@@ -735,11 +735,14 @@ class LLMDialogClient:
         return False
 
     def verify_answer(
-        self, answer: str, material: list[dict], ctx: DialogContext | None = None
+        self, answer: str, material: list[dict], ctx: DialogContext | None = None,
+        question: str = "",
     ) -> bool:
-        """Whether every claim of the answer is supported by the material. False if the LLM
-        fails: an answer that cannot be verified is not said."""
-        prompt, schema = self._pb.verify_answer(answer, material)
+        """Whether every claim of the answer is supported by the material, the answer read with
+        the question it answers ("Yes." to "Can I park here overnight?"; without it a short
+        answer could not be verified: E1 development, 2026-11-07). False if the LLM fails: an
+        answer that cannot be verified is not said."""
+        prompt, schema = self._pb.verify_answer(answer, material, question)
         for _ in range(self.MAX_RETRIES):
             raw = self._call_nlu(prompt, schema, max_tokens=200)
             if not raw:
@@ -789,15 +792,27 @@ class LLMDialogClient:
                 continue
             kind = data.get("kind") if data.get("kind") in kinds else "other"
             if kind == "option":
-                try:
-                    index = int(data.get("option")) - 1
-                except (TypeError, ValueError):
-                    return {"kind": "ambiguous", "option": -1}
-                if not 0 <= index < len(options):
+                index = self._scale_option_index(data.get("option"), options)
+                if index is None:
                     return {"kind": "ambiguous", "option": -1}
                 return {"kind": "option", "option": index}
             return {"kind": kind, "option": -1}
         return {"kind": "other", "option": -1}
+
+    @staticmethod
+    def _scale_option_index(chosen, options: list[str]) -> int | None:
+        """The index of the option the model wrote (its label, compared without case,
+        surrounding spaces or final punctuation); None when it matches no option. The options
+        are given by their label, not numbered (E1 development, 2026-11-07): a number is read
+        as a label, never as a position."""
+        def norm(text) -> str:
+            return " ".join(str(text).strip().strip(".!?\"'").lower().split())
+
+        if chosen is None or isinstance(chosen, bool):
+            return None
+        said = norm(chosen)
+        matches = [i for i, o in enumerate(options) if norm(o) == said]
+        return matches[0] if len(matches) == 1 else None
 
     # ==== QUIZ ====
 
@@ -927,6 +942,8 @@ class LLMDialogClient:
         not_done: list[str],
         ctx: DialogContext | None = None,
     ) -> str:
+        """The closing line of a procedure. not_done: how each step not done ended ("skipped",
+        "stuck"), never the step's text, so that the closing gives no instruction."""
         prompt = self._pb.procedure_summary(task, completed, total, "; ".join(not_done), ctx)
         res = self._call_nlg(prompt, max_tokens=80)
         return self._clean(res) or self._fb["procedure_summary"]

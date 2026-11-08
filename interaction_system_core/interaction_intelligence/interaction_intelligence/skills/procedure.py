@@ -175,9 +175,9 @@ def advance(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
             state["task"],
             completed=_count(state, "done"),
             total=len(state["steps"]),
-            not_done=[
-                s["step"] for s, st in zip(state["steps"], state["status"]) if st != "done"
-            ],
+            # How each step not done ended, never its text: with the text the closing told the
+            # user to do it after all, sometimes with details the step does not have
+            not_done=[st for st in state["status"] if st != "done"],
             ctx=env.ctx,
         )
         return _say(state, reply, "finished")
