@@ -12,7 +12,8 @@ Shared by every dialogue behavior: subtree `CancelCheck` of `common.xml`, skill 
 
 ## How it works
 
-Every user turn goes first to `CancelCheck`, before the behavior:
+Every user turn goes first to `CancelCheck`, before the behavior. Its first question is whether
+the user tells of an urgency ([Urgencies](urgencies.md)); then:
 
 1. **Detection.** A local check comes first: an utterance that is exactly one of the stop
    commands of the conversation's language, or one of them repeated, is a cancel request without

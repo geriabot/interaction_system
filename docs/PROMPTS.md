@@ -63,6 +63,7 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `verify_answer` | Understanding | `grounded_qa.answer`: whether every claim of the drafted answer is supported by the material; an answer that is not is replaced by the abstention |
 | `detect_wrong_check` | Understanding | `grounded_qa.answer`: for a turn read as a reaction after an answer from the material, whether it repeats back a value of that answer with a different value; if so, the last answer is said again |
 | `map_scale_answer` | Understanding | `questionnaire.record`: the option the answer clearly chooses, or `ambiguous`, `meaning`, `refuses`, `repeat`, `other`. The items, the options, the clarifications and the closing are read without the LLM |
+| `detect_urgency` | Understanding | `cancel_check`, first on every user turn: whether the user tells of something happening now that needs a person ([Urgencies](behaviors/urgencies.md)) |
 | `detect_cancel_intent`, `classify_cancel_reply` | Understanding | `cancel_check`: the cancel request, and the answer to the confirmation |
 | `ask_cancel_confirmation`, `cancel_confirmed_response` | Generation | `cancel_check`: a short yes/no question whether the user wants to stop, and the closing after a confirmed cancellation |
 

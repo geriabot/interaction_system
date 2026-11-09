@@ -26,6 +26,7 @@ Shared by every dialogue behavior: subtrees `Begin`, `TurnLimit`, `EndDialogue` 
 | `partial` | The behavior: it ended normally, some element left unfinished | The behavior's own | Which elements: `Unanswered slots: ...`, `Steps not done: ...`, and the like |
 | `failed` | The behavior: its goal was not achieved | The behavior's own (e.g. the explanation gives up) | E.g. `Critical points not verified after 3 checks: ...` |
 | `cancelled` | The user (spoken cancellation, below) or the requesting behavior (action cancel) | Generated, or fixed with the LLM down (below); none when the requesting behavior cancels | `Cancelled by the user` / `Cancelled` |
+| `escalated` | An urgency in the user's turn ([Urgencies](urgencies.md)); it wins over any other ending | Fixed, `close_escalated` ("I'm letting someone know right now, so that a person can help you.") | `Urgency, handed over to a person: <what the user said>` |
 | `user_silent` | The tree: `max_silence` reached ([Silence](silence.md)) | Fixed, `close_user_silent` | `The user stayed silent for max_silence seconds` |
 | `breakdown` | The tree: `max_stalled` turns in a row without progress ([Recovery and breakdown](no_progress.md)) | Fixed, `close_breakdown` | `Communication breakdown: max_stalled turns in a row without progress` |
 | `breakdown` (off task) | The tree of grounded QA: `max_off_task` requests in a row outside the task ([grounded QA](grounded_qa.md)) | Fixed, `close_off_task` | `Off-task: max_off_task requests outside the task in a row` |

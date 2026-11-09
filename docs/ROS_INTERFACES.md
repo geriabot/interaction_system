@@ -92,7 +92,7 @@ filler, which is not an utterance of the conversation):
 
 The outcome constants are `DialogTask.Result.OUTCOME_COMPLETED` (`completed`),
 `OUTCOME_PARTIAL` (`partial`), `OUTCOME_FAILED` (`failed`), `OUTCOME_CANCELLED` (`cancelled`),
-`OUTCOME_USER_SILENT` (`user_silent`), `OUTCOME_BREAKDOWN` (`breakdown`), `OUTCOME_TURN_LIMIT`
+`OUTCOME_ESCALATED` (`escalated`: an urgency, handed over to a person), `OUTCOME_USER_SILENT` (`user_silent`), `OUTCOME_BREAKDOWN` (`breakdown`), `OUTCOME_TURN_LIMIT`
 (`turn_limit`) and `OUTCOME_ERROR` (`error`).
 
 The goal is rejected when another conversation is being prepared or run. A goal that completes
@@ -118,6 +118,7 @@ control cycle (the voice and the listening are halted) and returns `canceled` wi
 | `/interaction/user_utterance` | topic `std_msgs/String` | `/interaction_intelligence` | `Listen` | The transcriptions that are not noise |
 | `/interaction/user_turn` | topic `std_msgs/String` | `Listen` | `/interaction_intelligence` (transcript) | The utterances taken as turns |
 | `/interaction/skill_trace` | topic `std_msgs/String` (JSON) | `/interaction_intelligence` | tools, evaluation | Every skill asked, with its timing and its LLM calls (fields below the table) |
+| `/interaction/urgency` | topic `std_msgs/String` (JSON) | `/interaction_intelligence` | the robot's architecture | An urgency in the user's turn: the conversation is handed over to a person ([Urgencies](behaviors/urgencies.md)). JSON with `dialogue_id`, `user_text` and `time` (seconds since the epoch) |
 | `/llm/error` | topic `ros2_llm_interfaces/msg/LlmError` | `/interaction_intelligence` | the GUI's Monitor | A question the model could not answer (the interpretation server unavailable, no answer in time, the model down, an invalid answer); the conversation goes on with its fallback |
 | lifecycle services of `/interaction_orchestrator` and the runners | `lifecycle_msgs` | | `mission_executor` | Activation |
 

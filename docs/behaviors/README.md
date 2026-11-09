@@ -3,7 +3,7 @@
 This folder has one page per dialogue behavior (strategy) and one per mechanism shared by all of
 them. Each page describes what the behavior or mechanism does, what it needs and returns, its
 Behavior Tree, how it understands each user turn, and how it handles the edge cases: silence, a
-request to repeat, a turn not understood, a cancellation, a failure of the LLM or of speech, and a
+request to repeat, a turn not understood, a cancellation, an urgency, a failure of the LLM or of speech, and a
 limit reached. The questions to the LLM are described in [PROMPTS.md](../PROMPTS.md), and how to
 add a behavior in [ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md).
 
@@ -11,6 +11,7 @@ add a behavior in [ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md
 |---|---|
 | [Slot filling](slot_filling.md) (`slot_filling`) | [Silence](silence.md): waiting for the user without giving up too early |
 | [Explanation](explanation.md) (`explanation`) | [Spoken cancellation](cancellation.md): "stop, forget it", confirmed |
+| | [Urgencies](urgencies.md): "I've fallen", handed over to a person |
 | [Quiz](quiz.md) (`quiz`) | [Recovery and communication breakdown](no_progress.md): bounded repairs |
 | [Procedure](procedure.md) (`procedure`) | [Endings and outcome](endings.md): every conversation closes with a line and a reason |
 | [Role play](roleplay.md) (`roleplay`) | [Barge-in](barge_in.md) *(experimental, not validated)*: the user interrupts the robot, which stops and listens |
