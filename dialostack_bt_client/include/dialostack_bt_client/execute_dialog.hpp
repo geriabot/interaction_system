@@ -72,7 +72,7 @@ public:
         "final_frame_json", "The data of the dialogue (e.g. the filled slots), also when it "
         "did not complete"),
       BT::OutputPort<std::string>(
-        "outcome", "How it ended: completed, partial, failed, cancelled, user_silent, "
+        "outcome", "How it ended: completed, partial, failed, cancelled, escalated, user_silent, "
         "breakdown, turn_limit or error (only completed succeeds)"),
       BT::OutputPort<std::string>(
         "failure_reason", "Why it did not complete"),

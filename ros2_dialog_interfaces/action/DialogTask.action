@@ -95,6 +95,8 @@ string OUTCOME_PARTIAL = "partial"         # Ended normally, some element left u
 string OUTCOME_FAILED = "failed"           # The goal of the strategy was not achieved (e.g. the
                                            # explanation was not understood)
 string OUTCOME_CANCELLED = "cancelled"     # The user asked to stop, or the goal was cancelled
+string OUTCOME_ESCALATED = "escalated"     # An urgency in the user's turn (a fall, a pain, a call
+                                           # for help): handed over to a person (/interaction/urgency)
 string OUTCOME_USER_SILENT = "user_silent" # The user stayed silent max_silence seconds
 string OUTCOME_BREAKDOWN = "breakdown"     # max_stalled user turns in a row without progress
 string OUTCOME_TURN_LIMIT = "turn_limit"   # max_turns reached
