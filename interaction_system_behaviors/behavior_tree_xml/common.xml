@@ -5,7 +5,8 @@
          turn limit -> listen -> (spoken cancellation | the strategy's turn) -> speak
        until the dialogue is done or aborted, and concludes with its outcome.
        Every ending has a closing line and an outcome with its reason: the strategy's own
-       (completed, partial, failed), the user's (cancelled), or one decided here by
+       (completed, partial, failed), the user's (cancelled), an urgency's (escalated), or one
+       decided here by
        EndDialogue (user_silent, breakdown, turn_limit) or by Conclude (error).
        The orchestrator writes in the blackboard, before the behavior starts: the request
        (goal, as JSON), dialogue_id, skip_intro, the limits (max_turns, wait_timeout,
@@ -91,8 +92,10 @@
     </Sequence>
   </BehaviorTree>
 
-  <!-- The spoken cancellation ("stop, forget it"), checked before the strategy handles the
-       turn: the robot asks for confirmation, then ends the dialogue or resumes it with what
+  <!-- The urgencies and the spoken cancellation, checked before the strategy handles the
+       turn. An urgency (something happening now that needs a person: "I've fallen") ends the
+       dialogue at once with a fixed line (label escalated). A request to stop ("stop, forget
+       it"): the robot asks for confirmation, then ends the dialogue or resumes it with what
        it had asked (last_utterance). Asked whether they want to stop, a user who says instead
        that they have finished, in a strategy whose end the user decides, gets the strategy's
        own closing: a normal end (label finished). Fails when the user did not ask to stop, or
@@ -102,7 +105,7 @@
     <Sequence>
       <AskIntelligence skill="cancel_check" user_text="{user_text}" option="{last_utterance}"/>
       <ScriptCondition code="label != 'none'"/>
-      <Script code="done := label == 'confirmed' || label == 'finished'"/>
+      <Script code="done := label == 'confirmed' || label == 'finished' || label == 'escalated'"/>
     </Sequence>
   </BehaviorTree>
 
