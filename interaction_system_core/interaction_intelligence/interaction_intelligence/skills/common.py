@@ -4,9 +4,9 @@
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
 """
-Skills shared by every dialogue: start it from the request, the spoken cancellation, the
-prompts during a silence, the closing lines of the endings decided by the trees, and the
-outcome.
+Skills shared by every dialogue: start it from the request, the urgencies and the spoken
+cancellation, the prompts during a silence, the closing lines of the endings decided by the
+trees, and the outcome.
 """
 
 import json
@@ -65,6 +65,7 @@ def begin(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
             "phase": "",
             "awaiting_cancel": False,
             "user_cancelled": False,
+            "escalated": False,
             "completed": False,
         }
     )
@@ -82,10 +83,15 @@ def _frame_or_none(state: dict):
 
 @skill("cancel_check")
 def cancel_check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
-    """The spoken cancellation, checked on every user turn before the strategy (option: the
-    robot's last utterance, to resume with it).
+    """The urgencies and the spoken cancellation, checked on every user turn before the
+    strategy (option: the robot's last utterance, to resume with it). The urgency is asked
+    first, with its own question (detect_urgency), then the request to stop.
 
-    label: "none" (no cancel request: the strategy handles the turn), "ask" (the user wants to
+    label: "escalated" (the user tells of something happening now that needs a person, in any
+    strategy and also in answer to the confirmation below: the robot says the fixed line,
+    close_escalated, with no advice, the dialogue ends with the outcome escalated and the
+    intelligence publishes the notice on /interaction/urgency), "none" (no cancel request: the
+    strategy handles the turn), "ask" (the user wants to
     stop: confirm it), "confirmed" (the dialogue ends, cancelled by the user), "denied" (the
     user does not want to stop after all: the robot resumes with what it had asked; the same
     words are not asked about again) or
@@ -103,6 +109,10 @@ def cancel_check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     former can be a cancel request, so a false alarm goes to the strategy without a question
     (decided by the author, 2026-11-01)."""
     task, ctx = state["task"], env.ctx
+    # An exact stop command is never an urgency: no question for it
+    if not local_cancel_check(inp.user_text, getattr(env.llm, "language", "English")) \
+            and env.llm.detect_urgency(inp.user_text, ctx, task=task):
+        return escalate(env, state, inp.user_text)
     if state.get("awaiting_cancel"):
         state["awaiting_cancel"] = False
         answer = env.llm.classify_cancel_reply(inp.user_text, ctx)
@@ -143,6 +153,15 @@ def cancel_check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
         state["resume_line"] = resume_line(env, inp.option)
         return SkillResult(reply=env.llm.ask_cancel_confirmation(task, ctx), label="ask")
     return SkillResult(label="none")
+
+
+def escalate(env: SkillEnv, state: dict, user_text: str) -> SkillResult:
+    """An urgency: the robot leaves the task and hands the conversation over to a person. The
+    line is fixed (never generated, so it gives no advice and works whatever the model says
+    next); the words of the user are kept for the notice and the result."""
+    state["escalated"] = True
+    state["urgency_text"] = user_text
+    return SkillResult(reply=env.llm.phrase("close_escalated"), label="escalated")
 
 
 def resume_line(env: SkillEnv, last_utterance: str) -> str:
@@ -228,8 +247,12 @@ def closing(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
 def result(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     """The outcome of the dialogue (option: the ending decided by the tree, if any).
 
-    label: the outcome ("completed", "partial", "failed", "cancelled", "user_silent",
-    "breakdown", "turn_limit" or "error"); reply: why it is not "completed"."""
+    label: the outcome ("completed", "partial", "failed", "cancelled", "escalated",
+    "user_silent", "breakdown", "turn_limit" or "error"); reply: why it is not "completed".
+    An urgency wins over any other ending: the dialogue ended because of it."""
+    if state.get("escalated"):
+        said = state.get("urgency_text", "")
+        return SkillResult(label="escalated", reply=f"Urgency, handed over to a person: {said}")
     if inp.option:
         return SkillResult(label=OUTCOME_OF.get(inp.option, inp.option),
                            reply=ENDINGS.get(inp.option, inp.option))

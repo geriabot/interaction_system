@@ -1303,6 +1303,31 @@ interaction_intelligence:
 
         HOW IT ENDED: {ended_by}
 
+      detect_urgency: |
+        Decide whether the user's words tell of an URGENCY: something happening now that needs a
+        person, to the user or to someone with them.
+
+        TASK OF THE CONVERSATION: "{task}"
+        USER SAID: "{user_text}"
+        DIALOG LANGUAGE: {language}
+
+        "urgency" is true when the user says that something is happening now that needs a person: a
+        fall, a strong or sudden pain, trouble breathing, feeling very unwell, being unable to get up,
+        bleeding, a burn, a call for help ("help!", "I've fallen and I can't get up", "my chest hurts a
+        lot", "call someone, please", or its {language} equivalent). It is true whatever else the words
+        say, also in the middle of an answer or of a step of the task, and also when it is said calmly.
+
+        It is false for:
+        - A health remark that needs no one now ("my knee aches a bit when it rains", "I slept badly",
+          "I fell last year").
+        - A figurative use ("this form is killing me", "I'm dying to know").
+        - Words of the task's own scene or material (a line in character in a role play of an
+          emergency call, a question about what to do after a fall), unless the user steps out of it to
+          say it is happening to them now.
+        - Anything else: answers, questions, requests to stop or to go on.
+
+        Output strict JSON only: {{"urgency": true | false}}
+
       detect_cancel_intent: |
         Decide whether the user wants to STOP or CANCEL this conversation, has
         FINISHED the task, or neither.

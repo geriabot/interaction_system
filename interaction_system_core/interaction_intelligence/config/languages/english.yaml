@@ -113,6 +113,8 @@ phrases:
   close_off_task: "It seems you are looking for something I cannot help you with here. Let's leave it here."
   close_turn_limit: "We have reached the time we had, so let's leave it here."
   close_error: "I'm sorry, something went wrong and I have to stop here."
+  # An urgency in the user's turn: the conversation is handed over to a person (fixed, no advice)
+  close_escalated: "I'm letting someone know right now, so that a person can help you."
   # Slot filling: a slot left blank
   slot_skipped: "Alright, we'll leave that one blank."
   # Grounded question answering

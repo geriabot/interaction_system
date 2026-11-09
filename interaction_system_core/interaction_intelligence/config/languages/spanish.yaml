@@ -105,6 +105,8 @@ phrases:
   close_off_task: "Parece que buscas algo con lo que no puedo ayudarte aquí. Lo dejamos aquí."
   close_turn_limit: "Hemos llegado al tiempo previsto, así que lo dejamos aquí."
   close_error: "Lo siento, ha habido un problema y tengo que parar aquí."
+  # Una urgencia en el turno del usuario: la conversación pasa a una persona (fija, sin consejos)
+  close_escalated: "Ahora mismo aviso a alguien para que una persona pueda ayudarte."
   slot_skipped: "De acuerdo, lo dejamos sin rellenar."
   qa_invite: "¿Qué quieres saber?"
   qa_more: "¿Quieres saber algo más?"

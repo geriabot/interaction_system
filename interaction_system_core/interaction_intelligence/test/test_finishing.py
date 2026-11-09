@@ -46,6 +46,8 @@ def client(answers, language="English"):
     calls = []
 
     def infer(session, prompt, max_tokens, schema):
+        if schema and "urgency" in schema.get("properties", {}):
+            return '{"urgency": false}'  # the urgency question, asked first on every turn
         calls.append(prompt)
         return answers[min(len(calls), len(answers)) - 1]
 

@@ -327,8 +327,13 @@ questions:
     max_tokens: 200
     validate: object
 
-  # ==== Cancellation ====
+  # ==== Urgencies and cancellation ====
 
+  detect_urgency:
+    class: DialogueQuestion
+    template: detect_urgency
+    max_tokens: 20
+    validate: object
   detect_cancel_intent:
     class: DialogueQuestion
     template: detect_cancel_intent

@@ -100,7 +100,8 @@ QUESTIONS = {
     "roleplay_coach": ("roleplay_coach", "roleplay_coach", "text"),
     "evaluate_roleplay": ("evaluate_roleplay_criterion", "evaluate_roleplay", "json"),
     "roleplay_feedback": ("roleplay_feedback", "roleplay_feedback", "json"),
-    # Cancellation
+    # Urgencies and cancellation
+    "detect_urgency": ("detect_urgency", "detect_urgency", "json"),
     "detect_cancel_intent": ("detect_cancel_intent", "detect_cancel_intent", "json"),
     "classify_cancel_reply": ("classify_cancel_reply", "classify_cancel_reply", "json"),
     "ask_cancel_confirmation": ("ask_cancel_confirmation", "ask_cancel_confirmation", "text"),

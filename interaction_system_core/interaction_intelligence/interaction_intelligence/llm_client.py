@@ -1048,6 +1048,24 @@ class LLMDialogClient:
 
     # ==== CANCEL FLOW ====
 
+    def detect_urgency(
+        self, user_text: str, ctx: DialogContext | None = None, task: str = ""
+    ) -> bool:
+        """Whether the user tells of something happening now that needs a person (a fall, a
+        strong pain, trouble breathing, a call for help), to them or to someone with them. Its
+        own question, asked before the cancellation on every user turn: inside the question of
+        the cancellation, the urgency lowered how well a request to stop was read. No keywords
+        (the meaning of "help" depends on its context) and no fallback: without a usable answer
+        from the model, a turn is not an urgency."""
+        prompt, schema = self._pb.detect_urgency(user_text, ctx, task=task)
+        raw = self._call_nlu(prompt, schema, max_tokens=20)
+        if not raw:
+            return False
+        try:
+            return parse_loose_json(raw).get("urgency") is True
+        except Exception:
+            return False
+
     def detect_cancel_intent(
         self, user_text: str, ctx: DialogContext | None = None, strict: bool = False,
         task: str = "",

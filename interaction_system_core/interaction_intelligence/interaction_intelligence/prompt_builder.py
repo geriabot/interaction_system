@@ -768,6 +768,18 @@ class PromptBuilder:
 
     # ==== CANCEL FLOW ====
 
+    def detect_urgency(
+        self, user_text: str, ctx: DialogContext | None = None, task: str = ""
+    ) -> tuple[str, dict]:
+        # As detect_cancel_intent, no context injection: only the task description, so that a
+        # line of a role play or a quiz of the task can be told from what happens now
+        schema = {
+            "type": "object",
+            "properties": {"urgency": {"type": "boolean"}},
+            "required": ["urgency"],
+        }
+        return self._t("detect_urgency", user_text=user_text, task=task or "(not given)"), schema
+
     def detect_cancel_intent(
         self, user_text: str, ctx: DialogContext | None = None, strict: bool = False,
         task: str = "",

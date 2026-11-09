@@ -46,6 +46,8 @@ def client(answers, language="English", limits=None):
     calls = []
 
     def infer(session, prompt, max_tokens, schema):
+        if schema and "urgency" in schema.get("properties", {}):
+            return '{"urgency": false}'  # the urgency question, asked first on every turn
         calls.append(prompt)
         answer = answers[min(len(calls), len(answers)) - 1] if answers else None
         if isinstance(answer, Exception):
@@ -226,6 +228,9 @@ class Roleplay:
 
     def classify_cancel_reply(self, user_text, ctx=None):
         return self.reply
+
+    def detect_urgency(self, user_text, ctx=None, task=""):
+        return False
 
     def detect_cancel_intent(self, user_text, ctx=None, strict=False, task=""):
         return True

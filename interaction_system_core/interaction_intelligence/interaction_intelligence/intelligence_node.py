@@ -32,6 +32,10 @@ Topics published:
                                          success, time (s), and its calls to the model that
                                          timed out or were not made (llm_timeouts,
                                          llm_skipped); for diagnosis and evaluation.
+  /interaction/urgency        (String) — JSON when a dialogue is handed over to a person
+                                         because of an urgency in the user's turn
+                                         (dialogue_id, user_text, time): for the robot's
+                                         architecture, which alerts a person.
 
 Downstream clients:
   /interaction_perception/get_user_state (GetUserState service, optional) — the state of
@@ -134,6 +138,9 @@ class InteractionIntelligence(Node):
 
         self._utterance_pub = self.create_publisher(String, "/interaction/user_utterance", 10)
         self._trace_pub = self.create_publisher(String, "/interaction/skill_trace", 50)
+        # An urgency in the user's turn (cancel_check, label escalated): the dialogue ends with
+        # a fixed line and this notice tells the robot's architecture to alert a person
+        self._urgency_pub = self.create_publisher(String, "/interaction/urgency", 10)
         for topic in self._transcription_topics:
             self.create_subscription(
                 String, topic, self._on_transcription, 10, callback_group=self._cb
@@ -369,6 +376,11 @@ class InteractionIntelligence(Node):
         limits = CallLimits(self._llm_timeout, req.budget_s,
                             reasoning_timeout=self._reasoning_timeout)
         res = self._ask(req, res, limits)
+        if res.label == "escalated":  # cancel_check (or an ablation's own check)
+            self._urgency_pub.publish(String(data=json.dumps({
+                "dialogue_id": req.dialogue_id, "user_text": req.user_text,
+                "time": time.time(),
+            }, ensure_ascii=False)))
         self._trace_pub.publish(String(data=json.dumps({
             "dialogue_id": req.dialogue_id, "skill": req.skill, "label": res.label,
             "success": res.success, "time_s": round(time.monotonic() - t0, 3),
