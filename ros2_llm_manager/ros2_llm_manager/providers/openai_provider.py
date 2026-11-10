@@ -44,7 +44,10 @@ def strict_schema(schema: dict) -> tuple[dict, bool]:
     Strict mode needs `additionalProperties: false` on every object and every
     property listed in `required`. The dialog manager's schemas have optional
     properties, so those are sent non-strict: the schema then guides the reply
-    and the client still parses it loosely.
+    and the client still parses it loosely. A free-form object (type object
+    without properties, such as the LLM-led condition's `result`) cannot be
+    strict either: it is sent as it is, non-strict (closing it would allow only
+    an empty object, and the API rejects the strict schema).
     """
     strict = True
 
@@ -55,6 +58,9 @@ def strict_schema(schema: dict) -> tuple[dict, bool]:
         if not isinstance(node, dict):
             return node
         out = {k: fix(v) for k, v in node.items()}
+        if out.get("type") == "object" and "properties" not in out:
+            strict = False
+            return out
         if out.get("type") == "object" or "properties" in out:
             out["additionalProperties"] = False
             if set(out.get("properties", {})) - set(out.get("required", [])):

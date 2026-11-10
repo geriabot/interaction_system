@@ -94,6 +94,20 @@ def test_optional_properties_fall_back_to_non_strict():
     assert not strict and schema["additionalProperties"] is False
 
 
+def test_free_form_object_falls_back_to_non_strict():
+    # The LLM-led condition's reply: `result` is an object whose keys depend on the strategy
+    schema, strict = strict_schema(
+        {
+            "type": "object",
+            "properties": {"reply": {"type": "string"}, "result": {"type": "object"}},
+            "required": ["reply", "result"],
+        }
+    )
+    assert not strict
+    assert schema["additionalProperties"] is False
+    assert "additionalProperties" not in schema["properties"]["result"]
+
+
 # ==== REQUEST PARAMETERS ====
 
 
