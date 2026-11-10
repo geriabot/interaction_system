@@ -131,11 +131,12 @@ def test_the_status_of_the_last_call():
 
 
 def test_a_generated_line_too_short_or_missing_is_a_failure():
+    # (the question whether to stop is fixed: the closing of a cancellation is generated)
     c, _ = client(["", ""])
-    assert c.ask_cancel_confirmation("Book a taxi") == c.phrase("cancel_ask")
+    assert c.cancel_confirmed_response("Book a taxi") == c.phrase("cancel_ok")
     assert c.model_status is False
-    c, _ = client(["Do you want to stop?"])
-    c.ask_cancel_confirmation("Book a taxi")
+    c, _ = client(["Alright, we leave it here."])
+    c.cancel_confirmed_response("Book a taxi")
     assert c.model_status is True
 
 
@@ -173,11 +174,13 @@ def test_with_the_model_down_an_exact_command_ends_at_once(language, command):
 
 @pytest.mark.parametrize("language,command", [("English", "Stop."), ("Spanish", "Para.")])
 def test_with_the_model_up_an_exact_command_asks_for_confirmation(language, command):
-    llm, _ = client(["Do you want to stop?"], language)
+    llm, calls = client([], language)
     env, state = slot_filling(llm)
     state["model_down"] = False
     result = get_skill("cancel_check")(env, state, SkillInput(user_text=command, option="q?"))
-    assert (result.label, result.reply) == ("ask", "Do you want to stop?")
+    # The question is the fixed yes/no one of the language file: no call to the model
+    assert (result.label, result.reply) == ("ask", load_language(language).phrases["cancel_ask"])
+    assert calls == []
     assert state["awaiting_cancel"] is True and not state["user_cancelled"]
 
 

@@ -62,7 +62,7 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `detect_wrong_check` | Understanding | `grounded_qa.answer`: for a turn read as a reaction after an answer from the material, whether it repeats back a value of that answer with a different value; if so, the last answer is said again |
 | `map_scale_answer` | Understanding | `questionnaire.record`: the option the answer clearly chooses, or `ambiguous`, `meaning`, `refuses`, `repeat`, `other`. The items, the options, the clarifications and the closing are read without the LLM |
 | `detect_cancel_intent`, `classify_cancel_reply` | Understanding | `cancel_check`: the cancel request, and the answer to the confirmation |
-| `ask_cancel_confirmation`, `cancel_confirmed_response` | Generation | `cancel_check`: a short yes/no question whether the user wants to stop, and the closing after a confirmed cancellation |
+| `cancel_confirmed_response` | Generation | `cancel_check`: the closing after a confirmed cancellation (the question whether the user wants to stop is the fixed phrase `cancel_ask`; the template `ask_cancel_confirmation` is kept but no longer called) |
 
 Notes on some of the templates:
 
@@ -112,9 +112,11 @@ Notes on some of the templates:
 - `classify_cancel_reply` reads the answer to the confirmation: `yes`, `no`, `finished` (a normal
   end, where the dialogue behavior lets the user end it) or `other` (the answer does not say whether to
   stop). Only `yes` stops; `no` and `other` both resume.
-- `ask_cancel_confirmation`: "yes" means stopping, as `classify_cancel_reply` reads it, and the
-  question does not explain how to answer it. After a `no`, the robot says the fixed phrase
-  `cancel_no` and repeats its last line, without the `cancel_no` of an earlier denial.
+- The question whether the user wants to stop is the fixed phrase `cancel_ask` ("Do you want to
+  stop here?"), in which "yes" means stopping, as `classify_cancel_reply` reads it: a generated
+  one was at times an alternative ("Want to stop or need more info?"), whose "no" could not be
+  read. After a `no`, the robot says the fixed phrase `cancel_no` and repeats its last line,
+  without the `cancel_no` of an earlier denial.
 
 The skills `begin`, `silence`, `closing`, `result`, `quiz.repeat` (the first time: the question
 itself), `quiz.unanswered` and `finish`, and every operation on the frame, ask no question: the

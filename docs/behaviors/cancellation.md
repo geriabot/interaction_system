@@ -52,10 +52,18 @@ Every user turn goes first to `CancelCheck`, before the behavior:
    the exact commands alone, a user could not stop while choosing an option with words such as
    "Para, déjalo" or "Wait, stop".
 2. **Confirmation.** The robot asks whether the user wants to stop and remembers what it had
-   asked before (its last utterance). The question is a short generated yes/no question
-   (`ask_cancel_confirmation`; fallback "Are you sure you want to cancel?") in which "yes" means
-   stopping. It does not explain how to answer, and like every spoken line it addresses the user
-   directly and informally ([PROMPTS.md](../PROMPTS.md#placeholders-context-and-caching)).
+   asked before (its last utterance). The question is a fixed yes/no question of the language
+   file (`cancel_ask`: "Do you want to stop here?", "¿Quieres que lo dejemos aquí?") in which
+   "yes" means stopping. It was first generated, and a small model at times phrased it as an
+   alternative ("Want to stop or need more info?"), whose "no" could not be read.
+
+   In a behavior whose end the user decides (grounded question answering), there is no
+   confirmation: stopping and finishing are the same there, and nothing is lost, since every
+   question was answered in its turn. A request to stop ends the conversation with the
+   behavior's own closing, a normal end (label `finished`), also for an exact stop command
+   while the LLM is down. A small model took "No, that's all" after "Is there anything else?"
+   for a request to stop, and the user, who had finished, did not answer the confirmation: the
+   conversation then ended by silence.
 3. **The answer to the confirmation** (`classify_cancel_reply`):
 
 | Answer | Label | The robot | The conversation |

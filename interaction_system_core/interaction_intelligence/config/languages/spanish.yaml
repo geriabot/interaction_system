@@ -95,7 +95,7 @@ phrases:
   quiz_correct: "¡Correcto!"
   quiz_wrong: "No, la respuesta era {expected}."
   quiz_unanswered: "La dejamos sin responder."
-  cancel_ask: "¿Seguro que quieres cancelar?"
+  cancel_ask: "¿Quieres que lo dejemos aquí?"
   cancel_ok: "De acuerdo, cancelado."
   cancel_no: "Perfecto, continuamos."
   timeout: "Tómate tu tiempo, sigo aquí."

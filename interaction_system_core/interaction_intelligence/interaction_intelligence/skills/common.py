@@ -89,8 +89,9 @@ def cancel_check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     stop: confirm it), "confirmed" (the dialogue ends, cancelled by the user), "denied" (the
     user does not want to stop after all: the robot resumes with what it had asked; the same
     words are not asked about again) or
-    "finished" (asked whether they want to stop, the user says instead that they have finished,
-    in a strategy whose end the user decides: its own closing, a normal end). Only a yes stops:
+    "finished" (in a strategy whose end the user decides, a request to stop or, asked whether
+    they want to stop, a user who says instead that they have finished: its own closing, a
+    normal end, without a confirmation). Only a yes stops:
     any other answer to the confirmation ("no, I want to finish the boat", a value, "can you
     repeat?", a "finished" in a strategy whose end the user does not decide) is "denied" too,
     and the robot asks its question again; the answer never reaches the strategy as if it
@@ -128,6 +129,9 @@ def cancel_check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     # question could not be read anyway (decided by the author, 2026-10-30)
     if state.get("model_down") and local_cancel_check(
             inp.user_text, getattr(env.llm, "language", "English")):
+        finished = user_finished(env, state)
+        if finished:
+            return finished
         state["user_cancelled"] = True
         state["cancelled_without_confirmation"] = True
         reply = _strategy_closing(env, state) or env.llm.phrase("cancel_ok")
@@ -138,6 +142,14 @@ def cancel_check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     if said and said in state.get("denied_cancels", []):
         return SkillResult(label="none")
     if env.llm.detect_cancel_intent(inp.user_text, ctx, strict=strict, task=task):
+        # In a strategy whose end the user decides (grounded QA), stopping and finishing are the
+        # same: nothing is lost (every question was answered in its turn), so the strategy's
+        # own closing follows without a confirmation. A small model took "No, that's all" after
+        # "Anything else?" for a request to stop, and the user, already gone, never answered the
+        # confirmation
+        finished = user_finished(env, state)
+        if finished:
+            return finished
         state["awaiting_cancel"] = True
         state["cancel_turn"] = said
         state["resume_line"] = resume_line(env, inp.option)
