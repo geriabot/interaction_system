@@ -56,7 +56,7 @@ The parameters `dialogue_behaviors.*` of `/interaction_orchestrator`, in
   ros__parameters:
     dialogue_behaviors:
       behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA",
-                  "Questionnaire"]
+                  "Questionnaire", "TopicChat"]
       Quiz:
         behavior_id: 2
         mode: "quiz"
@@ -212,7 +212,8 @@ are declared from the files.
   request to the model's server.
 - `reasoning: critical` lets the LLM reason before these questions: the answer to a confirmation,
   quiz grading, teach-back, the answer from the material and its verification, the answer to "do
-  you want to stop?", the questionnaire option, the procedure step and the role-play turn. It
+  you want to stop?", the questionnaire option, the procedure step, the role-play turn and the
+  turn of a topic-bounded conversation. It
   never reasons when a line is generated. Each of those requests asks the variant `reasoning` of
   its question, answered on the route with `think` on; a model that cannot reason ignores it.
   The evaluation decides it per model when it chooses the local model (the `@critical`
@@ -239,6 +240,8 @@ are declared from the files.
   - grounded question answering's `qa_invite`, `qa_more`, `qa_abstain`, `qa_decline` and `qa_bye`;
   - the questionnaire's `questionnaire_intro`, `questionnaire_item`, `questionnaire_options`,
     `questionnaire_or` and `questionnaire_end`;
+  - the topic-bounded conversation's `topic_chat_open`, `topic_chat_more`, `topic_chat_back`,
+    `topic_chat_bye` and `topic_chat_bye_early`;
   - the fallbacks of each dialogue behavior.
 
 ## llm_manager_node

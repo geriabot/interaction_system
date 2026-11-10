@@ -45,6 +45,8 @@ _STEP_INTENTS = ("done", "question", "problem", "repeat", "back", "skip", "uncle
 # Turn intents of the roleplay strategy (classify_roleplay_turn) and its score range.
 _ROLEPLAY_INTENTS = ("continue", "repeat", "coach", "end", "scene_end")
 _ROLEPLAY_SCORE_MIN, _ROLEPLAY_SCORE_MAX = 1, 5
+# Turn kinds of the topic-bounded conversation (classify_topic_turn).
+_TOPIC_TURN_KINDS = ("on_topic", "drifting", "avoid", "end", "repeat")
 # Two character questions at least this similar count as the same question.
 _REPEAT_SIMILARITY = 0.75
 
@@ -60,6 +62,27 @@ def _repeats_question(line: str, history: list[dict]) -> str:
         earlier = spoken_ask(turn["content"])
         if earlier and SequenceMatcher(None, question, earlier).ratio() >= _REPEAT_SIMILARITY:
             return question
+    return ""
+
+
+def _question_of(line: str) -> str:
+    """The question of a robot's line: its last sentence that ends with a question mark."""
+    parts = re.split(r"(?<=[.!?])\s+", (line or "").strip())
+    questions = [p for p in parts if p.endswith("?")]
+    return questions[-1] if questions else ""
+
+
+def _repeats(question: str, asked: list[str]) -> str:
+    """The earlier question that this one repeats (the same words, or nearly), or ""."""
+    def norm(text):
+        return " ".join(re.sub(r"[^\w\s]", " ", text.lower()).split())
+    q = norm(question)
+    if not q:
+        return ""
+    for earlier in asked:
+        e = norm(earlier)
+        if e and SequenceMatcher(None, q, e).ratio() >= 0.85:
+            return earlier
     return ""
 
 
@@ -242,14 +265,15 @@ class LLMDialogClient:
 
     # The questions whose wrong answer is a critical error (the safety gate of E0a: a correction
     # taken as a confirmation, a wrong answer graded right, an unsupported answer verified, a
-    # stop not asked for, an option not chosen, a step not done, an end not asked for). With
+    # stop not asked for, an option not chosen, a step not done, an end not asked for; and, out
+    # of E0a, a social conversation ended or bridged away from what the user was telling). With
     # reasoning="critical" the model may reason before answering them, and only them: the other
     # questions and the generated lines stay fast (selective reasoning, decided by the author,
     # 2026-11-02, after qwen3:14b went from 11 to 7 critical errors in phase A with it)
     REASONING_QUESTIONS = frozenset({
         "classify_intent", "evaluate_quiz_answer", "judge_teach_back", "answer_from_material",
         "verify_answer", "classify_cancel_reply", "map_scale_answer", "classify_step_turn",
-        "classify_roleplay_turn",
+        "classify_roleplay_turn", "classify_topic_turn",
     })
 
     # Names by which a question may also be routed: the prompt template it uses, when it differs
@@ -1045,6 +1069,94 @@ class LLMDialogClient:
         closing = parts["closing"] or self._fb["roleplay_feedback"]
         text = " ".join(p for p in (closing, scores, parts["highlight"], parts["improve"]) if p)
         return {"text": text, "highlight": parts["highlight"], "improve": parts["improve"]}
+
+    # ==== TOPIC-BOUNDED SOCIAL CONVERSATION ====
+
+    def topic_chat_opening(
+        self, task: str, chat: dict, greet: bool = True, ctx: DialogContext | None = None
+    ) -> str:
+        """The opening: a greeting (greet), the topic and one open question on it."""
+        prompt = self._pb.topic_chat_opening(task, chat, greet, ctx)
+        res = self._call_nlg(prompt, max_tokens=100)
+        return _keep_first_question(self._clean(res) or "") or self._fb_fmt(
+            "topic_chat_open", topic=chat["topic"])
+
+    def classify_topic_turn(
+        self, user_text: str, chat: dict, history: list[dict], ctx: DialogContext | None = None
+    ) -> str:
+        """The kind of the user's turn (_TOPIC_TURN_KINDS), or "unclear" when the model gives no
+        valid reading: the robot asks to repeat, a turn without progress, so that a sustained
+        failure of the model ends as a breakdown instead of a conversation the robot carries
+        alone."""
+        prompt, schema = self._pb.classify_topic_turn(user_text, chat, history, ctx)
+        for _ in range(self.MAX_RETRIES):
+            raw = self._call_nlu(prompt, schema, max_tokens=30)
+            if not raw:
+                continue
+            try:
+                kind = parse_loose_json(raw).get("kind")
+            except Exception:
+                continue
+            if kind in _TOPIC_TURN_KINDS:
+                return kind
+        return "unclear"
+
+    def topic_chat_reply(
+        self, chat: dict, history: list[dict], kind: str, ctx: DialogContext | None = None
+    ) -> str:
+        """The robot's line: a comment on what the user said and one open question on the topic
+        (kind: on_topic, drifting, avoid). Only the first question is kept; without a usable
+        line, a fixed one (on the topic: "tell me more"; otherwise back to the topic)."""
+        prompt = self._pb.topic_chat_reply(chat, history, kind, ctx)
+        line = _keep_first_question(self._clean(self._call_nlg(prompt, max_tokens=90)) or "")
+        # A small model copied one of its own earlier lines, word for word, despite the rule in the
+        # prompt: a line whose question was already asked is asked for once more, naming it, and
+        # otherwise replaced by the fixed one
+        asked = [_question_of(t["content"]) for t in history if t["role"] == "assistant"]
+        repeated = _repeats(_question_of(line), asked) if line else ""
+        if repeated:
+            again = (f"{prompt}\n\nYou already asked \"{repeated}\". Ask a different open "
+                     "question: about another part of what the user told, or one of the "
+                     "SUPPORTING QUESTIONS that has not come up yet.")
+            line = _keep_first_question(self._clean(self._call_nlg(again, max_tokens=90)) or "")
+            if line and _repeats(_question_of(line), asked):
+                # Still a repeat: the next supporting question not asked yet, as written in the
+                # request, keeps the conversation going without the model
+                line = next((q for q in chat.get("questions", []) if not _repeats(q, asked)), "")
+        if line:
+            return line
+        if kind == "on_topic":
+            return self._fb["topic_chat_more"]
+        return self._fb_fmt("topic_chat_back", topic=chat["topic"])
+
+    def topic_chat_closing(
+        self, chat: dict, history: list[dict], ctx: DialogContext | None = None
+    ) -> str:
+        """The closing: a short summary of what the user shared, thanks and a goodbye. A closing
+        that asks something is replaced by the fixed one: the conversation ends here."""
+        prompt = self._pb.topic_chat_closing(chat, history, ctx)
+        res = self._clean(self._call_nlg(prompt, max_tokens=90))
+        if not res or "?" in res or "¿" in res:
+            return self._fb["topic_chat_bye"]
+        return res
+
+    def review_topic_chat(
+        self, chat: dict, history: list[dict], ctx: DialogContext | None = None
+    ) -> dict:
+        """The reading of the conversation for its result: {"covered": the numbers of the
+        supporting questions the user talked about, "topics": the topics that came up, a few
+        words each}; empty lists when the model gives no usable answer."""
+        prompt, schema = self._pb.review_topic_chat(chat, history, ctx)
+        raw = self._call_nlu(prompt, schema, max_tokens=150)
+        if not raw:
+            return {"covered": [], "topics": []}
+        try:
+            data = parse_loose_json(raw)
+        except Exception:
+            return {"covered": [], "topics": []}
+        covered = [n for n in data.get("covered") or [] if isinstance(n, int)]
+        topics = [str(t).strip() for t in data.get("topics") or [] if str(t).strip()]
+        return {"covered": covered, "topics": topics[:10]}
 
     # ==== CANCEL FLOW ====
 

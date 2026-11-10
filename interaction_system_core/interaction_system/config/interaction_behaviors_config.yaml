@@ -41,3 +41,7 @@ behaviors:
     behavior_file: "behavior_tree_xml/questionnaire.xml"
     control_period_ms: 50
     package_name: "interaction_system_behaviors"
+  - name: "interaction_topic_chat"
+    behavior_file: "behavior_tree_xml/topic_chat.xml"
+    control_period_ms: 50
+    package_name: "interaction_system_behaviors"

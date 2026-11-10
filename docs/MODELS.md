@@ -92,6 +92,7 @@ questions, which are the usual candidates:
 | Role play | `classify_roleplay_turn`, `evaluate_roleplay`, `roleplay_feedback` |
 | Grounded question answering | `answer_from_material`, `verify_answer`, `detect_wrong_check` |
 | Questionnaire | `map_scale_answer` |
+| Topic-bounded social conversation | `classify_topic_turn`, `review_topic_chat` |
 | Urgencies and cancellation (every dialogue behavior) | `detect_urgency`, `detect_cancel_intent`, `classify_cancel_reply` |
 
 A generation method (e.g. `generate_response`) can be routed too. `extract_slots` is accepted

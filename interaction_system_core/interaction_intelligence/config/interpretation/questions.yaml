@@ -327,6 +327,39 @@ questions:
     max_tokens: 200
     validate: object
 
+  # ==== Topic-bounded social conversation ====
+
+  topic_chat_opening:
+    class: DialogueQuestion
+    template: topic_chat_opening
+    max_tokens: 100
+    parse: text
+    allow_empty: true
+  classify_topic_turn:
+    class: DialogueQuestion
+    template: classify_topic_turn
+    max_tokens: 30
+    validate: object
+    variants:
+      reasoning: {route: reasoning}
+  topic_chat_reply:
+    class: DialogueQuestion
+    template: topic_chat_reply
+    max_tokens: 90
+    parse: text
+    allow_empty: true
+  topic_chat_closing:
+    class: DialogueQuestion
+    template: topic_chat_closing
+    max_tokens: 90
+    parse: text
+    allow_empty: true
+  review_topic_chat:
+    class: DialogueQuestion
+    template: review_topic_chat
+    max_tokens: 150
+    validate: object
+
   # ==== Urgencies and cancellation ====
 
   detect_urgency:

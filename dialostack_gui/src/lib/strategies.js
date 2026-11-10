@@ -57,6 +57,11 @@ export const PHRASE_LABELS = {
   questionnaire_options: 'The options ({options})',
   questionnaire_or: 'The word before the last option',
   questionnaire_end: 'Closing of the questionnaire',
+  topic_chat_open: 'Opening (LLM down) ({topic})',
+  topic_chat_more: 'Follow-up on the topic (LLM down)',
+  topic_chat_back: 'Back to the topic (LLM down) ({topic})',
+  topic_chat_bye: 'Closing summary and goodbye (LLM down)',
+  topic_chat_bye_early: 'Goodbye when the user ends before talking about the topic',
 }
 
 // The slot-filling acknowledgments are a LIST (a random one is spoken after a
@@ -132,6 +137,14 @@ export const STRATEGIES = [
     summary: 'Administers a standardized questionnaire, word for word.',
     desc: 'Reads each item and its options as written, records the option the user chooses (never choosing for them), gives the instrument\'s clarifications and computes the score, which it does not say.',
     keys: ['questionnaire_intro', 'questionnaire_item', 'questionnaire_options', 'questionnaire_or', 'questionnaire_end'],
+  },
+  {
+    id: 'topic_chat',
+    label: 'Topic chat',
+    frameKind: null,
+    summary: 'Talks with the user about a topic, with nothing to collect.',
+    desc: 'A companionship or reminiscence conversation on a topic set by the request: the robot comments on what the user tells and asks open questions, bridges back when the user drifts, avoids the topics it is told to avoid and closes with a short summary at the limit.',
+    keys: ['topic_chat_open', 'topic_chat_more', 'topic_chat_back', 'topic_chat_bye', 'topic_chat_bye_early'],
   },
 ]
 

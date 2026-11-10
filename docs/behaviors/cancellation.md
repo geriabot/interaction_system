@@ -71,7 +71,7 @@ the user tells of an urgency ([Urgencies](urgencies.md)); then:
 |---|---|---|---|
 | Yes | `confirmed` | A brief generated closing (`cancel_confirmed_response`; fallback "Alright, cancelled."), never a question (below) | Ends: outcome `cancelled`, reason `Cancelled by the user` |
 | No | `denied` | "OK, let's continue." (`cancel_no`) and what it had asked before | Goes on |
-| Finished: they have nothing more to ask or add ("No, I have no more questions"), in a behavior whose end the user decides (grounded question answering) | `finished` | The behavior's own closing (`DialogueMode.on_finished`; grounded QA: "Alright. Have a good day!") | Ends normally: the behavior's own outcome (`completed`), not a cancellation |
+| Finished: they have nothing more to ask or add ("No, I have no more questions"), in a behavior whose end the user decides (grounded question answering, topic-bounded social conversation) | `finished` | The behavior's own closing (`DialogueMode.on_finished`; grounded QA: "Alright. Have a good day!"; the topic-bounded conversation: its summary and goodbye) | Ends normally: the behavior's own outcome (`completed`), not a cancellation |
 | Finished, in a behavior whose end the user does not decide | `denied` | As for no | Goes on |
 | Anything else ("No, I want to finish the boat", the value it had asked for, "can you repeat?") | `denied` | As for no | Goes on: the robot asks its question again (a value said there is said once more) |
 

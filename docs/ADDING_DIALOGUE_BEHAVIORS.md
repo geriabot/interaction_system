@@ -230,9 +230,9 @@ and the behavior to a copy of `interaction_orchestrator_params.yaml` (launch arg
 ```yaml
     dialogue_behaviors:
       behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA",
-                  "Questionnaire", "Survey"]
+                  "Questionnaire", "TopicChat", "Survey"]
       Survey:
-        behavior_id: 7       # unique: 0 to 6 are taken
+        behavior_id: 8       # unique: 0 to 7 are taken
         mode: "survey"
         needs: [""]          # or a need the intelligence can check (see selection.py)
         explanation: "The robot ASKS a list of yes/no questions and records the answers."

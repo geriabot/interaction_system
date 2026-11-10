@@ -36,7 +36,7 @@
     # The catalog of dialogue behaviors. A request names one with dialog_mode, or the
     # intelligence chooses among those whose needs the request provides
     dialogue_behaviors:
-      behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire"]
+      behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire", "TopicChat"]
 
       SlotFilling:
         behavior_id: 0
@@ -86,3 +86,10 @@
         needs: ["instrument"]
         explanation: "The robot ADMINISTERS a standardized questionnaire or survey (a satisfaction survey, a rating scale, a validated instrument): it reads each item and its answer options as written, records the option the user chooses and computes the score."
         node_name: "interaction_questionnaire"
+
+      TopicChat:
+        behavior_id: 7
+        mode: "topic_chat"
+        needs: ["topic"]
+        explanation: "The robot TALKS with the user about a topic set for them, with nothing to collect, explain or test (companionship, reminiscence: their village, a photograph, their work): it comments on what the user tells and asks open questions on the topic, steers back to it gently, avoids the topics it is told to avoid, and closes with a short summary and a goodbye."
+        node_name: "interaction_topic_chat"

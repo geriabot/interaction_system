@@ -134,5 +134,6 @@ def available_skills() -> list[str]:
 
 # Register the skills on package import (the strategies first: common uses their modes)
 from . import (  # noqa: E402,F401
-    slot_filling, explanation, quiz, procedure, roleplay, grounded_qa, questionnaire, common,
+    slot_filling, explanation, quiz, procedure, roleplay, grounded_qa, questionnaire, topic_chat,
+    common,
 )

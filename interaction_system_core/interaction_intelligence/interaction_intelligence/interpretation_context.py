@@ -100,6 +100,12 @@ QUESTIONS = {
     "roleplay_coach": ("roleplay_coach", "roleplay_coach", "text"),
     "evaluate_roleplay": ("evaluate_roleplay_criterion", "evaluate_roleplay", "json"),
     "roleplay_feedback": ("roleplay_feedback", "roleplay_feedback", "json"),
+    # Topic-bounded social conversation
+    "topic_chat_opening": ("topic_chat_opening", "topic_chat_opening", "text"),
+    "classify_topic_turn": ("classify_topic_turn", "classify_topic_turn", "json"),
+    "topic_chat_reply": ("topic_chat_reply", "topic_chat_reply", "text"),
+    "topic_chat_closing": ("topic_chat_closing", "topic_chat_closing", "text"),
+    "review_topic_chat": ("review_topic_chat", "review_topic_chat", "json"),
     # Urgencies and cancellation
     "detect_urgency": ("detect_urgency", "detect_urgency", "json"),
     "detect_cancel_intent": ("detect_cancel_intent", "detect_cancel_intent", "json"),

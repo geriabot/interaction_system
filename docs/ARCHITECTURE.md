@@ -131,7 +131,7 @@ or in VS Code with the Draw.io Integration extension, and save it to the same fi
 | Block | Node | What it does |
 |---|---|---|
 | Interaction system (`interaction_system`) | `/interaction_orchestrator` | Serves `/dialog/execute_task`, chooses the dialogue behavior, activates its runner, writes the request to the blackboard, sends the feedback and the result, and publishes `/interaction_system/status` |
-| | Behavior runners (`/interaction_slot_filling`, `/interaction_explanation`, `/interaction_quiz`, `/interaction_procedure`, `/interaction_roleplay`, `/interaction_grounded_qa`, `/interaction_questionnaire`) | One lifecycle node per dialogue behavior, which ticks its Behavior Tree while active |
+| | Behavior runners (`/interaction_slot_filling`, `/interaction_explanation`, `/interaction_quiz`, `/interaction_procedure`, `/interaction_roleplay`, `/interaction_grounded_qa`, `/interaction_questionnaire`, `/interaction_topic_chat`) | One lifecycle node per dialogue behavior, which ticks its Behavior Tree while active |
 | | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior: asks their questions to the interpretation server, applies the answers to the state of the conversation, and writes the transcript. It talks to no model itself |
 | | `/interaction/interpretation_server` (behavior_architecture) | Builds the prompt of each question from the system's templates and the arguments it receives, asks the model of the question's route, and returns its text |
 | Speech sub-capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and speaks on request ([SPEECH.md](SPEECH.md)) |
@@ -226,6 +226,7 @@ as it fills (`current_frame_json`).
 | Role play | exchanges of the scene; criteria of the rubric | scored, not scored | `resources_json`: the scene and its criteria |
 | Grounded QA | the user's questions, against the material | answered, abstained, declined | `resources_json`: the material |
 | Questionnaire | items with their response options | pending, answered, refused, unanswered | `resources_json`: the instrument |
+| Topic-bounded conversation | the supporting questions; the exchanges and the minutes of the limit | covered, not covered | `resources_json`: the topic, its material, questions, topics to avoid and limits |
 
 The frame is kept outside the LLM, in the state of the conversation that travels with every
 request to the [interaction intelligence](#the-interaction-intelligence). The LLM takes part only
@@ -300,6 +301,7 @@ A filler is not a turn and changes no counter ([Conversational fillers](behavior
 | [Role play](behaviors/roleplay.md) (`roleplay`) | Plays a character in a scene, then scores the user on each criterion of a rubric |
 | [Grounded question answering](behaviors/grounded_qa.md) (`grounded_qa`) | Answers the user's questions only from the material of the request, verifying each answer and abstaining when the material does not contain the answer |
 | [Standardized questionnaire](behaviors/questionnaire.md) (`questionnaire`) | Reads an instrument word for word, maps each answer to an option and computes the score in code |
+| [Topic-bounded social conversation](behaviors/topic_chat.md) (`topic_chat`) | Talks with the user about a topic set by the requester, with nothing to collect: follows up with open questions, bridges back when the user drifts, avoids the topics it is told to avoid, and closes with a summary at the limit |
 
 The outcomes (`completed`, `partial`, `failed`, `cancelled`, `user_silent`, `breakdown`,
 `turn_limit`, `error`) are defined in [Endings and outcome](behaviors/endings.md).
@@ -349,6 +351,7 @@ decides by parsing the resources, without the LLM (`interaction_intelligence/sel
 | `scene` | A JSON object with `scenario` and `role` (role play); the scenario names the user in the third person ("The user knocks on..."), never as "you", since the model reads it next to the role it plays |
 | `material` | A resource with plain text, not JSON and not named `handover` (grounded question answering) |
 | `instrument` | A JSON object with a list `items`, each item with answer options (questionnaire) |
+| `topic` | A JSON object with `topic` (topic-bounded social conversation) |
 
 Slot filling and explanation need nothing, so they are always offered. If one dialogue behavior
 is offered, it is chosen; if several are, the LLM chooses among them from their explanations
@@ -381,6 +384,7 @@ described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behavio
 | `roleplay.open`, `.open_direct`, `.classify`, `.reply`, `.repeat`, `.coach`, `.finish` | [Role play](behaviors/roleplay.md) |
 | `grounded_qa.open`, `.open_direct`, `.answer` | [Grounded question answering](behaviors/grounded_qa.md) |
 | `questionnaire.open`, `.ask`, `.record`, `.clarify`, `.options`, `.unanswered`, `.finish` | [Questionnaire](behaviors/questionnaire.md) |
+| `topic_chat.open`, `.open_direct`, `.classify`, `.reply`, `.finish` | [Topic-bounded social conversation](behaviors/topic_chat.md) |
 | `finish` | Asked by the orchestrator when a conversation ends: cancel its questions in progress, close its transcript |
 
 The skills live in `interaction_intelligence/skills/`, one module per dialogue behavior and

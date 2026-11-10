@@ -44,7 +44,7 @@ public:
       BT::InputPort<std::string>(
         "initial_frame_json", "", "Optional JSON pre-filling slot values (resume / prior context)"),
       BT::InputPort<std::string>(
-        "dialog_mode", "", "slot_filling | explanation | quiz | procedure | roleplay | empty: chosen from the task"),
+        "dialog_mode", "", "slot_filling | explanation | quiz | procedure | roleplay | grounded_qa | questionnaire | topic_chat | empty: chosen from the task"),
       BT::InputPort<std::string>(
         "domain", "", "Domain hint injected into the prompts (e.g. 'restaurant', 'hospital')"),
       BT::InputPort<bool>(

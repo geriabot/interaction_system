@@ -8,8 +8,8 @@ The choice of the dialogue behavior for a request without dialog_mode.
 The orchestrator sends its catalog: each behavior with its explanation and what it needs from
 the request. A behavior is offered only if the request provides what it needs (a quiz needs
 a question bank, a procedure its steps, a roleplay its scene, grounded question answering a
-plain-text material, a questionnaire its instrument); this is decided here, by
-parsing the resources, without the LLM. If one behavior is offered it is chosen; if several
+plain-text material, a questionnaire its instrument, a topic-bounded conversation its topic);
+this is decided here, by parsing the resources, without the LLM. If one behavior is offered it is chosen; if several
 are, the LLM chooses among them from their explanations.
 """
 
@@ -21,6 +21,7 @@ from .skills.procedure import parse_steps
 from .skills.questionnaire import parse_instrument
 from .skills.quiz import parse_questions
 from .skills.roleplay import parse_scene
+from .skills.topic_chat import parse_topic
 
 _log = logging.getLogger("InteractionIntelligence")
 
@@ -31,6 +32,7 @@ NEEDS = {
     "scene": lambda resources: parse_scene(resources)[0] is not None,
     "material": lambda resources: bool(parse_material(resources)[0]),
     "instrument": lambda resources: parse_instrument(resources) is not None,
+    "topic": lambda resources: parse_topic(resources)[0] is not None,
 }
 
 

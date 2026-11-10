@@ -32,6 +32,7 @@ SPOKEN = {
     "procedure_opening", "procedure_step", "procedure_answer_question", "procedure_help_step",
     "procedure_remind", "procedure_summary",
     "roleplay_intro", "roleplay_reply", "roleplay_coach", "roleplay_feedback",
+    "topic_chat_opening", "topic_chat_reply", "topic_chat_closing",
     "ask_cancel_confirmation", "cancel_confirmed_response",
 }
 
@@ -56,6 +57,7 @@ SCENE = {"scenario": "A kayak rental desk by a lake", "role": "the desk clerk"}
 MATERIAL = [{"name": "hours", "content": "The desk opens at nine."}]
 HISTORY = [{"role": "assistant", "content": "Hi."}, {"role": "user", "content": "Hello."}]
 EVALUATION = {"scores": [{"criterion": "asks a question", "score": 4, "comment": "Good."}]}
+CHAT = {"topic": "the lake in summer", "material": [], "questions": [], "avoid": []}
 
 
 def rendered(pb: PromptBuilder) -> dict:
@@ -94,6 +96,9 @@ def rendered(pb: PromptBuilder) -> dict:
         "roleplay_reply": pb.roleplay_reply(SCENE, HISTORY),
         "roleplay_coach": pb.roleplay_coach("help me", SCENE, HISTORY + HISTORY),
         "roleplay_feedback": pb.roleplay_feedback(SCENE, EVALUATION, "user")[0],
+        "topic_chat_opening": pb.topic_chat_opening("talk about the lake", CHAT),
+        "topic_chat_reply": pb.topic_chat_reply(CHAT, HISTORY, "on_topic"),
+        "topic_chat_closing": pb.topic_chat_closing(CHAT, HISTORY),
         "ask_cancel_confirmation": pb.ask_cancel_confirmation("rent a kayak"),
         "cancel_confirmed_response": pb.cancel_confirmed_response("rent a kayak"),
     }

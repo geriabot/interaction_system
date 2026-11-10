@@ -20,11 +20,12 @@ string frame_schema_json   # Optional. JSON slot schema {"slots":[{name,type,...
 string initial_frame_json  # Optional JSON object pre-filling slot values (resume support).
                             # Applied after frame creation, whether from schema or LLM.
 string dialog_mode          # "slot_filling" | "explanation" | "quiz" | "procedure" |
-                            # "roleplay" | "grounded_qa" | "questionnaire". Empty: the system
-                            # chooses among the behaviors whose needs the request provides
-                            # (quiz: a question bank; procedure: the steps; roleplay: the
-                            # scene; grounded_qa: a plain-text material; questionnaire: an
-                            # instrument), from the task description.
+                            # "roleplay" | "grounded_qa" | "questionnaire" | "topic_chat".
+                            # Empty: the system chooses among the behaviors whose needs the
+                            # request provides (quiz: a question bank; procedure: the steps;
+                            # roleplay: the scene; grounded_qa: a plain-text material;
+                            # questionnaire: an instrument; topic_chat: a topic), from the
+                            # task description.
 string resources_json       # JSON array of {name, description, content} objects.
                             # For quiz mode, the first parseable resource must be a JSON
                             # list of {"question","answer"} objects.
@@ -44,6 +45,11 @@ string resources_json       # JSON array of {name, description, content} objects
                             # For questionnaire, a JSON object {"name","instructions",
                             # "options","items","scoring"} (items: strings or {"text",
                             # "reverse","clarification","options"}).
+                            # For topic_chat, a JSON object {"topic"} with optional
+                            # "material" (text or a list of texts: a photograph's
+                            # description, facts given by the family or the staff),
+                            # "questions" (supporting questions), "avoid" (topics the robot
+                            # does not go into), "max_exchanges" and "max_minutes".
 string domain               # Free-text hint injected into every prompt as context
                             # (e.g. "hospital", "coffee shop", "university helpdesk").
                             # Helps the LLM use domain-appropriate tone and vocabulary.

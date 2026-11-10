@@ -17,6 +17,7 @@ add a behavior in [ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md
 | [Role play](roleplay.md) (`roleplay`) | [Barge-in](barge_in.md) *(experimental, not validated)*: the user interrupts the robot, which stops and listens |
 | [Grounded question answering](grounded_qa.md) (`grounded_qa`) | [Conversational fillers](fillers.md): "Hmm…, let me think" when the reply takes more than two seconds |
 | [Standardized questionnaire](questionnaire.md) (`questionnaire`) | |
+| [Topic-bounded social conversation](topic_chat.md) (`topic_chat`) | |
 
 ## What every behavior shares
 

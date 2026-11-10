@@ -128,3 +128,8 @@ phrases:
   roleplay_feedback: "Hemos terminado la práctica. ¡Buen trabajo!"
   roleplay_scores: "Tus notas: {scores}."
   roleplay_score_item: "{criterion}, {score} de 5"
+  topic_chat_open: "Me encantaría hablar contigo de {topic}. ¿Qué te viene a la cabeza?"
+  topic_chat_more: "Cuéntame más de eso."
+  topic_chat_back: "Volvamos a {topic}. ¿Qué más recuerdas?"
+  topic_chat_bye: "Gracias por contarme todo esto. Me ha gustado mucho la charla. ¡Hasta pronto!"
+  topic_chat_bye_early: "De acuerdo, ya hablaremos de ello en otro momento. ¡Hasta pronto!"

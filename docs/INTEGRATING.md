@@ -163,9 +163,19 @@ ros2 action send_goal /dialog/execute_task ros2_dialog_interfaces/action/DialogT
     resources_json: '[{\"name\": \"instrument\", \"description\": \"survey\", \"content\": \"{\\\"options\\\": [\\\"Not at all\\\", \\\"A little\\\", \\\"Quite\\\", \\\"Very much\\\"], \\\"items\\\": [\\\"I enjoyed the visit\\\", \\\"I would recommend the museum\\\"]}\"}]'}"
 ```
 
+**Topic-bounded social conversation** talks with the user about a topic, with nothing to
+collect; the material, the supporting questions, the topics to avoid and the limits are optional:
+
+```sh
+ros2 action send_goal /dialog/execute_task ros2_dialog_interfaces/action/DialogTask \
+  "{task_description: 'Talk with the resident about the dance hall of their youth',
+    dialog_mode: 'topic_chat',
+    resources_json: '[{\"name\": \"topic\", \"description\": \"topic of the conversation\", \"content\": \"{\\\"topic\\\": \\\"The dance hall where you went as a young person\\\", \\\"questions\\\": [\\\"What music did they play?\\\"], \\\"max_minutes\\\": 10}\"}]'}"
+```
+
 Without `dialog_mode`, the system offers slot filling, explanation and every dialogue behavior whose
 needs the resources provide (a question bank, steps, a scene, plain-text material, an
-instrument), and the LLM chooses among them from the task
+instrument, a topic), and the LLM chooses among them from the task
 ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)).
 
 ## 3. Check it

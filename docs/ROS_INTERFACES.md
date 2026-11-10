@@ -25,7 +25,7 @@ the fillers are marked `filler`; the GUI also reads `/robot_utterance`.
 | Field | Type | Meaning |
 |---|---|---|
 | `task_description` | `string` | What the robot must accomplish, in natural language. Required |
-| `dialog_mode` | `string` | `slot_filling`, `explanation`, `quiz`, `procedure`, `roleplay`, `grounded_qa` or `questionnaire`; empty: the system chooses ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
+| `dialog_mode` | `string` | `slot_filling`, `explanation`, `quiz`, `procedure`, `roleplay`, `grounded_qa`, `questionnaire` or `topic_chat`; empty: the system chooses ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
 | `frame_schema_json` | `string` | Slot filling: the slot schema ([SLOT_SCHEMA.md](SLOT_SCHEMA.md)); empty: the LLM designs it from the task |
 | `initial_frame_json` | `string` | Slot filling: a JSON object of values that pre-fill the frame (to resume) |
 | `resources_json` | `string` | A JSON array of `{name, description, content}`: reference text for any dialogue behavior, and what each dialogue behavior needs (formats below the table) |
@@ -48,8 +48,9 @@ points ([explanation](behaviors/explanation.md#what-it-needs-and-returns)), the 
 ([quiz](behaviors/quiz.md#what-it-needs-and-returns)), the steps
 ([procedure](behaviors/procedure.md#what-it-needs-and-returns)), the scene
 ([role play](behaviors/roleplay.md#what-it-needs-and-returns)), the material and the `handover`
-sentence ([grounded question answering](behaviors/grounded_qa.md#what-it-needs-and-returns)), and
-the instrument ([questionnaire](behaviors/questionnaire.md#what-it-needs-and-returns)).
+sentence ([grounded question answering](behaviors/grounded_qa.md#what-it-needs-and-returns)), the
+instrument ([questionnaire](behaviors/questionnaire.md#what-it-needs-and-returns)), and the topic
+([topic-bounded social conversation](behaviors/topic_chat.md#what-it-needs-and-returns)).
 
 For `max_off_task`, a question within the task resets the count, but a reaction does not.
 Selective reasoning (`reasoning`) makes the critical questions more reliable and the turns

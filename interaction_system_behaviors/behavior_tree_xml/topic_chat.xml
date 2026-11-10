@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="TopicChat">
+  <include path="common.xml"/>
+
+  <!-- Talk with the user about a topic set by the requester (in the resources of the request),
+       with nothing to collect: companionship, reminiscence. The robot keeps the initiative:
+       each of its lines comments on what the user said and ends with one open question on the
+       topic.
+
+       Each turn is read as: on_topic (the robot follows up), drifting (the robot bridges back
+       to the topic gently), avoid (a topic to avoid: the robot moves the conversation to
+       another side of the topic), end (the user wants to end: the closing), repeat (the robot's
+       last line again, without the LLM; a turn without progress) or unclear (the model could
+       not read the turn: the robot asks to repeat it with a fixed phrase; a turn without
+       progress, so that a sustained failure of the model ends as a breakdown). A turn that
+       reaches the limit of the conversation (its exchanges, or its minutes) is read as limit
+       or time: the closing. The closing is a short summary of what the user shared and a
+       goodbye; the result is the duration, the supporting questions covered, the topics that
+       came up and who ended the conversation. -->
+  <BehaviorTree ID="TopicChat">
+    <Sequence>
+      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
+      <WithFillers budget_s="{opening_budget}">
+        <SubTree ID="TopicChatOpening" _autoremap="true"/>
+      </WithFillers>
+      <Speak text="{reply}"/>
+      <Fallback>
+        <Repeat num_cycles="-1">
+          <Sequence>
+            <SubTree ID="TurnLimit" _autoremap="true"/>
+            <IfThenElse>
+              <SubTree ID="ListenToUser" _autoremap="true"/>
+              <Sequence>
+                <!-- The reply to the turn, with fillers while it is prepared -->
+                <WithFillers>
+                  <Fallback>
+                    <SubTree ID="CancelCheck" _autoremap="true"/>
+                    <SubTree ID="TopicChatTurn" _autoremap="true"/>
+                  </Fallback>
+                </WithFillers>
+                <SubTree ID="CountProgress" _autoremap="true"/>
+                <Speak text="{reply}"/>
+              </Sequence>
+              <SubTree ID="UserSilent" _autoremap="true"/>
+            </IfThenElse>
+            <ScriptCondition code="done == false"/>
+          </Sequence>
+        </Repeat>
+        <SubTree ID="Conclude" _autoremap="true"/>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="TopicChatOpening">
+    <Sequence>
+      <SubTree ID="Begin" _autoremap="true"/>
+      <IfThenElse>
+        <ScriptCondition code="skip_intro == true"/>
+        <AskIntelligence skill="topic_chat.open_direct"/>
+        <AskIntelligence skill="topic_chat.open"/>
+      </IfThenElse>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="TopicChatTurn">
+    <Sequence>
+      <AskIntelligence skill="topic_chat.classify" user_text="{user_text}"/>
+      <Switch5 variable="{label}" case_1="end" case_2="limit" case_3="time"
+               case_4="repeat" case_5="unclear">
+        <SubTree ID="TopicChatFinish" _autoremap="true" ended_by="user"/>
+        <SubTree ID="TopicChatFinish" _autoremap="true" ended_by="limit"/>
+        <SubTree ID="TopicChatFinish" _autoremap="true" ended_by="time"/>
+        <!-- Repeat and unclear: the reply is set (the last line again, or a request to repeat);
+             close after max_stalled turns without progress -->
+        <Fallback>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </Fallback>
+        <Fallback>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </Fallback>
+        <!-- On the topic, drifting or a topic to avoid: the robot's line for that kind -->
+        <AskIntelligence skill="topic_chat.reply" option="{label}"/>
+      </Switch5>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="TopicChatFinish">
+    <Sequence>
+      <AskIntelligence skill="topic_chat.finish" option="{ended_by}"/>
+      <Script code="done := true"/>
+    </Sequence>
+  </BehaviorTree>
+</root>

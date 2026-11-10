@@ -50,7 +50,8 @@ The system rests on five design decisions.
    conversation but never derails it.
 3. Each dialogue behavior is a Behavior Tree. The dialogue behaviors (the dialogue strategies) are
    slot filling, explanation with a teach-back check of understanding, quiz, guided procedure,
-   role play, grounded question answering and standardized questionnaire. The trees share the
+   role play, grounded question answering, standardized questionnaire and topic-bounded social
+   conversation. The trees share the
    subtrees that keep any conversation on track ([the shared mechanisms](#the-dialogue-behaviors)).
    Every conversation ends with a closing line and an outcome with its reason, so the requesting
    behavior knows why it ended and can act on it. A new dialogue behavior is a new tree and its
@@ -147,13 +148,15 @@ and the trees are in `interaction_system_behaviors/behavior_tree_xml`.
 | `roleplay` | Plays a character in a scene, gives hints on request, then scores the user on each criterion of a rubric (1 to 5) | The scene and its rubric | The scores and the feedback |
 | `grounded_qa` | Answers the user's questions only from the given information, verifying each answer against it | The material (plain text) | Each question with its resolution |
 | `questionnaire` | Reads a standardized questionnaire word for word, maps each answer to an option of the scale and computes the score | The instrument | The answer to each item and the score |
+| `topic_chat` | Talks with the user about a topic set for them (companionship, reminiscence), with open questions, bridging back when the user drifts and avoiding the topics it is told to avoid, and closes with a summary | The topic (material, supporting questions, topics to avoid and limits are optional) | The duration, the supporting questions covered, the topics that came up and who ended it |
 
 Without a slot schema, the LLM designs one from the task. In teach-back, the user explains the
 topic back in their own words; each key point is checked, and only what is missing or wrong is
 explained again. A user who does not want to restate it gets a direct question instead. In
 grounded question answering, the robot says when it does not have the information and declines
 what is outside the task. In the questionnaire, the robot never chooses an option for the user and
-never says the score.
+never says the score. In the topic-bounded conversation, the robot never states facts about the
+person that the person did not say and that are not in the material.
 
 All dialogue behaviors share the following mechanisms. The trees drive them with counters; the
 LLM only classifies the turn.

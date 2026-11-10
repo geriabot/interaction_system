@@ -141,3 +141,9 @@ phrases:
   roleplay_feedback: "We have finished the practice. Well done!"
   roleplay_scores: "Your scores: {scores}."
   roleplay_score_item: "{criterion}, {score} out of 5"
+  # Topic-bounded social conversation
+  topic_chat_open: "I'd love to talk with you about {topic}. What comes to mind?"
+  topic_chat_more: "Tell me more about that."
+  topic_chat_back: "Let's go back to {topic}. What else do you remember?"
+  topic_chat_bye: "Thank you for sharing all this with me. I really enjoyed our talk. Goodbye!"
+  topic_chat_bye_early: "Alright, we can talk about it another time. Goodbye!"

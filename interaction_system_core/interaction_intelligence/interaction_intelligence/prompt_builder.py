@@ -43,6 +43,27 @@ _ROLEPLAY_ENDINGS = {
 }
 
 
+# How the topic-bounded conversation opens, as told to its opening prompt.
+_TOPIC_CHAT_STARTS = {
+    True: "greet the user briefly;",
+    False: "do not greet the user (they were already greeted): start with the topic;",
+}
+
+# What the robot's line does after each kind of user turn (classify_topic_turn), as told to the
+# reply prompt.
+_TOPIC_CHAT_SITUATIONS = {
+    "on_topic": "The user is talking about the topic: follow up on what they said.",
+    "drifting": (
+        "The user has moved away from the topic: acknowledge what they said in a few words, "
+        "then bridge back gently to the topic through something it has in common with what "
+        "they said or with what they told before; never change the subject abruptly."),
+    "avoid": (
+        "The user brought up a topic to avoid: do not go into it, do not comment on it and do "
+        "not name it; acknowledge them kindly in a few words and move the conversation to "
+        "another side of the topic."),
+}
+
+
 class Prompt(str):
     """Prompt text plus the length of its stable leading part."""
 
@@ -766,6 +787,82 @@ class PromptBuilder:
         )
         return self._inject(prompt, ctx), schema
 
+    # ==== TOPIC-BOUNDED SOCIAL CONVERSATION ====
+
+    @staticmethod
+    def _fmt_list(items: list[str], numbered: bool = False) -> str:
+        if not items:
+            return "  (none)"
+        if numbered:
+            return "\n".join(f"  {i}. {item}" for i, item in enumerate(items, 1))
+        return "\n".join(f"  - {item}" for item in items)
+
+    def topic_chat_opening(
+        self, task: str, chat: dict, greet: bool = True, ctx: DialogContext | None = None
+    ) -> str:
+        prompt = self._t(
+            "topic_chat_opening", start=_TOPIC_CHAT_STARTS[bool(greet)], task=task,
+            topic=chat["topic"], material=self._fmt_list(chat.get("material", [])),
+            questions=self._fmt_list(chat.get("questions", []), numbered=True),
+        )
+        return self._inject(prompt, ctx)
+
+    def classify_topic_turn(
+        self, user_text: str, chat: dict, history: list[dict], ctx: DialogContext | None = None
+    ) -> tuple[str, dict]:
+        # No context injection: a quick routing decision over the topic only
+        schema = {
+            "type": "object",
+            "properties": {"kind": {"type": "string", "enum": [
+                "on_topic", "drifting", "avoid", "end", "repeat"]}},
+            "required": ["kind"],
+        }
+        prompt = self._t(
+            "classify_topic_turn", topic=chat["topic"],
+            avoid="; ".join(chat.get("avoid", [])) or "(none)",
+            history=self._fmt_chat(history[-2:]), user_text=user_text,
+        )
+        return prompt, schema
+
+    def topic_chat_reply(
+        self, chat: dict, history: list[dict], kind: str, ctx: DialogContext | None = None
+    ) -> str:
+        # The whole conversation, not a sliding window: it only grows by appending
+        prompt = self._t(
+            "topic_chat_reply",
+            situation=_TOPIC_CHAT_SITUATIONS.get(kind, _TOPIC_CHAT_SITUATIONS["on_topic"]),
+            topic=chat["topic"], avoid="; ".join(chat.get("avoid", [])) or "(none)",
+            material=self._fmt_list(chat.get("material", [])),
+            questions=self._fmt_list(chat.get("questions", []), numbered=True),
+            history=self._fmt_chat(history),
+        )
+        return self._inject(prompt, ctx)
+
+    def topic_chat_closing(
+        self, chat: dict, history: list[dict], ctx: DialogContext | None = None
+    ) -> str:
+        prompt = self._t("topic_chat_closing", topic=chat["topic"],
+                         history=self._fmt_chat(history))
+        return self._inject(prompt, ctx)
+
+    def review_topic_chat(
+        self, chat: dict, history: list[dict], ctx: DialogContext | None = None
+    ) -> tuple[str, dict]:
+        schema = {
+            "type": "object",
+            "properties": {
+                "covered": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+                "topics": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["covered", "topics"],
+        }
+        prompt = self._t(
+            "review_topic_chat", topic=chat["topic"],
+            questions=self._fmt_list(chat.get("questions", []), numbered=True),
+            history=self._fmt_chat(history),
+        )
+        return prompt, schema
+
     # ==== CANCEL FLOW ====
 
     def detect_urgency(
@@ -834,6 +931,14 @@ class PromptBuilder:
         if not turns:
             return "  (empty)"
         labels = {"assistant": "Character", "user": "User"}
+        return "\n".join(f"  {labels.get(t['role'], t['role'])}: {t['content']}" for t in turns)
+
+    @staticmethod
+    def _fmt_chat(turns: list[dict]) -> str:
+        """A social conversation: the assistant's turns are the robot's lines."""
+        if not turns:
+            return "  (empty)"
+        labels = {"assistant": "Robot", "user": "User"}
         return "\n".join(f"  {labels.get(t['role'], t['role'])}: {t['content']}" for t in turns)
 
     @staticmethod
