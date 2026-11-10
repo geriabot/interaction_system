@@ -78,8 +78,8 @@ without the question.
 | Anything else (off-topic noise, unintelligible) | "Could you repeat that?" | No |
 
 Finishing is never a cancellation: the cancellation detector answers "finished" and leaves the
-turn to the behavior. If the robot did ask "do you want to stop?" and the user answers that they
-have no more questions, the conversation ends with the same closing
+turn to the behavior. The end of this behavior is the user's to decide, so a request to stop is
+not confirmed either: it ends the conversation with the same closing, as a normal end
 ([Spoken cancellation](cancellation.md)).
 
 The abstention, the declining and the closing are fixed phrases, never generated, so the robot
@@ -108,7 +108,7 @@ turn not understood ("Could you repeat that?").
 | Situation | What happens |
 |---|---|
 | Silence | [Silence](silence.md) |
-| "Stop" | [Spoken cancellation](cancellation.md); once confirmed, the outcome is `cancelled` even if some questions were answered (below) |
+| "Stop" | The same closing as when the user has finished, without a confirmation, and the outcome is `completed` ([Spoken cancellation](cancellation.md)) |
 | `max_stalled` turns in a row without progress | [Breakdown](no_progress.md) |
 | The LLM fails to read a turn | The label `other` (a turn not understood, as for the value `unclear` [above](#how-each-turn-is-understood)): the robot asks to repeat; a sustained failure ends as a breakdown |
 | The LLM fails to verify an answer | The answer is not said: the robot abstains |
@@ -116,9 +116,9 @@ turn not understood ("Could you repeat that?").
 | No material in the request | `error` before the robot speaks |
 | Turn limit, failure of the system | [Endings](endings.md) |
 
-`completed` means that the whole task was done. After a cancellation, the questions with their
-resolution are still returned in `final_frame_json`, and the requesting behavior decides what
-follows.
+`completed` means that the conversation ended normally: the user had no more questions or asked
+to stop. The questions with their resolution are returned in `final_frame_json` in every case,
+and the requesting behavior decides what follows.
 
 ## Parameters
 

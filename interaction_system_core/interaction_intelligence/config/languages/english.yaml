@@ -100,7 +100,7 @@ phrases:
   quiz_wrong: "No, the answer was {expected}."
   quiz_unanswered: "We'll leave that one unanswered."
   # Spoken cancellation (the question, the cancelled closing, the denied cancellation)
-  cancel_ask: "Are you sure you want to cancel?"
+  cancel_ask: "Do you want to stop here?"
   cancel_ok: "Alright, cancelled."
   cancel_no: "OK, let's continue."
   # Silence: the first prompt ("take your time"; timeout_prompt / phrases.timeout override it)

@@ -1113,9 +1113,10 @@ class LLMDialogClient:
         return local_yes_no(user_text, self.language) or "other"
 
     def ask_cancel_confirmation(self, task: str, ctx: DialogContext | None = None) -> str:
-        prompt = self._pb.ask_cancel_confirmation(task, ctx)
-        res = self._call_nlg(prompt, max_tokens=60)
-        return self._clean(res) or self._fb["cancel_ask"]
+        """The question whether the user wants to stop: a fixed yes/no question of the language
+        file (cancel_ask). A generated one was at times an alternative ("Want to stop or need
+        more info?"), whose "no" could not be read."""
+        return self._fb["cancel_ask"]
 
     def cancel_confirmed_response(
         self, task: str, frame: DialogFrame | None = None, ctx: DialogContext | None = None

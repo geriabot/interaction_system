@@ -104,7 +104,6 @@ QUESTIONS = {
     "detect_urgency": ("detect_urgency", "detect_urgency", "json"),
     "detect_cancel_intent": ("detect_cancel_intent", "detect_cancel_intent", "json"),
     "classify_cancel_reply": ("classify_cancel_reply", "classify_cancel_reply", "json"),
-    "ask_cancel_confirmation": ("ask_cancel_confirmation", "ask_cancel_confirmation", "text"),
     "cancel_confirmed_response": ("cancel_confirmed_response", "cancel_confirmed_response",
                                   "text"),
 }

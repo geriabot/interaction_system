@@ -7,6 +7,7 @@ before the request to stop; the shared check hands the dialogue over with a fixe
 outcome is escalated. No keywords: without an answer of the model, a turn is never an
 urgency."""
 
+import json
 import os
 
 import yaml
@@ -90,10 +91,10 @@ def env_of(llm):
                     timeout_prompt="", history_max_turns=4)
 
 
-def started(llm):
+def started(llm, goal=None):
     env, state = env_of(llm), {}
-    goal = {"dialog_mode": "grounded_qa", "task_description": "Museum desk",
-            "resources_json": '[{"name": "m", "content": "Opens at 10."}]'}
+    goal = goal or {"dialog_mode": "grounded_qa", "task_description": "Museum desk",
+                    "resources_json": '[{"name": "m", "content": "Opens at 10."}]'}
     begin(env, state, SkillInput("", "", 0, goal))
     return env, state
 
@@ -116,8 +117,12 @@ def test_an_urgency_wins_over_an_ending_of_the_tree():
 
 
 def test_an_urgency_in_answer_to_the_confirmation():
+    # (in slot filling: in grounded QA a request to stop is the normal end, with no confirmation)
     llm = FakeLLM(urgent={"No, my chest hurts a lot"}, cancel=True)
-    env, state = started(llm)
+    schema = {"slots": [{"name": "drink", "type": "string", "required": True,
+                         "description": "The drink"}]}
+    env, state = started(llm, {"dialog_mode": "slot_filling", "task_description": "Drink order",
+                               "frame_schema_json": json.dumps(schema)})
     asked = cancel_check(env, state, SkillInput("I'd rather stop", "Anything else?", 0, {}))
     assert asked.label == "ask"
     out = cancel_check(env, state, SkillInput("No, my chest hurts a lot", "", 0, {}))

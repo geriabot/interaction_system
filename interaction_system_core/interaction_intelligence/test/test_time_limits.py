@@ -141,12 +141,12 @@ def test_a_failed_call_that_is_not_a_timeout_is_asked_again():
 def test_a_short_generated_line_is_asked_again_and_a_timeout_is_not():
     limits = CallLimits(15.0, 20.0, clock=Clock())
     c, calls = client(["", "A line long enough."], limits)
-    assert c.ask_cancel_confirmation("Book a taxi") == "A line long enough."
+    assert c.cancel_confirmed_response("Book a taxi") == "A line long enough."
     assert len(calls) == 2
     clock = Clock()
     limits = CallLimits(15.0, 20.0, clock=clock)
     c, calls = client([None, "A line long enough."], limits, clock)
-    assert c.ask_cancel_confirmation("Book a taxi") == c.phrase("cancel_ask")
+    assert c.cancel_confirmed_response("Book a taxi") == c.phrase("cancel_ok")
     assert len(calls) == 1
 
 

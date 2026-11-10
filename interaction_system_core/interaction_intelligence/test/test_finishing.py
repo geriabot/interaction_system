@@ -108,19 +108,33 @@ def ask_then_reply(env, state):
 
 
 @LANGUAGES
-def test_in_grounded_qa_finished_is_the_normal_end(language):
-    llm, _ = client(['{"request": "cancel"}', "Do you want to stop?", '{"answer": "finished"}'],
-                    language)
+def test_in_grounded_qa_a_request_to_stop_is_the_normal_end_without_a_confirmation(language):
+    # The end of grounded QA is the user's to decide: stopping and finishing are the same, and
+    # nothing is lost, so no confirmation is asked (a small model took "No, that's all" after
+    # "Anything else?" for a request to stop, and the user never answered the confirmation)
+    llm, calls = client(['{"request": "cancel"}'], language)
     env, state = qa(llm)
-    result = ask_then_reply(env, state)
+    result = get_skill("cancel_check")(env, state, SkillInput(user_text="I think that's all",
+                                                              option="Anything else?"))
     assert (result.label, result.reply) == ("finished", llm.phrase("qa_bye"))
-    assert state["completed"] and not state["user_cancelled"]
+    assert state["completed"] and not state["user_cancelled"] and not state["awaiting_cancel"]
+    assert len(calls) == 1  # only the detection
     assert get_skill("result")(env, state, SkillInput()).label == "completed"
 
 
 @LANGUAGES
+def test_in_grounded_qa_an_exact_command_with_the_model_down_is_the_normal_end(language):
+    llm, calls = client([], language)
+    env, state = qa(llm)
+    state["model_down"] = True
+    stop = "Stop." if language == "English" else "Para."
+    result = get_skill("cancel_check")(env, state, SkillInput(user_text=stop, option="x"))
+    assert result.label == "finished" and not state["user_cancelled"]
+
+
+@LANGUAGES
 def test_where_the_user_does_not_decide_the_end_the_robot_resumes(language):
-    llm, _ = client(['{"request": "cancel"}', "Do you want to stop?", '{"answer": "finished"}'],
+    llm, _ = client(['{"request": "cancel"}', '{"answer": "finished"}'],
                     language)
     env, state = begin(llm, {"dialog_mode": "slot_filling", "task_description": "Drink order",
                              "frame_schema_json": json.dumps(DRINKS)})
@@ -132,7 +146,7 @@ def test_where_the_user_does_not_decide_the_end_the_robot_resumes(language):
 def test_only_a_yes_stops_any_other_answer_resumes(language):
     # "No, I want the plumber to come" read as "other" reached the strategy and was recorded as
     # a value (round 6): the answer to "do you want to stop?" never reaches the strategy
-    llm, _ = client(['{"request": "cancel"}', "Do you want to stop?", '{"answer": "other"}'],
+    llm, _ = client(['{"request": "cancel"}', '{"answer": "other"}'],
                     language)
     env, state = begin(llm, {"dialog_mode": "slot_filling", "task_description": "Drink order",
                              "frame_schema_json": json.dumps(DRINKS)})
@@ -148,9 +162,9 @@ def test_only_a_yes_stops_any_other_answer_resumes(language):
 def test_the_same_words_are_not_asked_about_again_once_denied(language):
     # A safety net for a false alarm the detector did not catch ("Done, I've pressed cancel"
     # looped: author, 2026-11-01)
-    llm, calls = client(['{"request": "cancel"}', "Do you want to stop?", '{"answer": "no"}'],
-                        language)
-    env, state = qa(llm)
+    llm, calls = client(['{"request": "cancel"}', '{"answer": "no"}'], language)
+    env, state = begin(llm, {"dialog_mode": "slot_filling", "task_description": "Drink order",
+                             "frame_schema_json": json.dumps(DRINKS)})
     cancel_check = get_skill("cancel_check")
     said = "Done, I've pressed cancel."
     assert cancel_check(env, state, SkillInput(user_text=said, option="x")).label == "ask"

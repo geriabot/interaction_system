@@ -346,12 +346,6 @@ questions:
     validate: object
     variants:
       reasoning: {route: reasoning}
-  ask_cancel_confirmation:
-    class: DialogueQuestion
-    template: ask_cancel_confirmation
-    max_tokens: 60
-    parse: text
-    allow_empty: true
   cancel_confirmed_response:
     class: DialogueQuestion
     template: cancel_confirmed_response
