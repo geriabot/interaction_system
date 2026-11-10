@@ -263,6 +263,8 @@ Read the guides in this order to go from what the system does to how to extend i
     experiments ([Running the experiments](#running-the-experiments)).
     [evaluation/HUMAN_REVIEW.md](evaluation/HUMAN_REVIEW.md) has the instructions for the people
     who review and annotate.
+12. [FUTURE_WORK.md](FUTURE_WORK.md): what the evaluated version leaves out, to be addressed
+    next.
 
 Reference pages:
 
