@@ -34,62 +34,64 @@
                                 # many seconds; 0 = none after the ladder
 
     # The catalog of dialogue behaviors. A request names one with dialog_mode, or the
-    # intelligence chooses among those whose needs the request provides
+    # intelligence chooses the one the task needs, over the whole catalog (or none). Either way
+    # the request must provide its needs (what the intelligence's selection.py checks:
+    # question_bank, steps, scene, material, instrument, reference, topic); otherwise it is not feasible
     dialogue_behaviors:
-      behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire", "TopicChat"]
+      behaviors: ["Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire", "TopicChat", "SlotFilling"]
 
       SlotFilling:
         behavior_id: 0
         mode: "slot_filling"
         needs: [""]
-        explanation: "The robot COLLECTS specific structured data from the user (form filling, order taking, registration, booking, reservation, preference selection), then reads it back for confirmation. Also when the task combines informing the user with collecting a preference or decision: the collection is primary."
+        explanation: "The robot asks the user for data it must record: an order, a booking, a registration, a form. It COLLECTS those values (also a preference or decision among options it presents) and reads them back for confirmation. Not for the items of a questionnaire or a rating scale, the answers to test questions, or questions the user asks."
         node_name: "interaction_slot_filling"  # As in interaction_behaviors_config.yaml
 
       Explanation:
         behavior_id: 1
         mode: "explanation"
-        needs: [""]
-        explanation: "The robot EXPLAINS something to the user and checks that they understood it, answering their questions and explaining again if needed. Only when there is nothing to collect from the user."
+        needs: ["reference"]  # a reference text or the key points (what is explained)
+        explanation: "The robot tells the user something they must understand or remember (what it is, what will happen, or how to do it before the user does it) and checks it: it EXPLAINS given content and explains again if needed. Only when there is nothing to collect from the user, and not when the user comes to ask their own questions."
         node_name: "interaction_explanation"
 
       Quiz:
         behavior_id: 2
         mode: "quiz"
         needs: ["question_bank"]
-        explanation: "The robot ASKS the questions of a question bank, grades each answer of the user and gives the score: tests, quizzes, cognitive exercises, trivia."
+        explanation: "The robot asks questions that have a right answer, to see what the user knows or remembers: it ASKS the questions of a question bank, grades each answer and gives the score (tests, quizzes, cognitive exercises, vocabulary or recall practice, trivia)."
         node_name: "interaction_quiz"
 
       Procedure:
         behavior_id: 3
         mode: "procedure"
         needs: ["steps"]
-        explanation: "The robot GUIDES the user step by step through a procedure while the user does it, helping when the user is stuck and repeating, going back or skipping steps on request: exercises, assembly, recipes, checklists."
+        explanation: "The user does something now, step by step, and the robot GUIDES them through it (not steps the robot carries out by itself), helping when the user is stuck and repeating, going back or skipping steps on request: physical exercises, assembly, recipes, using a device or a screen, checklists."
         node_name: "interaction_procedure"
 
       Roleplay:
         behavior_id: 4
         mode: "roleplay"
         needs: ["scene"]
-        explanation: "The robot PLAYS a character in a scene so that the user can practise a situation (a job interview, a conversation in another language, a difficult talk), and then scores the user against a rubric."
+        explanation: "The robot plays a character so that the user practises a situation: it PLAYS that character in a scene (a job interview, a customer, a conversation in another language, a difficult talk), and then scores the user against a rubric."
         node_name: "interaction_roleplay"
 
       GroundedQA:
         behavior_id: 5
         mode: "grounded_qa"
         needs: ["material"]
-        explanation: "The robot ANSWERS the user's questions about a topic, only from the information it is given (a reception desk, a museum, a station, opening hours, prices): the user asks, the robot answers, says when it does not have the information, and declines what is outside the task. Only when the user is the one who asks; nothing to collect, explain or test."
+        explanation: "The user asks and the robot answers from given information: it ANSWERS the user's questions about a topic, only from the information it is given (a reception desk, a museum, a station, a shop, opening hours, prices), says when it does not have the information, and declines what is outside the task. Only when the user is the one who asks; nothing to collect, explain or test."
         node_name: "interaction_grounded_qa"
 
       Questionnaire:
         behavior_id: 6
         mode: "questionnaire"
         needs: ["instrument"]
-        explanation: "The robot ADMINISTERS a standardized questionnaire or survey (a satisfaction survey, a rating scale, a validated instrument): it reads each item and its answer options as written, records the option the user chooses and computes the score."
+        explanation: "The robot reads the items of a questionnaire, scale or survey, each with its answer options: it ADMINISTERS a standardized instrument (a satisfaction or experience survey, a pain or strain rating scale, screening questions, a validated instrument), reads each item and its options as written, records the option the user chooses and computes the score."
         node_name: "interaction_questionnaire"
 
       TopicChat:
         behavior_id: 7
         mode: "topic_chat"
         needs: ["topic"]
-        explanation: "The robot TALKS with the user about a topic set for them, with nothing to collect, explain or test (companionship, reminiscence: their village, a photograph, their work): it comments on what the user tells and asks open questions on the topic, steers back to it gently, avoids the topics it is told to avoid, and closes with a short summary and a goodbye."
+        explanation: "The robot and the user talk about a topic set for them, with nothing to collect, explain or test (companionship, reminiscence: their village, a photograph, their work): the robot TALKS with the user, comments on what the user tells and asks open questions on the topic, steers back to it gently, avoids the topics it is told to avoid, and closes with a short summary and a goodbye."
         node_name: "interaction_topic_chat"

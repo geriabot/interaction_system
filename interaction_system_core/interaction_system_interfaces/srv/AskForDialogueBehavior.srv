@@ -1,12 +1,19 @@
-# Which dialogue behavior fits a request that does not name one. The intelligence offers only
-# the behaviors whose needs the request provides; if more than one is offered, the LLM chooses
+# The first phase of a request: which dialogue behavior the task needs, and whether the request
+# carries its material. When the request does not name the behavior (dialog_mode empty), the LLM
+# chooses it over the whole catalog, or none; then, always, a deterministic check of the material
 string task_description
 string domain
 string resources_json
+# The dialog_mode of the request; empty: the behavior is chosen from the task description
+string dialog_mode
 DialogueBehaviorDetails[] behaviors
 ---
+# false: the decision itself failed (message), a failure of the system
 bool success
 string message
-# The chosen behavior, or -1 if none of the catalog can be offered
+# The behavior the task needs, or -1 if no behavior of the catalog fits it
 int8 behavior_id
-int8[] offered_ids
+# Whether the request can run: a behavior fits and the request carries its material
+bool feasible
+# Why the request is not feasible (the failure_reason of the request); empty when it is
+string reason
