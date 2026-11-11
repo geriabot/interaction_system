@@ -862,6 +862,12 @@ class LLMDialogClient:
         fb = self._fb["quiz_correct"] if correct else self._fb_fmt("quiz_wrong", expected=expected)
         return {"kind": "answer", "correct": correct, "feedback": fb}
 
+    def quiz_feedback(self, correct: bool, expected: str) -> str:
+        """The fixed feedback of a quiz answer graded without the LLM (a number)."""
+        if correct:
+            return self._fb["quiz_correct"]
+        return self._fb_fmt("quiz_wrong", expected=expected)
+
     def quiz_rephrase_question(self, question: str, expected: str) -> str:
         """The question in simpler words, without revealing the answer; the question itself if
         the LLM fails."""
