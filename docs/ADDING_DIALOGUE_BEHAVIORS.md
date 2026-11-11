@@ -229,20 +229,20 @@ and the behavior to a copy of `interaction_orchestrator_params.yaml` (launch arg
 
 ```yaml
     dialogue_behaviors:
-      behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA",
-                  "Questionnaire", "Survey"]
+      behaviors: ["Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire",
+                  "SlotFilling", "Survey"]
       Survey:
         behavior_id: 7       # unique: 0 to 6 are taken
         mode: "survey"
         needs: [""]          # or a need the intelligence can check (see selection.py)
-        explanation: "The robot ASKS a list of yes/no questions and records the answers."
+        explanation: "The robot asks the user a list of yes/no questions and records the answers."
         node_name: "interaction_survey"
 ```
 
 The fields are described in [CONFIGURATION.md](CONFIGURATION.md#the-catalog-of-dialogue-behaviors).
 
 A request with `dialog_mode: survey` runs it; without `dialog_mode`, the intelligence may choose it
-from its explanation. A new kind of *need* (a resource the behavior requires) is added in
+from its explanation, whose first sentence should say who speaks and why, as the others do. A new kind of *need* (a resource the behavior requires) is added in
 `interaction_intelligence/selection.py` (`NEEDS`, and the wording of the refusal in `MISSING`); a
 need that is not there is never provided, so every request for the behavior is then refused as
 `not_feasible`.

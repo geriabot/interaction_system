@@ -360,8 +360,13 @@ of each dialogue behavior). The intelligence decides in two steps
 
 1. **The behavior the task needs**, only when the request does not name it (`dialog_mode`
    empty). The LLM reads the task and the explanations of the whole catalog and answers the
-   behavior that the task needs, or that none fits (prompt `choose_dialogue_behavior`). The task
-   is best described as the phase the robot is in ("Gait speed test: explaining the walk to the
+   behavior that the task needs, or that none fits (prompt `choose_dialogue_behavior`). The first
+   sentence of each explanation says who speaks and why (the user asks and the robot answers from
+   given information; the robot asks questions with a right answer; the user does something and
+   the robot guides them...), and the question asks the LLM to compare the phase with those
+   sentences. The LLM reads the catalog in its order; a small model tends to favour the first
+   entries, so the broadest behavior, slot filling, is listed last. The task is best described as
+   the phase the robot is in ("Gait speed test: explaining the walk to the
    participant"). The question carries the domain but not the resources: the LLM decides what
    the task needs, not what can run with what was attached.
 2. **The check of the material**, always, also when the request names the behavior. The

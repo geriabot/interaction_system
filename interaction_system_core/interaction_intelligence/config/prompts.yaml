@@ -63,10 +63,11 @@ interaction_intelligence:
           meanwhile; or it only speaks, without expecting answers; or it talks with
           the user with no goal of the list.
 
-        Choose by what the task asks the robot to achieve with the user in this phase.
-        When the task combines informing the user with collecting a preference or
-        decision, the collection is primary. Choose what the task needs even if the
-        material that behavior uses is not mentioned: whether it was provided is
+        To decide, ask yourself who speaks and why in this phase, and compare it with
+        the first sentence of each behavior, which says just that.
+        Choose by what the task asks the robot to achieve with the user in this phase,
+        not by whether something gets written down. Choose what the task needs even if
+        the material that behavior uses is not mentioned: whether it was provided is
         checked later. A behavior fits only if the robot holds that conversation with
         the user in this phase; otherwise answer -1.
 
