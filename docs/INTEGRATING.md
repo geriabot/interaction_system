@@ -58,6 +58,7 @@ The outcome is what the behavior acts on. The meaning of each outcome is in
 | `breakdown` | Try later, change the modality, or call a person |
 | `turn_limit` | Resume later, passing the data as `initial_frame_json` (slot filling) |
 | `error` | Retry, or report it; `failure_reason` says what failed |
+| `not_feasible` | Fix the request: nothing was said. Either no dialogue behavior fits the task, or the request lacks the material of the one it needs (`failure_reason`, e.g. "The task needs a procedure, but no steps were provided") |
 
 In practice:
 
@@ -81,7 +82,8 @@ goal and stays `RUNNING` until the conversation ends, then returns `SUCCESS` (ou
                  frame_schema_json='{"slots": [{"name": "full_name", "type": "str"}, {"name": "age", "type": "int", "minimum": 18}]}'
                  final_frame_json="{patient}"/>
   <ExecuteDialog task_description="Explain the exercise: raise both arms to shoulder height and hold"
-                 dialog_mode="explanation" skip_intro="true"/>
+                 dialog_mode="explanation" skip_intro="true"
+                 resources_json='[{"name": "exercise", "description": "instructions", "content": "Raise both arms to shoulder height and hold them there for five seconds."}]'/>
 </Sequence>
 ```
 
@@ -105,8 +107,9 @@ ros2 action send_goal --feedback /dialog/execute_task ros2_dialog_interfaces/act
     dialog_mode: 'slot_filling', domain: 'coffee shop'}"
 ```
 
-**Explanation** explains something and verifies it was understood with teach-back; the key
-points the user must say back are optional (without them the LLM lists them from the material):
+**Explanation** explains something and verifies it was understood with teach-back. It needs the
+content to explain: a reference text, the key points the user must say back, or both (with only
+the text, the LLM lists the key points from it):
 
 ```sh
 ros2 action send_goal /dialog/execute_task ros2_dialog_interfaces/action/DialogTask \
@@ -173,9 +176,12 @@ ros2 action send_goal /dialog/execute_task ros2_dialog_interfaces/action/DialogT
     resources_json: '[{\"name\": \"topic\", \"description\": \"topic of the conversation\", \"content\": \"{\\\"topic\\\": \\\"The dance hall where you went as a young person\\\", \\\"questions\\\": [\\\"What music did they play?\\\"], \\\"max_minutes\\\": 10}\"}]'}"
 ```
 
-Without `dialog_mode`, the system offers slot filling, explanation and every dialogue behavior whose
-needs the resources provide (a question bank, steps, a scene, plain-text material, an
-instrument, a topic), and the LLM chooses among them from the task
+Without `dialog_mode`, the LLM chooses, over the whole catalog, the dialogue behavior that the
+task needs, or none. Describe in `task_description` the phase the robot is in (e.g. "Gait speed
+test: explaining the walk to the participant"). Named or chosen, the behavior runs only if the
+request carries its material (a reference text or key points, a question bank, steps, a scene,
+plain-text material, an instrument, a topic; slot filling needs none); otherwise the goal ends at
+once with outcome `not_feasible`
 ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)).
 
 ## 3. Check it

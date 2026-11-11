@@ -55,23 +55,23 @@ The parameters `dialogue_behaviors.*` of `/interaction_orchestrator`, in
 /interaction_orchestrator:
   ros__parameters:
     dialogue_behaviors:
-      behaviors: ["SlotFilling", "Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA",
-                  "Questionnaire", "TopicChat"]
+      behaviors: ["Explanation", "Quiz", "Procedure", "Roleplay", "GroundedQA", "Questionnaire",
+                  "TopicChat", "SlotFilling"]
       Quiz:
         behavior_id: 2
         mode: "quiz"
         needs: ["question_bank"]
-        explanation: "The robot ASKS the questions of a question bank, grades each answer ..."
+        explanation: "The robot asks questions that have a right answer, to see what ..."
         node_name: "interaction_quiz"
 ```
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `behaviors` | string[] | The dialogue behaviors to load; each has a block with its name |
+| `behaviors` | string[] | The dialogue behaviors to load; each has a block with its name. The LLM reads them in this order when it chooses one; a small model tends to favour the first, so the broadest behavior (slot filling) goes last |
 | `<Behavior>.behavior_id` | int | Its unique id, which is also the answer to the choice of the dialogue behavior (`0` to `6` ship) |
 | `<Behavior>.mode` | string | The `dialog_mode` it implements |
-| `<Behavior>.needs` | string[] | What the request must provide for the dialogue behavior to be offered: `question_bank`, `steps`, `scene`, `material`, `instrument`; `[""]` for none ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
-| `<Behavior>.explanation` | string | What the LLM reads to choose it |
+| `<Behavior>.needs` | string[] | What the request must provide for the dialogue behavior to run: `reference`, `question_bank`, `steps`, `scene`, `material`, `instrument`; `[""]` for none. A request without it, whether it names the behavior or the LLM chose it, ends with outcome `not_feasible` ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
+| `<Behavior>.explanation` | string | What the LLM reads to choose it. Its first sentence says who speaks and why (the user asks, the robot asks questions with a right answer, the robot guides what the user does...): the question to the LLM compares the phase with those first sentences |
 | `<Behavior>.node_name` | string | Its runner, as named in `interaction_behaviors_config.yaml` |
 
 A dialogue behavior without `behavior_id`, `mode` or `node_name` is ignored, with an error in the

@@ -28,6 +28,16 @@ it is, whether it is correct:
 A question left unanswered is not graded as wrong: the score counts only the answers. The
 attempts restart with each question.
 
+**Numeric answers.** When the expected answer is a single number, the reply is graded without the
+LLM if it says exactly one number, in digits or in words ("forty-eight", "cuarenta y ocho",
+"two thousand and five", "mil novecientos sesenta y nueve"). The numbers that the question itself
+says do not count: in "How many hours are there in two days?", "Two days have forty-eight hours"
+is graded on 48. The articles "a", "un", "una" and the word "one" count as 1 only when the reply
+has no other number ("Mars has one moon") or come before a multiplier ("a hundred"). A reply
+with no number, or with several ("forty-eight or fifty"), is left to the LLM as above. Small
+models accepted near misses ("forty" for 48), and a comparison of numbers does not need a model.
+The feedback is then the fixed phrase (`phrases.quiz_correct` or `phrases.quiz_wrong`).
+
 ## Tree
 
 ![The tree of the quiz](../../media/bt/quiz.svg)

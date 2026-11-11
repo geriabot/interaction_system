@@ -33,7 +33,7 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 
 | Template | Kind | Asked by |
 |---|---|---|
-| `choose_dialogue_behavior` | Understanding | The choice of the dialogue behavior, among the offered ones ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
+| `choose_dialogue_behavior` | Understanding | The dialogue behavior the task needs, over the whole catalog, or none (`-1`); the material is checked afterwards in code ([ARCHITECTURE.md](ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) |
 | `classify_task_mode` | Understanding | Not used by the system: the original classifier between slot filling and explanation, kept for the offline benchmark that compares it with the choice above |
 | `create_frame`, `audit_frame` | Understanding | `slot_filling.prepare`, when the request has no schema: design the slots from the task, then check their allowed values against the resources |
 | `opening`, `opening_direct`, `resume_opening` | Generation | `slot_filling.opening`, `.opening_direct` (`skip_intro`), `.resume_opening` |
@@ -42,7 +42,7 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `ask_confirmation` | Generation | `slot_filling.confirmation_question`: read the frame back, saying which slots are left blank (unanswered) |
 | `classify_intent` | Understanding | `slot_filling.classify_confirmation`: `confirms`, `corrects` (with the corrections), `question`, `unclear` |
 | `response_to_intent`, `answer_confirmation_question` | Generation | `slot_filling.confirmed`, `.correction_reply`; `.answer_question` |
-| `extract_key_points` | Understanding | When the dialogue begins, if the request has no key points: list them from the task and the material, marking the critical ones |
+| `extract_key_points` | Understanding | When the dialogue begins, if the request has no key points: list them from the task and the reference text, marking the critical ones |
 | `explanation_opening`, `explanation_opening_direct` | Generation | `explanation.open`, `.open_direct` (end before the check: the teach-back question is the fixed phrase `teach_back`) |
 | `judge_teach_back` | Understanding | `explanation.check`: what the reply is and the status of every key point in it |
 | `repair_explanation`, `rephrase_explanation` | Generation | `explanation.repair`: only the points missing, incomplete or wrong (`points`), or the whole topic in another way (`all`); both end before the check (`teach_back_again`) |
@@ -50,7 +50,7 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `targeted_question` | Generation | `explanation.targeted`: the fallback, a direct question whose answer is the most critical point not yet verified, without giving the answer away |
 | `answer_explanation_question`, `understanding_confirmed` | Generation | `explanation.answer` (then the last check again), `.confirmed`. The closing after the last failed check (`.give_up`) uses fixed phrases and the critical points themselves |
 | `quiz_opening`, `quiz_next_question`, `quiz_rephrase_question`, `quiz_summary` | Generation | `quiz.open`, `.next_question`, `.repeat` (the question in simpler words, from the second time; never revealing the answer), `.summary` |
-| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer, whether it is correct, and short feedback |
+| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer, whether it is correct, and short feedback (not asked when the expected answer is a number and the reply says exactly one: [Quiz](behaviors/quiz.md)) |
 | `procedure_opening`, `procedure_step` | Generation | `procedure.open`; `procedure_step` for every presentation of a step (first, next, back), from that step only, without the context. `procedure.repeat` uses fixed phrases and no LLM |
 | `classify_step_turn` | Understanding | `procedure.classify`: `done`, `question`, `problem`, `repeat`, `back`, `skip`, `unclear` |
 | `procedure_answer_question`, `procedure_help_step`, `procedure_remind`, `procedure_summary` | Generation | `procedure.answer`, `.help`, `.remind`, `.advance` (after the last step) |
