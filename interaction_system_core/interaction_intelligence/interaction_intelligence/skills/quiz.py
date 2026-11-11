@@ -13,10 +13,13 @@ keys: "questions", "idx" (the current question), "results", "feedback" (of the l
 A reply that is not an attempt to answer (the user asks to repeat or clarify the question, did
 not hear or understand it) is not graded: the tree asks the question again (literally first,
 then in simpler words) and, after max_attempts such replies, leaves it unanswered and moves
-on. "I don't know" is an answer (wrong). The outcome is "partial" if a question was left
-unanswered; the score is in the data either way.
+on. "I don't know" is an answer (wrong). An answer whose expected value is a number is graded
+without the LLM when it says exactly one number other than those of the question
+(spoken_numbers.py); otherwise the LLM grades it. The outcome is "partial" if a question was
+left unanswered; the score is in the data either way.
 """
 
+from ..spoken_numbers import grade_number
 from ..utils import parse_loose_json
 from . import DialogueMode, SkillEnv, SkillInput, SkillResult, register_mode, skill
 
@@ -110,9 +113,16 @@ def evaluate(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     label: "next", "last" after the last question, or "repeat" when the reply is not an
     attempt to answer (nothing is recorded: the tree asks the question again)."""
     current = state["questions"][state["idx"]]
-    evaluation = env.llm.evaluate_quiz_answer(
-        question=current["question"], expected=current["answer"], given=inp.user_text
-    )
+    # A number is compared without the LLM when the answer says exactly one (spoken_numbers.py)
+    graded = grade_number(current["question"], current["answer"], inp.user_text,
+                          getattr(env.llm, "language", "English"))
+    if graded is not None:
+        evaluation = {"kind": "answer", "correct": graded,
+                      "feedback": env.llm.quiz_feedback(graded, current["answer"])}
+    else:
+        evaluation = env.llm.evaluate_quiz_answer(
+            question=current["question"], expected=current["answer"], given=inp.user_text
+        )
     if evaluation.get("kind") == "repeat":
         return SkillResult(label="repeat")
     state["feedback"] = evaluation["feedback"]

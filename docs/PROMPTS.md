@@ -48,7 +48,7 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `targeted_question` | Generation | `explanation.targeted`: the fallback, a direct question whose answer is the most critical point not yet verified, without giving the answer away |
 | `answer_explanation_question`, `understanding_confirmed` | Generation | `explanation.answer` (then the last check again), `.confirmed`. The closing after the last failed check (`.give_up`) uses fixed phrases and the critical points themselves |
 | `quiz_opening`, `quiz_next_question`, `quiz_rephrase_question`, `quiz_summary` | Generation | `quiz.open`, `.next_question`, `.repeat` (the question in simpler words, from the second time; never revealing the answer), `.summary` |
-| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer, whether it is correct, and short feedback |
+| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer, whether it is correct, and short feedback (not asked when the expected answer is a number and the reply says exactly one: [Quiz](behaviors/quiz.md)) |
 | `procedure_opening`, `procedure_step` | Generation | `procedure.open`; `procedure_step` for every presentation of a step (first, next, back), from that step only, without the context. `procedure.repeat` uses fixed phrases and no LLM |
 | `classify_step_turn` | Understanding | `procedure.classify`: `done`, `question`, `problem`, `repeat`, `back`, `skip`, `unclear` |
 | `procedure_answer_question`, `procedure_help_step`, `procedure_remind`, `procedure_summary` | Generation | `procedure.answer`, `.help`, `.remind`, `.advance` (after the last step) |
