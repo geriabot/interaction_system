@@ -91,6 +91,7 @@ def launch_setup(context):
         input_device = LaunchConfiguration('input_device').perform(context)
         if input_device:
             stt_params['input_device'] = input_device
+        stt_params['device'] = LaunchConfiguration('stt_device').perform(context)
         speech_nodes = [
             Node(
                 package='simple_hri',
@@ -170,6 +171,10 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'whisper_model', default_value='small',
             description='Whisper model of simple_hri: tiny, base, small, medium, large(-v3)'),
+        DeclareLaunchArgument(
+            'stt_device', default_value='cpu',
+            description="Where simple_hri's speech recognition runs: cpu (leaves the GPU to a "
+                        'local language model), cuda, or auto (the GPU if there is one)'),
         DeclareLaunchArgument(
             'input_device', default_value='',
             description="The microphone of simple_hri's faster_whisper (a sounddevice name or "
