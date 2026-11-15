@@ -15,40 +15,12 @@
        the model ends as a breakdown). Only continue turns count as exchanges. end, scene_end
        and limit close the scene and score it. The result is the scores and the feedback. -->
   <BehaviorTree ID="Roleplay">
-    <Sequence>
-      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
-      <WithFillers budget_s="{opening_budget}">
-        <SubTree ID="RoleplayOpening" _autoremap="true"/>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <!-- The reply to the turn, with fillers while it is prepared -->
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="RoleplayTurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
-    </Sequence>
+    <!-- The dialogue loop shared by every strategy (common.xml), with this file's
+         StrategyOpening and StrategyTurn -->
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
   </BehaviorTree>
 
-  <BehaviorTree ID="RoleplayOpening">
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
       <SubTree ID="Begin" _autoremap="true"/>
       <IfThenElse>
@@ -59,7 +31,7 @@
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="RoleplayTurn">
+  <BehaviorTree ID="StrategyTurn">
     <Sequence>
       <AskIntelligence skill="roleplay.classify" user_text="{user_text}"/>
       <Switch6 variable="{label}" case_1="end" case_2="scene_end" case_3="limit"
@@ -71,18 +43,34 @@
         <IfThenElse>
           <SubTree ID="NoProgress" _autoremap="true"/>
           <AskIntelligence skill="roleplay.repeat" user_text="{user_text}"/>
-          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+          <SubTree ID="RoleplayBreakdown" _autoremap="true"/>
         </IfThenElse>
         <!-- Unclear: the request to repeat is already the reply; close after max_stalled
              turns without progress -->
         <Fallback>
           <SubTree ID="NoProgress" _autoremap="true"/>
-          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+          <SubTree ID="RoleplayBreakdown" _autoremap="true"/>
         </Fallback>
         <!-- Continue: the character replies -->
         <AskIntelligence skill="roleplay.reply"/>
       </Switch6>
     </Sequence>
+  </BehaviorTree>
+
+  <!-- max_stalled turns in a row without progress: after at least one line of the scene the
+       robot gives the evaluation of what was done (the strategy's own outcome, as after a
+       silence); otherwise the dialogue ends as a breakdown. Its label goes to its own key, not
+       to {label}: the Switch of StrategyTurn reads {label} on every tick while a child runs,
+       and another value would switch it to another case -->
+  <BehaviorTree ID="RoleplayBreakdown">
+    <Fallback>
+      <Sequence>
+        <AskIntelligence skill="roleplay.breakdown_end" label="{breakdown_end}"/>
+        <ScriptCondition code="breakdown_end == 'closed'"/>
+        <Script code="done := true"/>
+      </Sequence>
+      <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+    </Fallback>
   </BehaviorTree>
 
   <BehaviorTree ID="RoleplayFinish">

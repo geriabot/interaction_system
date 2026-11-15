@@ -8,8 +8,10 @@ Explanation: explain a topic and verify that the user understood it with teach-b
 
 The robot explains, then asks the user to say it back in their own words (teach-back: a
 "yes, I understood" is not taken as evidence). The reply is judged against the KEY POINTS of
-the explanation: each one correct, incomplete (part of it said right, nothing false: handled
-as missing, never as wrong; decided by the author, 2026-10-31), wrong or missing. Understanding
+the explanation: each one correct, incomplete (part of it said right, nothing added or
+changed: handled as missing, never as wrong; decided by the author, 2026-10-31), wrong (also a
+part right with something added or changed) or missing. The robot never repeats the user's
+words as right: it confirms only the points said back correctly, with their own text. Understanding
 is verified when every
 critical key point has been said back correctly (paraphrase is fine). A reply that says some
 points right and none wrong makes progress: the robot confirms them and asks only for the
@@ -27,7 +29,7 @@ request with neither is refused before the dialogue (selection.py: the need "ref
 "key_points" ([{point, critical, status: pending | correct | incomplete | wrong, said}]),
 "check_mode"
 (teach_back or targeted), "last_check" (the last check asked), "self_reported" (the user said they
-understood without saying it back), "checks".
+understood without saying it back), "checks", "repeats" (requests to hear it again in a row).
 """
 
 from ..utils import parse_loose_json
@@ -93,6 +95,7 @@ def _outcome(state: dict) -> tuple[str, str]:
 register_mode(
     "explanation",
     DialogueMode(
+        finishing_is_an_answer=True,  # "I'm done" or "I understood" answers the check
         init=_init,
         phase=lambda state: (
             "done" if state.get("completed") else state.get("check_mode", "explaining")
@@ -107,6 +110,7 @@ register_mode(
         },
         succeeded=lambda state: bool(state.get("completed")) and not state.get("user_cancelled"),
         outcome=_outcome,
+        pending=lambda env, state: "" if state.get("completed") else state.get("last_check", ""),
     ),
 )
 
@@ -146,7 +150,8 @@ def check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     asks only for those, and it is not a failed check), "gaps" (a reply with content, but a
     critical point missing or wrong and no progress; also declining the direct question of the
     fallback), "question", "declines" (only "I understood" or a refusal, without content: the
-    fallback), "not_understood" (the user did not understand, or asks to repeat) or "other"."""
+    fallback), "not_understood" (the user did not understand), "repeat" (asks to hear it again:
+    explanation.repeat, not a failed check) or "other"."""
     state["history"].append({"role": "user", "content": inp.user_text})
     # Only the points not yet verified are judged: a verified point stays verified, and with
     # it in the list the model could put another point's content in its entry (round 6, Qwen:
@@ -159,6 +164,8 @@ def check(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     )
     judged["points"] = [(open_[j], status, said) for j, status, said in judged["points"]]
     kind = judged["kind"]
+    if kind != "repeat":
+        state["repeats"] = 0
     if (kind == "restates" and state.get("check_mode") != "targeted"
             and not any(s != "missing" for _, s, _ in judged["points"])):
         # Nothing of the explanation was said (e.g. unintelligible): no progress, not a check
@@ -208,6 +215,22 @@ def ask_again(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     return _check(env, state, "", state.get("last_check") or env.llm.phrase("teach_back"))
 
 
+@skill("explanation.repeat")
+def repeat(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
+    """A request to hear it again: not a failed check (the tree counts a turn without
+    progress). The first in a row: the robot's last line again, literally (no LLM); from the
+    second in a row: the explanation in other words, then the last check again."""
+    state["repeats"] = state.get("repeats", 0) + 1
+    last = next((h["content"] for h in reversed(state["history"]) if h["role"] == "assistant"),
+                "")
+    if state["repeats"] <= 1 and last:
+        return _say(state, last)
+    text = env.llm.rephrase_explanation(
+        state["task"], state["history"], attempt_number=state["repeats"], ctx=env.ctx
+    )
+    return _check(env, state, text, state.get("last_check") or env.llm.phrase("teach_back"))
+
+
 @skill("explanation.targeted")
 def targeted(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     """The fallback when the user does not say it back: a direct question about the most
@@ -219,14 +242,13 @@ def targeted(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
 
 @skill("explanation.ask_missing")
 def ask_missing(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
-    """A partial teach-back that made progress: confirm what was said right and ask only for
-    the critical points still pending, without explaining them again (a check that is not
-    counted as failed)."""
+    """A partial teach-back that made progress: confirm the points said right (with their own
+    text) and ask only for the critical points still pending, without explaining them again (a
+    check that is not counted as failed). The person's own words are never confirmed: a point
+    said only in part stays among the missing ones, and its part is not quoted (a wrong content
+    judged incomplete would otherwise be confirmed as right)."""
     state["check_mode"] = "teach_back"
     correct = [p["point"] for p in state["key_points"] if p["status"] == "correct"]
-    # A point said only in part: its part is confirmed and only the rest is asked for
-    correct += [f"part of \"{p['point']}\": {p['said']}" for p in _pending(state)
-                if p["status"] == "incomplete" and p["said"]]
     missing = [p["point"] for p in _pending(state)]
     return _check(env, state, "", env.llm.ask_missing_points(state["task"], correct, missing,
                                                               env.ctx))

@@ -11,44 +11,17 @@
        missing or wrong, without progress: the robot explains again only those points and asks
        again), a question (answered, then the check again), declines (only "I understood", or a
        refusal: the fallback, a direct question about the most critical point), not understood
-       (the whole topic explained again in another way) or other (a turn without progress: the
+       (the whole topic explained again in another way), a request to hear it again (the last
+       line again, then in other words: a turn without progress, not a failed check) or other (a turn without progress: the
        check again). After max_attempts failed checks the robot closes reminding the critical
        points (failed). The result is the status of each key point. -->
   <BehaviorTree ID="Explanation">
-    <Sequence>
-      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
-      <WithFillers budget_s="{opening_budget}">
-        <SubTree ID="ExplanationOpening" _autoremap="true"/>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <!-- The reply to the turn, with fillers while it is prepared -->
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="ExplanationTurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
-    </Sequence>
+    <!-- The dialogue loop shared by every strategy (common.xml), with this file's
+         StrategyOpening and StrategyTurn -->
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
   </BehaviorTree>
 
-  <BehaviorTree ID="ExplanationOpening">
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
       <SubTree ID="Begin" _autoremap="true"/>
       <IfThenElse>
@@ -59,9 +32,18 @@
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="ExplanationTurn">
+  <BehaviorTree ID="StrategyTurn">
     <Sequence>
       <AskIntelligence skill="explanation.check" user_text="{user_text}"/>
+      <IfThenElse>
+        <!-- A request to hear it again: the last line again (then in other words), a turn
+             without progress, not a failed check -->
+        <ScriptCondition code="label == 'repeat'"/>
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="explanation.repeat"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
       <Switch6 variable="{label}" case_1="verified" case_2="progress" case_3="question"
                case_4="declines" case_5="gaps" case_6="not_understood">
         <Sequence>
@@ -85,6 +67,7 @@
           <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
         </IfThenElse>
       </Switch6>
+      </IfThenElse>
     </Sequence>
   </BehaviorTree>
 
