@@ -11,40 +11,12 @@
        score is computed by code and returned, never said. The result is the answer to each item
        and the score (partial if an item has no answer). -->
   <BehaviorTree ID="Questionnaire">
-    <Sequence>
-      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
-      <WithFillers budget_s="{opening_budget}">
-        <SubTree ID="QuestionnaireOpening" _autoremap="true"/>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <!-- The reply to the turn, with fillers while it is prepared -->
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="QuestionnaireTurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
-    </Sequence>
+    <!-- The dialogue loop shared by every strategy (common.xml), with this file's
+         StrategyOpening and StrategyTurn -->
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
   </BehaviorTree>
 
-  <BehaviorTree ID="QuestionnaireOpening">
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
       <SubTree ID="Begin" _autoremap="true"/>
       <!-- The instructions of the instrument are part of its administration: no skip_intro -->
@@ -52,11 +24,11 @@
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="QuestionnaireTurn">
+  <BehaviorTree ID="StrategyTurn">
     <Sequence>
       <AskIntelligence skill="questionnaire.record" user_text="{user_text}"/>
-      <Switch4 variable="{label}" case_1="meaning" case_2="ambiguous" case_3="repeat"
-               case_4="other">
+      <Switch5 variable="{label}" case_1="meaning" case_2="ambiguous" case_3="repeat"
+               case_4="other" case_5="corrected">
         <AskIntelligence skill="questionnaire.clarify"/>
         <!-- Between options: the options again, or the item without an answer after
              max_attempts; a turn without progress -->
@@ -69,6 +41,7 @@
               <AskIntelligence skill="questionnaire.options"/>
               <Sequence>
                 <AskIntelligence skill="questionnaire.unanswered"/>
+                <Script code="new_element := true"/>
                 <SubTree ID="QuestionnaireNext" _autoremap="true"/>
               </Sequence>
             </IfThenElse>
@@ -86,9 +59,12 @@
           <AskIntelligence skill="questionnaire.ask"/>
           <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
         </IfThenElse>
+        <!-- The answer to the previous item changed (recorded there): said, and the current
+             item again -->
+        <AskIntelligence skill="questionnaire.corrected"/>
         <!-- An option or a refusal recorded (label next or last) -->
         <SubTree ID="QuestionnaireNext" _autoremap="true"/>
-      </Switch4>
+      </Switch5>
     </Sequence>
   </BehaviorTree>
 
