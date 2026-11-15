@@ -37,32 +37,35 @@ other side ([evaluation/doc/EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#rul
 | `classify_task_mode` | Understanding | Not used by the system: the original classifier between slot filling and explanation, kept for the offline benchmark that compares it with the choice above |
 | `create_frame`, `audit_frame` | Understanding | `slot_filling.prepare`, when the request has no schema: design the slots from the task, then check their allowed values against the resources |
 | `opening`, `opening_direct`, `resume_opening` | Generation | `slot_filling.opening`, `.opening_direct` (`skip_intro`), `.resume_opening` |
-| `extract_slots` | Understanding | `slot_filling.update`: what the turn does (`act`: `values`, `question`, `skip`, `repeat`, `other`) and the slots it gives or corrects, with list operations |
+| `extract_slots` | Understanding | `slot_filling.update`: what the turn does (`act`: `values`, `question`, `skip`, `repeat`, `between` (an answer between values of the closed slot asked, with no extraction for it), `other`) and the slots it gives or corrects, with list operations |
 | `generate_response` | Generation | `slot_filling.next_question`: acknowledge, say why a value was rejected, ask for what is missing |
 | `ask_confirmation` | Generation | `slot_filling.confirmation_question`: read the frame back, saying which slots are left blank (unanswered) |
-| `classify_intent` | Understanding | `slot_filling.classify_confirmation`: `confirms`, `corrects` (with the corrections), `question`, `unclear` |
+| `classify_intent` | Understanding | `slot_filling.classify_confirmation`: `confirms`, `corrects` (with the corrections), `question`, `repeat` (asks to hear the data again), `unclear` |
+| `rephrase_slot_question` | Generation | `slot_filling.repeat_question`, the second time the user asks to hear the question of a slot again (simpler words), and from the third time for an open slot (with an example of the kind of answer); the first time the question is said again as it was, and a closed slot gets its options, both by code |
 | `response_to_intent`, `answer_confirmation_question` | Generation | `slot_filling.confirmed`, `.correction_reply`; `.answer_question` |
 | `extract_key_points` | Understanding | When the dialogue begins, if the request has no key points: list them from the task and the reference text, marking the critical ones |
 | `explanation_opening`, `explanation_opening_direct` | Generation | `explanation.open`, `.open_direct` (end before the check: the teach-back question is the fixed phrase `teach_back`) |
 | `judge_teach_back` | Understanding | `explanation.check`: what the reply is and the status of every key point in it |
 | `repair_explanation`, `rephrase_explanation` | Generation | `explanation.repair`: only the points missing, incomplete or wrong (`points`), or the whole topic in another way (`all`); both end before the check (`teach_back_again`) |
-| `ask_missing_points` | Generation | `explanation.ask_missing`: after a partial teach-back with progress, confirms what was right and asks only for the critical points still missing, without giving them away |
+| `ask_missing_points` | Generation | `explanation.ask_missing`: after a partial teach-back with progress, confirms the points said right (with their own text, never the person's words) and asks only for the critical points still missing, without giving them away |
 | `targeted_question` | Generation | `explanation.targeted`: the fallback, a direct question whose answer is the most critical point not yet verified, without giving the answer away |
 | `answer_explanation_question`, `understanding_confirmed` | Generation | `explanation.answer` (then the last check again), `.confirmed`. The closing after the last failed check (`.give_up`) uses fixed phrases and the critical points themselves |
 | `quiz_opening`, `quiz_next_question`, `quiz_rephrase_question`, `quiz_summary` | Generation | `quiz.open`, `.next_question`, `.repeat` (the question in simpler words, from the second time; never revealing the answer), `.summary` |
-| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer, whether it is correct, and short feedback (not asked when the expected answer is a number and the reply says exactly one: [Quiz](behaviors/quiz.md)) |
+| `evaluate_quiz_answer` | Understanding | `quiz.evaluate`: whether the reply is an answer, whether it is correct, and short feedback (asked for every reply; when the expected answer is a number and the answer says exactly one, the number decides whether it is correct, with fixed feedback: [Quiz](behaviors/quiz.md)) |
 | `procedure_opening`, `procedure_step` | Generation | `procedure.open`; `procedure_step` for every presentation of a step (first, next, back), from that step only, without the context. `procedure.repeat` uses fixed phrases and no LLM |
 | `classify_step_turn` | Understanding | `procedure.classify`: `done`, `question`, `problem`, `repeat`, `back`, `skip`, `unclear` |
 | `procedure_answer_question`, `procedure_help_step`, `procedure_remind`, `procedure_summary` | Generation | `procedure.answer`, `.help`, `.remind`, `.advance` (after the last step) |
 | `roleplay_intro`, `roleplay_reply`, `roleplay_coach` | Generation | `roleplay.open`; the character's lines (`.open`, `.open_direct`, `.reply`, and `.repeat` from the second request to repeat); `.coach` |
-| `classify_roleplay_turn` | Understanding | `roleplay.classify`: `continue`, `repeat`, `coach`, `end`, `scene_end` (no valid answer: `unclear`, a request to repeat) |
+| `classify_roleplay_turn` | Understanding | `roleplay.classify`: `continue`, `repeat`, `coach`, `end`, `scene_end`, `unclear` (words that make no sense; also when there is no valid answer: a request to repeat, not an exchange of the scene) |
 | `evaluate_roleplay`, `roleplay_feedback` | Understanding | `roleplay.finish`: one question per criterion (score 1 to 5, the numbers of the user's lines as evidence), then the closing, the highlight and the advice |
 | `qa_opening` | Generation | `grounded_qa.open`: the greeting and the invitation to ask, with no facts |
 | `answer_from_material` | Understanding | `grounded_qa.answer`: what the person does, what a request is and, if it is answerable, the answer and the sentences that support it |
 | `verify_finished` | Understanding | `grounded_qa.answer`: before a closing, whether the person said they want nothing more |
 | `verify_answer` | Understanding | `grounded_qa.answer`: whether every claim of the drafted answer is supported by the material; an answer that is not is replaced by the abstention |
 | `detect_wrong_check` | Understanding | `grounded_qa.answer`: for a turn read as a reaction after an answer from the material, whether it repeats back a value of that answer with a different value; if so, the last answer is said again |
-| `map_scale_answer` | Understanding | `questionnaire.record`: the option the answer clearly chooses, or `ambiguous`, `meaning`, `refuses`, `repeat`, `other`. The items, the options, the clarifications and the closing are read without the LLM |
+| `check_intelligible` | Understanding | `grounded_qa.answer`: for a turn that would get an abstention, whether it is intelligible (a question, request or statement that makes sense) or words without meaning; if not intelligible, the turn is not understood |
+| `qa_topics` | Generation | `grounded_qa.answer`: from the second turn not understood in a row, one sentence naming two to four topics of the material, without their facts (generated once per dialogue) |
+| `map_scale_answer` | Understanding | `questionnaire.record`: the option the answer clearly chooses, or `ambiguous`, `meaning`, `refuses`, `repeat`, `corrects_previous` (a new option for the previous item, which it is given), `other`. A chosen option is taken as `ambiguous` by code when the reply says another option in full, with a word the chosen one does not have. The items, the options, the clarifications and the closing are read without the LLM |
 | `topic_chat_opening` | Generation | `topic_chat.open`, `.open_direct` (`skip_intro`: without the greeting): the topic and one open question on it; only the first question is kept |
 | `classify_topic_turn` | Understanding | `topic_chat.classify`: `on_topic`, `drifting`, `avoid`, `end`, `repeat` (no valid answer: `unclear`, a request to repeat) |
 | `topic_chat_reply` | Generation | `topic_chat.reply`: a comment on what the user said and one open question on the topic; what to do with the turn's kind (follow up, bridge back, move away from a topic to avoid) comes last, after the conversation, so that the cached prefix stays the same. Only the first question is kept |
@@ -77,14 +80,19 @@ Notes on some of the templates:
 - `generate_response`: the acknowledgment phrase itself is added by the code. Only when the slot
   it asks for is a list (`list_str`) does the code add `list_slot_rule`, which says that several
   values may be given and invites more items.
-- `judge_teach_back`: the reply is `restates`, `question`, `declines`, `not_understood` or
-  `other`. Each key point is `correct`, `incomplete` (with the part said; handled as missing,
-  never as wrong), `wrong` (with what was said) or `missing`. The schema requires one entry per
+- `judge_teach_back`: the reply is `restates`, `question`, `declines`, `not_understood`,
+  `repeat` (asks to hear it again, or did not hear it: not a failed check) or `other`. Each key point is `correct`, `incomplete` (with the part said, which adds or changes
+  nothing that the point does not say; handled as missing, never as wrong), `wrong` (with what was
+  said; also a part right with something added or changed) or `missing`. It first says whether
+  the words make sense (`sense`): a reply that does not is `other`, even when one of its words is
+  a word of a key point. The schema requires one entry per
   key point, because small models renumbered a shorter list.
-- `repair_explanation`: the points are reworded and address the person; the part of an
-  incomplete point that was said is confirmed, never corrected.
+- `repair_explanation`: the points are reworded and address the person; an incomplete point is
+  explained again whole, without quoting or confirming the person's words, and never corrected.
+  The repair is told only how many points were already said right, and never restates them.
 - `evaluate_quiz_answer`: `kind` is `answer`, or `repeat` when the user asks to repeat or
-  clarify, or did not hear or understand the question; "I don't know" is an answer. If the LLM
+  clarify, or did not hear or understand the question; "I don't know" is an answer, and so is a
+  tentative answer said as a question ("Is it Rome?"), graded on what it names. If the LLM
   fails every retry, the reply is right only when it equals the expected answer, after
   normalization.
 - `roleplay_reply`: a line that repeats an earlier question is asked again once.
@@ -112,15 +120,25 @@ Notes on some of the templates:
   part asked for count as supported.
 - `detect_cancel_intent` is asked for every utterance that is not exactly a stop command of the
   conversation's language (`cancel_commands` of its language file), and is given the task
-  description. The LLM first says what the words are about (`conversation` or `task`); words
-  about the task, such as "cancel my card", are never a cancel request, and the code enforces it.
+  description, the stage of the dialogue behavior (`DialogueMode.cancel_stage`: in slot filling,
+  that nothing has been booked, ordered or sent yet) and the robot's last line. The LLM first says
+  what the words are about (`conversation` or `task`); words about the task, such as "cancel my
+  card", are never a cancel request, and the code enforces it. Dropping what the conversation is
+  preparing ("cancel the booking") is about the conversation.
   It then chooses `cancel`, `finished` (nothing more to ask or add: the normal end, not a cancel
   request) or `none`.
 - `classify_cancel_reply` reads the answer to the confirmation: `yes`, `no`, `finished` (a normal
   end, where the dialogue behavior lets the user end it) or `other` (the answer does not say
-  whether to stop). Only `yes` stops; `no` and `other` both resume.
+  whether to stop). Only `yes` stops; `no` and `other` both resume. It is given the task
+  description and the user's words that led to the question, so that a "yes" about something the
+  task deals with ("Yes, I need to cancel my card" in a bank task) is `other`.
+  A bare yes ("Yes.", "Yes, please") is `yes` without the model (`utils.local_yes_no`): even with
+  the rule in its prompt, the small model read a plain "Yes." as `other` in about one
+  confirmation in four.
 - The question whether the user wants to stop is the fixed phrase `cancel_ask` ("Do you want to
-  stop here?"), in which "yes" means stopping, as `classify_cancel_reply` reads it: a generated
+  end our conversation here?"), in which "yes" means stopping, as `classify_cancel_reply` reads
+  it; it names the conversation so that, in a task about stopping or canceling something, the
+  answer is not about that thing. A generated
   one was at times an alternative ("Want to stop or need more info?"), whose "no" could not be
   read. After a `no`, the robot says the fixed phrase `cancel_no` and repeats its last line,
   without the `cancel_no` of an earlier denial.

@@ -109,9 +109,17 @@ The `DialogueMode` tells the system:
 | `succeeded` | Whether it succeeded (used when there is no `outcome`) |
 | `outcome` | `(outcome, reason)` when the dialogue behavior itself ended the conversation: `completed`, `partial` (an element left unfinished; the reason says which) or `failed` |
 | `strict_cancel` | Whether a cancel request must be explicit (e.g. while the user answers a closed-choice question) |
+| `cancel_stage` | One sentence for the cancel detector on where the behavior is (slot filling: nothing has been booked, ordered or sent yet), so that dropping what the conversation is preparing ("cancel the booking") is read as a request to stop; empty by default |
+| `expected_answers` | The answers the robot expects now (the options of the slot or item asked for, the quiz answer): a reply whose every word is in one of them, or that names a whole answer of two or more words in a sentence, is that answer, never a request to stop, and the LLM is not asked; empty by default |
+| `yes_is_an_answer` | Whether the question pending now is answered yes or no (slot filling's read-back of the data): a reply that opens with one of the language's `yes_words` is then that answer, and the LLM is not asked whether it is a request to stop. False by default |
+| `done_words_are_answers` | Whether a reply that is exactly one of the language's `step_done_words` ("Done.", "Ready.") answers the current element and is never read as a request to stop, without asking the model (procedure). False by default |
+| `finishing_is_an_answer` | Whether the user saying they have finished ("Done", "I'm done", "That's all") is a normal reply to the current element, handled by the behavior's own turn (procedure, explanation, role play, slot filling). When false and without `on_finished` (quiz, questionnaire), it is a request to stop and is asked about. False by default |
 | `silence_grace` | Seconds the user may stay silent on the current element without being prompted (e.g. a procedure step that takes time; 0 by default) ([silence](behaviors/silence.md)) |
 | `on_cancel` | Optional: the closing line when the user confirms a cancellation and the dialogue behavior has something to give for what was done (the role play: its evaluation); `""` for the generic closing. The outcome stays `cancelled` |
 | `on_finished` | Optional: the closing line when the user, asked whether they want to stop, says instead that they have finished (grounded question answering). It records the normal end, with the dialogue behavior's own outcome |
+| `pending` | The element the user is expected to answer now, as the robot asks it (the slot's question, the quiz question, the item with its options, the step): what the robot repeats after a silence and resumes with after a denied request to stop. `""` by default: the robot's last utterance |
+| `on_turn_limit` | Optional: what the dialogue behavior says for what was done when the conversation reaches `max_turns` before its own end (the quiz: the score so far; the procedure: how the steps went; the role play: its evaluation), said before the fixed closing line; `""` for the fixed line alone. The ending stays `turn_limit` |
+| `stop_is_finishing` | With `on_finished`: whether a request to stop is the normal end now (grounded question answering: once a question within the task got its reply). Then a request to stop gives `on_finished`'s closing without a confirmation; otherwise it is asked about, and a confirmed stop is a cancellation. True by default |
 
 The shared endings (`cancelled`, `user_silent`, `breakdown`, `turn_limit`, `error`) are decided by
 the shared subtrees, not by `outcome` ([Endings and outcome](behaviors/endings.md)).
@@ -128,7 +136,10 @@ interaction_intelligence:
 ## 2. The tree
 
 The tree includes the shared subtrees (`common.xml` of `interaction_system_behaviors`: copy it next
-to your tree, or include it by its path) and follows the skeleton of the other behaviors:
+to your tree, or include it by its path). Its main tree calls the dialogue loop shared by every
+behavior, `DialogueLoop`, and the file defines only the two parts that are the behavior's own:
+`StrategyOpening` (the start of the conversation: `Begin`, then the first reply) and
+`StrategyTurn` (the reply to a user turn):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -136,41 +147,17 @@ to your tree, or include it by its path) and follows the skeleton of the other b
   <include path="common.xml"/>
 
   <BehaviorTree ID="Survey">
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
+  </BehaviorTree>
+
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
-      <WithFillers>
-        <Sequence>
-          <SubTree ID="Begin" _autoremap="true"/>
-          <AskIntelligence skill="survey.ask"/>
-        </Sequence>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="SurveyTurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
+      <SubTree ID="Begin" _autoremap="true"/>
+      <AskIntelligence skill="survey.ask"/>
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="SurveyTurn">
+  <BehaviorTree ID="StrategyTurn">
     <Sequence>
       <AskIntelligence skill="survey.record" user_text="{user_text}"/>
       <Switch2 variable="{label}" case_1="last" case_2="unclear">
@@ -188,7 +175,20 @@ to your tree, or include it by its path) and follows the skeleton of the other b
 </root>
 ```
 
-The skeleton is the same in every behavior, and with it the new behavior gets every shared
+`DialogueLoop` (in `common.xml`) says the opening, with fillers while it is prepared and its own
+time budget, and then runs one user turn per cycle until the dialogue is done:
+
+```
+listen -> (spoken cancellation | StrategyTurn) -> count progress -> turn limit -> speak
+          (a silence: UserSilent)
+```
+
+and concludes with the outcome. The loop does not start when the opening already ended the
+dialogue (`done` set by `StrategyOpening`, as slot filling does when the frame cannot be designed).
+Subtrees are resolved by their ID when the tree is built from its file (BehaviorTree.CPP's
+`createTreeFromFile`): a tree given as text cannot resolve a relative `include`.
+
+The loop is the same for every behavior, and with it the new behavior gets every shared
 mechanism ([docs/behaviors](behaviors/README.md)):
 
 - `Begin` builds the state and keeps the closing line for a failure of the system and the
@@ -196,8 +196,9 @@ mechanism ([docs/behaviors](behaviors/README.md)):
 - `WithFillers`, around the opening and around the reply to each turn (everything that asks the
   intelligence before the next `Speak`), says a filler when the reply takes more than
   `filler_after_s` ([Conversational fillers](behaviors/fillers.md));
-- `TurnLimit`, `ListenToUser`, `UserSilent` and `CancelCheck` handle the turn limit, the
-  silences and the spoken cancellation;
+- `ListenToUser`, `UserSilent` and `CancelCheck` handle the silences and the spoken
+  cancellation, and `TurnLimit`, after `CountProgress` and before the reply is said, the turn
+  limit (on the last turn allowed its closing line replaces the reply);
 - `CountProgress` after the dialogue behavior's turn, and `NoProgress` as the condition of an
   `IfThenElse` in every branch of a turn without progress (then: the recovery; else:
   `EndDialogue` with `reason="breakdown"`), give the exit on a communication breakdown;

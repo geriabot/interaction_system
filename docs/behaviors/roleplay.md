@@ -38,15 +38,19 @@ One question to the LLM (`classify_roleplay_turn`):
 | Wants to stop the practice | `end` | Steps out of the role and evaluates |
 | The scene reached its natural end | `scene_end` | Steps out of the role and evaluates |
 | — (the last exchange allowed: `max_exchanges`, capped by `max_turns`) | `limit` | Steps out of the role and evaluates |
-| — (the LLM gives no valid reading: no answer, or not what was asked) | `unclear` | Asks to repeat with a fixed phrase ("Could you repeat that?"), out of character; the line is kept out of the scene's transcript. A turn without progress |
+| Words that make no sense (a word salad, garbled words the character could not answer), or the LLM gives no valid reading (no answer, or not what was asked) | `unclear` | Asks to repeat with a fixed phrase ("Could you repeat that?"), out of character; the line is kept out of the scene's transcript. A turn without progress |
 
 Only `continue` turns count as exchanges: a hint, a request to repeat or a turn not understood
-does not use up the scene. Every line of the scene makes progress; requests to repeat and turns
+does not use up the scene. A line that makes no sense is not a line of the scene: read as one, it
+used up the scene and was scored, and a confused user never reached the breakdown. Every line of the scene makes progress; requests to repeat and turns
 not understood do not, so `max_stalled` of them in a row end the dialogue with a
 [breakdown](no_progress.md). An LLM that is down therefore ends a role play with a breakdown, as
 in every other behavior, instead of letting the scene run to its limit and close without scores.
 The exchange limit is capped by the request's turn limit so that the user always gets the
-evaluation.
+evaluation. Since requests to repeat, hints and turns not understood are turns but not exchanges,
+the turn limit can still come first: then the robot steps out of the role on that last turn and
+gives the evaluation of what was done, followed by the fixed closing line (`on_turn_limit`; the
+ending is `turn_limit`).
 
 Before the scene, the robot introduces it out of character (`roleplay_intro`): the situation, the
 role it plays (named only: not how the character behaves or what it will ask, which would give
@@ -62,7 +66,7 @@ a hint and to finish.
 | Situation | What happens |
 |---|---|
 | Silence | [Silence](silence.md) |
-| `max_stalled` requests to repeat or turns not understood in a row | [Breakdown](no_progress.md): closing line, outcome `breakdown`, no evaluation |
+| `max_stalled` requests to repeat or turns not understood in a row | Once the user said at least one line of the scene, the robot steps out of the role and evaluates the exchanges so far (`ended_by` `breakdown`; the scene's outcome), as after a cancellation; before the first line, [breakdown](no_progress.md): closing line, outcome `breakdown`, no evaluation |
 | "Stop" (spoken cancellation) | [Spoken cancellation](cancellation.md); then the evaluation of the exchanges so far, outcome `cancelled` (below) |
 | The LLM fails to classify a turn | `unclear`: the robot asks to repeat, a turn without progress; a sustained failure ends as a breakdown |
 | The LLM fails to evaluate the scene (some or every criterion) | The feedback says the scores obtained (or only the fixed closing phrase); outcome `partial`, `Criteria not scored: ...` |

@@ -57,10 +57,10 @@ Every slot can be left unanswered: the conversation never insists forever.
 - **The user cannot or will not give it** ("I don't know", "I'd rather not say", "skip it"): the
   slot asked is left unanswered at once, and the robot says so ("Alright, we'll leave that one
   blank.").
-- **It is not obtained after the attempts allowed**: a turn that neither fills the slot asked nor
-  asks a question (an unintelligible answer, a value out of range, a request to repeat) is a
-  failed attempt. After `max_attempts` failed attempts the slot is asked differently (a simpler,
-  closed question), and after one more it is left unanswered.
+- **It is not obtained after the attempts allowed**: a turn that gives no value at all and asks
+  no question (an unintelligible answer, a value out of range) is a failed attempt; an answer
+  about another slot is not. The last asking is different (a simpler, closed question), and at
+  `max_attempts` failed attempts the slot is left unanswered.
 
 An unanswered slot stays empty, is not asked again and does not appear in the result's frame.
 The slots conditioned on it are out of scope (their condition cannot hold). A value the user

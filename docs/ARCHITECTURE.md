@@ -256,12 +256,14 @@ obtain. Here the frame takes a second role: it is the contract that governs a ge
 ## The action layer: the dialogue behaviors
 
 Every dialogue behavior begins the conversation, runs one user turn per cycle until the
-conversation is done or aborted, and concludes with its outcome:
+conversation is done or aborted, and concludes with its outcome. This loop is one subtree,
+`DialogueLoop` in `behavior_tree_xml/common.xml`, shared by every behavior; the file of a behavior
+defines only its opening (`StrategyOpening`) and its reply to a user turn (`StrategyTurn`):
 
 ```text
-begin -> open -> say -> repeat { turn limit -> listen -> (spoken cancellation | the behavior's turn)
-                                 -> count progress -> say }
-                     -> conclude
+StrategyOpening -> say -> repeat { listen -> (spoken cancellation | StrategyTurn)
+                                   -> count progress -> turn limit -> say }
+                       -> conclude
 ```
 
 The tree decides with counters and limits; the LLM only classifies the turn or phrases the reply.
@@ -272,6 +274,7 @@ The subtrees shared by every dialogue behavior are in `behavior_tree_xml/common.
 
 | Subtree | What it does | Page |
 |---|---|---|
+| `DialogueLoop` | The loop of every behavior: the opening, then one user turn per cycle (the subtrees below and the behavior's `StrategyTurn`), then the conclusion | This page |
 | `Begin` | Builds the state of the conversation and fetches the fixed closing line for a failure of the system and the conversational fillers | [Endings and outcome](behaviors/endings.md), [Fillers](behaviors/fillers.md) |
 | `TurnLimit` | Ends the conversation at `max_turns` (outcome `turn_limit`) | [Endings and outcome](behaviors/endings.md) |
 | `ListenToUser`, `UserSilent` | Waits for the user; on a silence, prompts or stays quiet, and ends at `max_silence` (outcome `user_silent`) | [Silence](behaviors/silence.md) |
@@ -323,6 +326,7 @@ rest:
 | `reply_deadline` | Orchestrator (0), `WithFillers` | When the time budget of the reply being prepared ends (steady clock, s; 0 while none is being prepared) |
 | `filler_after_s`, `filler_repeat_s` | Orchestrator | When the conversational fillers are said: `filler_after_s` from the request, or the orchestrator's parameter when the request leaves it unset (0 = none) |
 | `turns`, `timeouts`, `stalled`, `attempts`, `help`, `off_task`, `done`, `progress` | Orchestrator (zero, `false`, `true`), trees | The counters of the conversation, whether it is done, and whether the last turn made progress |
+| `new_element` | `Begin` (`false`), trees | Whether the element being asked was presented after one was given up: its first turn without progress never ends the conversation ([Recovery and breakdown](behaviors/no_progress.md)) |
 | `user_text`, `reply`, `label`, `phase`, `data` | Trees | The last utterance of the user, the reply to say, what the last skill found, the phase and the data of the conversation |
 | `spoken`, `last_utterance` | `Speak` | How many utterances were said, and the last one |
 | `error_closing` | `Begin` | The closing line for a failure of the system |

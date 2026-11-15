@@ -42,6 +42,13 @@ other steps.
 A reply that reports the step done is `done` even when it also asks something ("It's done. What's
 the next step?"): the robot gives the next step and the procedure moves on.
 
+A reply that is, normalized, exactly one of the language's `step_done_words` ("Done.", "Ready.",
+"Hecho.") is never read as a request to stop, and the cancel detector is not asked
+(`DialogueMode.done_words_are_answers`): given the robot's last line ("Let me know when you're
+done"), a small model read a bare "done" as a wish to stop in about one turn in ten of a scenario,
+and the robot asked whether to end the conversation. A longer reply ("I'm done, I want to stop")
+still goes to the detector.
+
 ## Tree
 
 ![The tree of the procedure](../../media/bt/procedure.svg)

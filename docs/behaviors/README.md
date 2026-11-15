@@ -21,7 +21,7 @@ add a behavior in [ADDING_DIALOGUE_BEHAVIORS.md](../ADDING_DIALOGUE_BEHAVIORS.md
 
 ## What every behavior shares
 
-Every behavior follows the same skeleton of turns
+Every behavior runs the same loop of turns, the shared subtree `DialogueLoop`
 ([ARCHITECTURE.md](../ARCHITECTURE.md#the-action-layer-the-dialogue-behaviors)): the tree of the
 behavior decides what follows each turn, the LLM only answers narrow questions (understand an
 utterance, phrase a reply), and every limit is a counter in the tree. Every conversation ends with
@@ -52,7 +52,7 @@ python3 interaction_system_behaviors/scripts/bt_diagrams.py   # writes media/bt/
 | Purple, rounded | Speech: `Speak` (with barge-in), `Listen`, and `WithFillers` (says the conversational fillers while its child prepares the reply) |
 | Yellow | A condition on the blackboard (`if ...`), or `fail` |
 | White | A blackboard update (`Script`): counters, `done` |
-| Green, bold | A subtree. Those of the behavior's own file are expanded below it, with their parameters; those of `common.xml` are a single box, `shared: ...`, drawn on the mechanism's page |
+| Green, bold | A subtree. The shared loop `DialogueLoop` and the behavior's own subtrees (`StrategyOpening`, `StrategyTurn` and those they call) are expanded below it, with their parameters; the other subtrees of `common.xml` are a single box, `shared: ...`, drawn on the mechanism's page |
 
 A Sequence runs its children in order and fails at the first child that fails; a Fallback tries
 its children in order until one succeeds; a Repeat runs its child until it fails; a switch runs the

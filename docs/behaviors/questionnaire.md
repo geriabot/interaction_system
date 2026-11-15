@@ -54,10 +54,11 @@ arithmetic.
 |---|---|---|---|
 | Clearly chooses an option (its words, a synonym or a paraphrase) | `next` / `last` | The next item, or the closing | Yes |
 | Declines the item | `next` / `last` | The next item (the item is recorded as refused) | Yes |
-| Answers between two options, or with none of them | `ambiguous` | The options again, without suggesting any; after `max_attempts` the item is left without an answer | No |
+| Answers between two options, or says another option in full besides the one the LLM chose (checked by code: "very satisfied" is never recorded as "Satisfied", "not sure" never as "Yes"; a synonym or a paraphrase that says no other option is kept; a one-word option such as "Yes" counts only when the chosen option is not said in full, so "Partly comfortable, yes." is "Partly"); or does not decide the option the LLM chose: it has a `hedge_words` word of the language, or every word it shares with that option, which it does not say in full, is in another option too ("tasty true." next to "Completely true" and "Mostly true", "to agree" next to "Somewhat agree" and "Completely agree"; a reply with no word of the chosen option, a synonym, is kept) | `ambiguous` | The options again, without suggesting any; after `max_attempts` the item is left without an answer | No |
+| Changes the answer to the previous item ("for the last one I meant quite"), referring to it (a word of `previous_item_words` of the language file, or a word of the previous item's text) | `corrected` | "All right, I have changed your answer to the previous question." and the current item again; the previous answer is replaced (the record keeps the one it replaced). A reply the LLM takes for a correction without referring to the previous item ("Oh, I see. Not at all." after an explanation, "Sorry, I meant yes") answers the current item when it has that option | Yes |
 | Asks what the item or a word means | `meaning` | The instrument's clarification for the item, or the item again | Yes |
 | Asks to hear the item again | `repeat` | The item and its options again | No |
-| Anything else | `other` | The item and its options again | No |
+| Anything else, also an answer that matches no option | `other` | The item and its options again | No |
 
 ## Tree
 
@@ -80,5 +81,5 @@ arithmetic.
 an answer. The shared limits are described in
 [What every behavior shares](README.md#what-every-behavior-shares). The fixed phrases are
 `phrases.questionnaire_intro`, `phrases.questionnaire_item`, `phrases.questionnaire_options`,
-`phrases.questionnaire_or` and `phrases.questionnaire_end`
+`phrases.questionnaire_or`, `phrases.questionnaire_corrected` and `phrases.questionnaire_end`
 ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)).

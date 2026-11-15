@@ -127,9 +127,11 @@ them are described in [docs/behaviors](behaviors/README.md).
   reason `Off-task: …` and the closing `close_off_task`.
 - `max_attempts` counts, per element: the failed teach-back checks of an explanation before it
   closes; the problems reported on a procedure step before the step is marked stuck; the failed
-  attempts on a slot before it is asked differently (one more attempt and the slot is left
-  unanswered); and the replies to a quiz question that are not answers, or the answers to a
-  questionnaire item that fall between options, before the question or item is left unanswered.
+  attempts on a slot before it is left unanswered (its last asking is different); and the
+  replies to a quiz question that are not answers, or the answers to a questionnaire item that
+  fall between options, before the question or item is left unanswered. Every behavior gives up
+  at the `max_attempts`-th failure. Keep `max_attempts` smaller than `max_stalled`, so that the
+  ladder of an element is complete before a breakdown.
 - `intelligence_timeout` is reached only when the intelligence itself does not answer; an LLM
   that does not answer is bounded by `reply_budget`
   ([the wait for the model](behaviors/endings.md#the-wait-for-the-model)).
@@ -235,11 +237,16 @@ are declared from the files.
   - `ack` (a list), `filler` (a list, over `filler_phrases`) and `timeout`;
   - the lines said without the LLM: `silence_ready`, `cancel_no`, the closing lines
     `close_user_silent`, `close_breakdown`, `close_turn_limit` and `close_error`, `slot_skipped`,
+    slot filling's line for a value out of range `slot_out_of_range` and the parts of the range
+    it says (`range_between`, `range_at_least`, `range_more_than`, `range_at_most`,
+    `range_less_than`), the closed question with the options of a slot `slot_options`, the options again after an answer between them `slot_between`, the confirmation
+    asked again after answering a question at the read-back `confirm_again`, the read-back
+    built by code `readback` and `readback_blank`,
     the closing of a confirmed form `confirmed_closing`, `quiz_unanswered`, the teach-back
     questions `teach_back` and `teach_back_again`, and the closing reminder `key_points_summary`;
   - grounded question answering's `qa_invite`, `qa_more`, `qa_abstain`, `qa_decline` and `qa_bye`;
   - the questionnaire's `questionnaire_intro`, `questionnaire_item`, `questionnaire_options`,
-    `questionnaire_or` and `questionnaire_end`;
+    `questionnaire_or`, `questionnaire_corrected` and `questionnaire_end`;
   - the topic-bounded conversation's `topic_chat_open`, `topic_chat_more`, `topic_chat_back`,
     `topic_chat_bye` and `topic_chat_bye_early`;
   - the fallbacks of each dialogue behavior.
