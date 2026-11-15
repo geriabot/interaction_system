@@ -8,9 +8,12 @@
           resumes, or (frame already complete) asks for confirmation.
        2. Gathering: each turn is understood (the slots it gives or corrects, a question, a
           slot the user cannot or will not give) and applied to the frame; the robot
-          acknowledges it and asks for what is missing. A slot asked max_attempts times is
-          asked differently, and after one more failed attempt it is left unanswered. A turn
-          not understood counts as a turn without progress.
+          acknowledges it and asks for what is missing. A request to hear the question again
+          has its own ladder per slot (literal, simpler, the options). A slot is asked
+          differently on its
+          last asking, and at max_attempts failed attempts it is left unanswered (an answer
+          about another slot is not a failed attempt). A turn not understood counts as a turn
+          without progress.
        3. Confirming: the robot reads the frame back (saying which slots are left blank). The
           user confirms (success; partial if a slot is unanswered), asks a question
           (answered), corrects a value (applied: confirm again, or gather again if a slot
@@ -18,58 +21,31 @@
        After max_stalled turns in a row without progress the robot closes (breakdown).
        The result is the frame (data). -->
   <BehaviorTree ID="SlotFilling">
-    <Sequence>
-      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
-      <WithFillers budget_s="{opening_budget}">
-        <SubTree ID="SlotFillingOpening" _autoremap="true"/>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <!-- One user turn per cycle; the loop ends (fails) when the dialogue is done, at the
-             turn limit, or on a failure of the system -->
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <!-- The reply to the turn, with fillers while it is prepared -->
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="SlotFillingTurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
-    </Sequence>
+    <!-- The dialogue loop shared by every strategy (common.xml), with this file's
+         StrategyOpening and StrategyTurn -->
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
   </BehaviorTree>
 
-  <BehaviorTree ID="SlotFillingOpening">
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
       <SubTree ID="Begin" _autoremap="true"/>
       <AskIntelligence skill="slot_filling.prepare"/>
-      <Switch2 variable="{label}" case_1="complete" case_2="resumed">
+      <Switch3 variable="{label}" case_1="complete" case_2="resumed" case_3="design_failed">
         <AskIntelligence skill="slot_filling.confirmation_question" option="opening"/>
         <AskIntelligence skill="slot_filling.resume_opening"/>
+        <!-- The frame could not be designed: the reply is the closing of an error, and the
+             dialogue ends after it with the outcome error -->
+        <Script code="ending := 'error'; done := true; failure_reason := 'The frame of the task could not be designed by the LLM'"/>
         <IfThenElse>
           <ScriptCondition code="skip_intro == true"/>
           <AskIntelligence skill="slot_filling.opening_direct"/>
           <AskIntelligence skill="slot_filling.opening"/>
         </IfThenElse>
-      </Switch2>
+      </Switch3>
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="SlotFillingTurn">
+  <BehaviorTree ID="StrategyTurn">
     <IfThenElse>
       <ScriptCondition code="phase == 'gathering'"/>
       <SubTree ID="SlotFillingGather" _autoremap="true"/>
@@ -81,7 +57,8 @@
     <Sequence>
       <AskIntelligence skill="slot_filling.update" user_text="{user_text}"
                        number="{max_attempts}"/>
-      <Switch2 variable="{label}" case_1="complete" case_2="not_understood">
+      <Switch4 variable="{label}" case_1="complete" case_2="not_understood" case_3="repeat"
+               case_4="unanswered">
         <AskIntelligence skill="slot_filling.confirmation_question"/>
         <!-- Not understood: ask again, or close after max_stalled turns without progress -->
         <IfThenElse>
@@ -90,18 +67,38 @@
                            number="{max_attempts}"/>
           <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
         </IfThenElse>
-        <!-- Understood (values, a question, a slot left unanswered): ask for what is missing -->
+        <!-- Asked to hear the question again: its own ladder per slot (literal, simpler,
+             the options), a turn without progress that is not a failed attempt -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="slot_filling.repeat_question" number="{max_attempts}"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <!-- The slot asked was left unanswered at its max_attempts-th failed attempt: a turn
+             without progress, as when the other behaviors give up an element; the next slot is
+             a new element (its first turn without progress never ends the dialogue) -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <Sequence>
+            <AskIntelligence skill="slot_filling.next_question" user_text="{user_text}"
+                             number="{max_attempts}"/>
+            <Script code="new_element := true"/>
+          </Sequence>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
+        <!-- Understood (values, a question, a slot the user would not or could not give): ask
+             for what is missing -->
         <AskIntelligence skill="slot_filling.next_question" user_text="{user_text}"
                          number="{max_attempts}"/>
-      </Switch2>
+      </Switch4>
     </Sequence>
   </BehaviorTree>
 
   <BehaviorTree ID="SlotFillingConfirm">
     <Sequence>
       <AskIntelligence skill="slot_filling.classify_confirmation" user_text="{user_text}"/>
-      <Switch4 variable="{label}" case_1="confirms" case_2="question"
-               case_3="corrects_reopened" case_4="corrects_applied">
+      <Switch5 variable="{label}" case_1="confirms" case_2="question"
+               case_3="corrects_reopened" case_4="corrects_applied" case_5="repeat">
         <Sequence>
           <AskIntelligence skill="slot_filling.confirmed"/>
           <Script code="done := true"/>
@@ -111,6 +108,12 @@
         <AskIntelligence skill="slot_filling.next_question" user_text="{user_text}"
                          number="{max_attempts}"/>
         <AskIntelligence skill="slot_filling.correction_reply"/>
+        <!-- Asked to hear the data again: they are read back again (a turn without progress) -->
+        <IfThenElse>
+          <SubTree ID="NoProgress" _autoremap="true"/>
+          <AskIntelligence skill="slot_filling.confirmation_question"/>
+          <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
+        </IfThenElse>
         <!-- Unclear: ask for the confirmation again, or close after max_stalled turns without
              progress -->
         <IfThenElse>
@@ -118,7 +121,7 @@
           <AskIntelligence skill="slot_filling.confirmation_question"/>
           <SubTree ID="EndDialogue" _autoremap="true" reason="breakdown"/>
         </IfThenElse>
-      </Switch4>
+      </Switch5>
     </Sequence>
   </BehaviorTree>
 </root>
