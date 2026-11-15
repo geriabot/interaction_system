@@ -7,9 +7,17 @@ the reply says the words that only another option has (a dropped modifier: "very
 "Satisfied", "not sure" as "Yes"); a synonym or a paraphrase is kept. A change of the answer to
 the previous item is recorded on that item."""
 
+import json
+import os
+
 import pytest
+import yaml
 
 from interaction_intelligence.dialog_context import DialogContext
+from interaction_intelligence.interpretation_context import (build_prompt, decode_context,
+                                                             encode_context)
+from interaction_intelligence.llm_client import LLMDialogClient
+from interaction_intelligence.prompt_builder import PromptBuilder
 from interaction_intelligence.skills import SkillEnv, SkillInput, get_skill
 from interaction_intelligence.skills.questionnaire import _contradicted
 
@@ -169,3 +177,71 @@ def test_without_a_reference_an_option_this_item_lacks_is_not_recorded():
         {"label": "Yes", "value": 1}, {"label": "No", "value": 0}]
     assert record(llm, instrument_state, "Oh, quite.").label == "other"
     assert len(instrument_state["answers"]) == 1
+
+
+# ==== THE OPTION WRITTEN BY ITS LABEL (the client and the interpretation server) ====
+
+_PROMPTS = os.path.join(os.path.dirname(__file__), "..", "config", "prompts.yaml")
+_QUESTIONS = os.path.join(os.path.dirname(__file__), "..", "config", "interpretation",
+                          "questions.yaml")
+
+
+def templates():
+    with open(_PROMPTS, encoding="utf-8") as f:
+        return yaml.safe_load(f)["interaction_intelligence"]["ros__parameters"]["prompts"]
+
+
+def model(answers):
+    """A real client whose model gives these answers in turn."""
+    calls = []
+
+    def infer(session, prompt, max_tokens, schema):
+        calls.append({"prompt": prompt, "schema": schema})
+        return answers[min(len(calls), len(answers)) - 1]
+
+    return LLMDialogClient("nlu", "nlg", infer, PromptBuilder(templates())), calls
+
+
+def test_the_model_writes_the_option_by_its_label():
+    llm, calls = model(['{"kind": "option", "option": "Quite"}'])
+    state = state_of()
+    assert record(llm, state, "Quite, I'd say.").label == "next"
+    assert state["answers"][0]["answer"] == "Quite"
+    assert calls[0]["schema"]["properties"]["option"] == {"type": "string"}
+    assert "- Quite" in calls[0]["prompt"] and "3. Quite" not in calls[0]["prompt"]
+
+
+def test_a_label_the_reply_contradicts_still_reads_the_options_again():
+    # The local checks work on the option the label names: a dropped modifier is not taken
+    llm, _ = model(['{"kind": "option", "option": "A little"}'])
+    state = state_of()
+    assert record(llm, state, "not very much").label == "ambiguous"
+    assert state["answers"] == []
+
+
+def test_a_change_of_the_previous_answer_is_written_by_the_previous_label():
+    llm, calls = model(['{"kind": "corrects_previous", "option": "Quite"}'])
+    state = state_at(1, ["I enjoyed it", "It was long"], ["A little"])
+    assert record(llm, state, "For the previous one I meant quite.").label == "corrected"
+    assert state["answers"][0]["answer"] == "Quite"
+    assert "- Quite" in calls[0]["prompt"].split("PREVIOUS ITEM:")[1]
+
+
+def test_a_change_to_a_label_the_previous_item_lacks_is_not_recorded():
+    llm, _ = model(['{"kind": "corrects_previous", "option": "Sometimes"}'])
+    state = state_at(1, ["I enjoyed it", "It was long"], ["A little"])
+    assert record(llm, state, "For the previous one I meant sometimes.").label == "other"
+    assert state["answers"][0]["answer"] == "A little"
+
+
+def test_the_server_writes_the_same_prompt_and_schema():
+    args = {"user_text": "Quite.", "item": "I enjoyed it", "options": AMOUNT,
+            "previous": {"item": "It was long", "options": AMOUNT, "answer": "A little"}}
+    expected = PromptBuilder(templates()).map_scale_answer(**args)
+    decoded = decode_context(json.loads(encode_context("map_scale_answer", "English", args)))
+    assert build_prompt("map_scale_answer", templates(), decoded) == expected
+    assert expected[1]["properties"]["option"] == {"type": "string"}
+    # The question's declaration takes its schema from PromptBuilder: the server reads no field
+    with open(_QUESTIONS, encoding="utf-8") as f:
+        spec = yaml.safe_load(f)["questions"]["map_scale_answer"]
+    assert spec["validate"] == "object" and "fields" not in spec

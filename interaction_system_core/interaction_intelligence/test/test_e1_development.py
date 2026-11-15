@@ -2,13 +2,57 @@
 #
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
-"""The fixes found in the development run of E1: the role play closed with its evaluation when
-the user leaves the scene in silence."""
+"""The fixes found in the development run of E1: a scale answer read by its label (a scale of
+numbers is never read by position) and the role play closed with its evaluation when the user
+leaves the scene in silence."""
 
 import json
+import os
+
+import yaml
 
 from interaction_intelligence.dialog_context import DialogContext
+from interaction_intelligence.llm_client import LLMDialogClient
+from interaction_intelligence.prompt_builder import PromptBuilder
 from interaction_intelligence.skills import SkillEnv, SkillInput, get_mode, get_skill
+
+_PROMPTS = os.path.join(os.path.dirname(__file__), "..", "config", "prompts.yaml")
+SCALE = [str(n) for n in range(11)]
+
+
+def prompts():
+    with open(_PROMPTS) as f:
+        return yaml.safe_load(f)["interaction_intelligence"]["ros__parameters"]["prompts"]
+
+
+def client(answers):
+    calls = []
+
+    def infer(session, prompt, max_tokens, schema):
+        calls.append(prompt)
+        return answers[min(len(calls), len(answers)) - 1]
+
+    return LLMDialogClient("nlu", "nlg", infer, PromptBuilder(prompts())), calls
+
+
+def test_a_scale_of_numbers_is_read_by_label_not_position():
+    llm, calls = client(['{"kind": "option", "option": "4"}'])
+    assert llm.map_scale_answer("I'd say a four", "How much pain?", SCALE) == {
+        "kind": "option", "option": 4}
+    # The options are given by their label, not numbered
+    assert "- 4" in calls[0] and "5. 4" not in calls[0]
+
+
+def test_a_label_is_matched_without_case_or_final_punctuation():
+    llm, _ = client(['{"kind": "option", "option": "quite."}'])
+    options = ["Not at all", "A little", "Quite", "Very much"]
+    assert llm.map_scale_answer("Quite", "item", options)["option"] == 2
+
+
+def test_an_option_that_is_not_a_label_is_ambiguous():
+    llm, _ = client(['{"kind": "option", "option": "Sometimes"}'])
+    assert llm.map_scale_answer("Sometimes", "item", ["Yes", "No"]) == {
+        "kind": "ambiguous", "option": -1}
 
 
 SCENE = {"scenario": "A café", "role": "The waiter", "criteria": ["Orders", "Is polite"],

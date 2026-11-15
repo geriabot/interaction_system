@@ -609,15 +609,16 @@ class PromptBuilder:
                 "kind": {"type": "string", "enum": [
                     "option", "ambiguous", "meaning", "refuses", "repeat", "corrects_previous",
                     "other"]},
-                "option": {"type": "integer"},
+                "option": {"type": "string"},
             },
             "required": ["kind", "option"],
         }
-        opts = "\n".join(f"{i + 1}. {o}" for i, o in enumerate(options))
+        # The options by their label, not numbered: a number before a scale of numbers ("5. 4")
+        # was answered with the label for the position (E1 development, 2026-11-07)
+        opts = "\n".join(f"- {o}" for o in options)
         if previous:
             prev = (f'"{previous["item"]}", answered "{previous["answer"] or "(declined)"}"; '
-                    "its options (number. label):\n"
-                    + "\n".join(f"{i + 1}. {o}" for i, o in enumerate(previous["options"])))
+                    "its options:\n" + "\n".join(f"- {o}" for o in previous["options"]))
         else:
             prev = "(none)"
         return self._t("map_scale_answer", item=item, options=opts, user_text=user_text,

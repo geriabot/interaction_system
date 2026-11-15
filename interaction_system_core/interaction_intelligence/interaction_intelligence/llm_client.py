@@ -874,23 +874,33 @@ class LLMDialogClient:
                 continue
             kind = data.get("kind") if data.get("kind") in kinds else "other"
             if kind == "corrects_previous":
-                try:
-                    index = int(data.get("option")) - 1
-                except (TypeError, ValueError):
-                    index = -1
-                if not previous or not 0 <= index < len(previous["options"]):
+                index = (self._scale_option_index(data.get("option"), previous["options"])
+                         if previous else None)
+                if index is None:
                     return {"kind": "other", "option": -1}
                 return {"kind": kind, "option": index}
             if kind == "option":
-                try:
-                    index = int(data.get("option")) - 1
-                except (TypeError, ValueError):
-                    return {"kind": "ambiguous", "option": -1}
-                if not 0 <= index < len(options):
+                index = self._scale_option_index(data.get("option"), options)
+                if index is None:
                     return {"kind": "ambiguous", "option": -1}
                 return {"kind": "option", "option": index}
             return {"kind": kind, "option": -1}
         return {"kind": "other", "option": -1}
+
+    @staticmethod
+    def _scale_option_index(chosen, options: list[str]) -> int | None:
+        """The index of the option the model wrote (its label, compared without case,
+        surrounding spaces or final punctuation); None when it matches no option. The options
+        are given by their label, not numbered (E1 development, 2026-11-07): a number is read
+        as a label, never as a position."""
+        def norm(text) -> str:
+            return " ".join(str(text).strip().strip(".!?\"'").lower().split())
+
+        if chosen is None or isinstance(chosen, bool):
+            return None
+        said = norm(chosen)
+        matches = [i for i, o in enumerate(options) if norm(o) == said]
+        return matches[0] if len(matches) == 1 else None
 
     # ==== QUIZ ====
 
