@@ -147,6 +147,58 @@ def local_yes_no(text: str, language: str = "English") -> str | None:
     return None
 
 
+def local_step_done(text: str, language: str = "English") -> bool:
+    """
+    Whether the whole utterance, normalised as the cancel commands, is exactly one
+    of the language's step_done_words ("Done.", "Ready", "Hecho."): a report that
+    the step is done, never a request to stop (DialogueMode.done_words_are_answers).
+    """
+    from .languages import load_language
+
+    normalized = normalize_text(text)
+    return bool(normalized) and normalized in load_language(language).step_done_words
+
+
+def local_starts_with_yes(text: str, language: str = "English") -> bool:
+    """
+    Whether a reply opens with a yes: its first clause (up to the first comma, full stop,
+    exclamation or semicolon), normalised, is one of the language's yes_words ("Yes, that's
+    correct.", "Sí, es eso."). "Yes thank you" without a pause, or "Okay let's stop", is not.
+    """
+    from .languages import load_language
+
+    first = normalize_text(re.split(r"[,.!;]", text or "", maxsplit=1)[0])
+    return bool(first) and first in {normalize_text(w) for w in load_language(language).yes_words}
+
+
+def local_names_answer(text: str, answer: str, language: str = "English") -> bool:
+    """
+    Whether a reply names the whole expected answer of a quiz question, word for word ("A young
+    to is all a tadpole." for "A tadpole"; leading trailing_words of the answer, such as an
+    article, are not required), with none of the language's negation_words or hedge_words in it
+    and no negative contraction ("not a tadpole", "a frog or a tadpole", "I wouldn't say a
+    tadpole"). A recognizer that garbles the words around the answer leaves the answer itself
+    intact, while the model, given only this line, may read the garbled words as a wrong answer.
+    The check depends on these word lists: it only silences the rule (the model's grade stands),
+    so a word listed that does not deny the answer costs nothing but the rule's help.
+    """
+    from .languages import load_language
+
+    lang = load_language(language)
+    expected = normalize_text(answer).split()
+    while expected and expected[0] in lang.trailing_words:
+        expected = expected[1:]
+    said = normalize_text(text).split()
+    if not expected or not said:
+        return False
+    line = f" {' '.join(said)} "
+    blockers = set(lang.negation_words) | {normalize_text(w) for w in lang.hedge_words}
+    if any(b and f" {b} " in line for b in blockers) or re.search(r"\w+n['\u2019]t\b", text or ""):
+        return False
+    n = len(expected)
+    return any(said[i:i + n] == expected for i in range(len(said) - n + 1))
+
+
 def cancel_intent_of(answer: dict) -> bool:
     """Whether the model's reading of an utterance (detect_cancel_intent) is a cancel
     request: {"request": "cancel"} when "about" is not "task"; "finished" (the normal end of the
@@ -160,6 +212,18 @@ def cancel_intent_of(answer: dict) -> bool:
     if "request" in answer:
         return answer.get("request") == "cancel"
     return answer.get("cancel", False) is True
+
+
+def stop_request_of(answer: dict) -> str:
+    """The model's reading of an utterance (detect_cancel_intent) as "cancel", "finished" or
+    "none", with the rule of cancel_intent_of: words about the task are never a request; the
+    former boolean form {"cancel": true} is read as "cancel"."""
+    if not isinstance(answer, dict) or answer.get("about") == "task":
+        return "none"
+    if "request" in answer:
+        request = answer.get("request")
+        return request if request in ("cancel", "finished") else "none"
+    return "cancel" if answer.get("cancel", False) is True else "none"
 
 
 def strip_leading(text: str, phrase: str) -> str:

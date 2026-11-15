@@ -82,8 +82,9 @@ _MAX_HISTORY = 200
 
 
 # What a gathering turn does (extract_slots): gives values, asks something, says it cannot or
-# will not give the value asked (skip), asks to repeat, or none of these (other)
-TURN_ACTS = ("values", "question", "skip", "repeat", "other")
+# will not give the value asked (skip), asks to repeat, answers between values of the closed slot
+# asked without settling on one (between), or none of these (other)
+TURN_ACTS = ("values", "question", "skip", "repeat", "between", "other")
 
 
 class DialogFrame:
@@ -837,6 +838,8 @@ class DialogFrame:
                 "_remove": {"type": "boolean"},
                 "_replace": {"type": "boolean"},
                 "items": {"type": "array", "items": {"type": "string"}},
+                "remove_items": {"type": "array", "items": {"type": "string"}},
+                "add_items": {"type": "array", "items": {"type": "string"}},
             },
         }
         by_type = {
@@ -852,7 +855,7 @@ class DialogFrame:
             "properties": {
                 "intent": {
                     "type": "string",
-                    "enum": ["confirms", "corrects", "question", "unclear"],
+                    "enum": ["confirms", "corrects", "question", "repeat", "unclear"],
                 },
                 "corrections": {
                     "type": "object",

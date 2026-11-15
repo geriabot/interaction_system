@@ -55,6 +55,7 @@ QUESTIONS = {
     "classify_intent": ("classify_intent", "classify_intent", "json"),
     "answer_confirmation_question": ("answer_confirmation_question",
                                      "answer_confirmation_question", "text"),
+    "rephrase_slot_question": ("rephrase_slot_question", "rephrase_slot_question", "text"),
     "response_to_intent": ("response_to_intent", "response_to_intent", "text"),
     # Explanation
     "generate_explanation": ("explanation_opening", "explanation_opening", "text"),
@@ -76,6 +77,8 @@ QUESTIONS = {
     "verify_finished": ("verify_finished", "verify_finished", "json"),
     "verify_answer": ("verify_answer", "verify_answer", "json"),
     "detect_wrong_check": ("detect_wrong_check", "detect_wrong_check", "json"),
+    "check_intelligible": ("check_intelligible", "check_intelligible", "json"),
+    "qa_topics": ("qa_topics", "qa_topics", "text"),
     # Questionnaire
     "map_scale_answer": ("map_scale_answer", "map_scale_answer", "json"),
     # Quiz

@@ -96,6 +96,12 @@ questions:
     max_tokens: 80
     parse: text
     allow_empty: true
+  rephrase_slot_question:
+    class: DialogueQuestion
+    template: rephrase_slot_question
+    max_tokens: 80
+    parse: text
+    allow_empty: true
   response_to_intent:
     class: DialogueQuestion
     template: response_to_intent
@@ -198,6 +204,17 @@ questions:
     template: detect_wrong_check
     max_tokens: 20
     validate: object
+  check_intelligible:
+    class: DialogueQuestion
+    template: check_intelligible
+    max_tokens: 20
+    validate: object
+  qa_topics:
+    class: DialogueQuestion
+    template: qa_topics
+    max_tokens: 60
+    parse: text
+    allow_empty: true
 
   # ==== Questionnaire ====
 

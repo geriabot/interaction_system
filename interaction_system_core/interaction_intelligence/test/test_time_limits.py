@@ -120,7 +120,7 @@ def test_an_invalid_answer_is_asked_again_while_there_is_time():
     clock = Clock()
     limits = CallLimits(15.0, 20.0, clock=clock)
     c, calls = client(["not json", '{"answer": "yes"}'], limits, clock, took=1.0)
-    assert c.classify_cancel_reply("yes") == "yes"
+    assert c.classify_cancel_reply("I suppose so") == "yes"
     assert len(calls) == 2
     # Without time left, an invalid answer is not asked again
     clock = Clock()
@@ -152,7 +152,7 @@ def test_a_short_generated_line_is_asked_again_and_a_timeout_is_not():
 
 def test_without_limits_the_client_waits_as_long_as_the_model_takes():
     c, calls = client(['{"answer": "yes"}'], CallLimits())
-    assert c.classify_cancel_reply("yes") == "yes"
+    assert c.classify_cancel_reply("I suppose so") == "yes"
     assert calls == [None]
 
 

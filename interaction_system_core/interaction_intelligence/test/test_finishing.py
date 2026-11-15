@@ -108,18 +108,43 @@ def ask_then_reply(env, state):
 
 
 @LANGUAGES
-def test_in_grounded_qa_a_request_to_stop_is_the_normal_end_without_a_confirmation(language):
-    # The end of grounded QA is the user's to decide: stopping and finishing are the same, and
-    # nothing is lost, so no confirmation is asked (a small model took "No, that's all" after
-    # "Anything else?" for a request to stop, and the user never answered the confirmation)
+def test_in_grounded_qa_a_request_read_by_the_model_after_an_answer_is_the_normal_end(language):
+    # The end of grounded QA is the user's to decide: once a question was answered, stopping
+    # and finishing are the same. A request only the model read ("No, that's all" after
+    # "Anything else?") gives the normal end without a confirmation: the user who said goodbye
+    # and left did not answer it, and the robot waited through two silences
     llm, calls = client(['{"request": "cancel"}'], language)
     env, state = qa(llm)
+    state["questions"].append({"question": "When?", "resolution": "answered"})
     result = get_skill("cancel_check")(env, state, SkillInput(user_text="I think that's all",
                                                               option="Anything else?"))
     assert (result.label, result.reply) == ("finished", llm.phrase("qa_bye"))
-    assert state["completed"] and not state["user_cancelled"] and not state["awaiting_cancel"]
-    assert len(calls) == 1  # only the detection
+    assert state["completed"] and not state.get("user_cancelled")
+    assert not state.get("awaiting_cancel")
     assert get_skill("result")(env, state, SkillInput()).label == "completed"
+
+
+@LANGUAGES
+def test_in_grounded_qa_an_exact_command_after_an_answer_ends_without_a_confirmation(language):
+    llm, calls = client([], language)
+    env, state = qa(llm)
+    state["questions"].append({"question": "When?", "resolution": "answered"})
+    stop = "Stop." if language == "English" else "Para."
+    result = get_skill("cancel_check")(env, state, SkillInput(user_text=stop, option="x"))
+    assert (result.label, result.reply) == ("finished", llm.phrase("qa_bye"))
+    assert not calls  # decided locally
+
+
+@LANGUAGES
+def test_in_grounded_qa_a_command_before_any_answer_is_asked_about(language):
+    llm, _ = client(['{"answer": "yes"}'], language)
+    env, state = qa(llm)
+    stop = "Stop." if language == "English" else "Para."
+    cancel_check = get_skill("cancel_check")
+    ask = cancel_check(env, state, SkillInput(user_text=stop, option="x"))
+    assert ask.label == "ask"
+    assert cancel_check(env, state, SkillInput(user_text="Yes.", option=ask.reply)).label \
+        == "confirmed" and state["user_cancelled"]
 
 
 @LANGUAGES
@@ -133,13 +158,29 @@ def test_in_grounded_qa_an_exact_command_with_the_model_down_is_the_normal_end(l
 
 
 @LANGUAGES
-def test_where_the_user_does_not_decide_the_end_the_robot_resumes(language):
+def test_where_the_user_does_not_decide_the_end_finished_agrees_to_stop(language):
+    # "Yes, I'm done for today" read as finished: there is no normal end of the user's to give,
+    # so it is a yes (resuming went against the user's will)
     llm, _ = client(['{"request": "cancel"}', '{"answer": "finished"}'],
                     language)
     env, state = begin(llm, {"dialog_mode": "slot_filling", "task_description": "Drink order",
                              "frame_schema_json": json.dumps(DRINKS)})
     result = ask_then_reply(env, state)
-    assert result.label == "denied" and not state["user_cancelled"]
+    assert result.label == "confirmed" and state["user_cancelled"]
+
+
+@LANGUAGES
+def test_where_the_user_does_not_decide_the_end_finished_is_asked_about(language):
+    # "I'm done, that's enough" in a quiz: asked, not graded as an answer (in slot filling,
+    # where finishing is a reply for the frame, it goes to the strategy:
+    # test_finishing_is_an_answer.py)
+    llm, _ = client(['{"about": "conversation", "request": "finished"}'], language)
+    env, state = begin(llm, {"dialog_mode": "quiz", "task_description": "Sums",
+                             "resources_json": json.dumps([{"name": "quiz", "content": json.dumps(
+                                 [{"question": "Two plus two?", "answer": "4"}])}])})
+    result = get_skill("cancel_check")(env, state, SkillInput(user_text="I'm done, enough.",
+                                                              option="x"))
+    assert result.label == "ask" and state["awaiting_cancel"]
 
 
 @LANGUAGES

@@ -110,9 +110,15 @@ def apply_operations(frame: DialogFrame, operations: list[Operation]) -> int:
 
 
 def corrections_to_extractions(corrections: dict) -> list[dict]:
-    """Bridge the output of classify_intent to the extraction format of apply_operations."""
+    """Bridge the output of classify_intent to the extraction format of apply_operations. A
+    list slot may carry several operations (a list of them: take some items out and put others
+    in), applied in order."""
     extractions: list[dict] = []
     for slot, val in corrections.items():
+        if isinstance(val, list) and val and all(isinstance(v, dict) for v in val):
+            for op in val:
+                extractions.extend(corrections_to_extractions({slot: op}))
+            continue
         ex: dict = {"slot": slot, "value": val}
         if isinstance(val, dict):
             for kind in ("remove", "replace", "add"):

@@ -6,8 +6,8 @@
 The languages of the interaction system: every language-dependent resource lives in one YAML
 file per language (config/languages/<name>.yaml): the fixed phrases (the fallbacks of the
 generated lines, the silence prompts, the closings), the acknowledgments, the fillers, the exact
-stop commands, the yes/no words, the noise phrases of the recognizer and the speech settings
-(recognition language, voices). How to add a language: docs/ADDING_A_LANGUAGE.md.
+stop commands, the yes/no words, the ordinal words, the noise phrases of the recognizer and the
+speech settings (recognition language, voices). How to add a language: docs/ADDING_A_LANGUAGE.md.
 
 The `language` parameter names the file by its `name` ("Spanish"), its `code` ("es"), an alias
 ("español") or the file name, in any case; it can also be the path of a language file outside
@@ -34,7 +34,9 @@ REFERENCE = "english"
 # The keys of a language file and their kind: the phrases (a mapping of strings, the keys of the
 # reference file), the lists of strings, the speech settings
 _TEXT = ("name", "code")
-_LISTS = ("aliases", "cancel_commands", "yes_words", "no_words", "asr_noise_phrases",
+_LISTS = ("aliases", "cancel_commands", "yes_words", "no_words", "step_done_words", "ordinal_words", "last_words",
+          "hedge_words", "negation_words", "previous_item_words", "trailing_words",
+          "asr_noise_phrases",
           "ack_phrases", "filler_phrases")
 # Lists that may be empty (a language with no other name)
 _MAY_BE_EMPTY = ("aliases",)
@@ -61,6 +63,13 @@ class Language:
     cancel_commands: frozenset  # normalised
     yes_words: tuple
     no_words: tuple
+    step_done_words: frozenset  # normalised
+    ordinal_words: tuple  # position i: the words of the (i+1)-th, alternatives split by "|"
+    last_words: tuple
+    hedge_words: tuple
+    negation_words: tuple  # normalised
+    previous_item_words: tuple  # normalised
+    trailing_words: tuple  # normalised
     asr_noise_phrases: tuple  # normalised
     ack_phrases: tuple
     filler_phrases: tuple
@@ -161,6 +170,13 @@ def _read(path: str) -> Language:
         cancel_commands=commands,
         yes_words=tuple(w.lower() for w in lists["yes_words"]),
         no_words=tuple(w.lower() for w in lists["no_words"]),
+        step_done_words=frozenset(normalize_text(w) for w in lists["step_done_words"]),
+        ordinal_words=tuple(w.lower() for w in lists["ordinal_words"]),
+        last_words=tuple(w.lower() for w in lists["last_words"]),
+        hedge_words=tuple(w.lower() for w in lists["hedge_words"]),
+        negation_words=tuple(normalize_text(w) for w in lists["negation_words"]),
+        previous_item_words=tuple(normalize_text(w) for w in lists["previous_item_words"]),
+        trailing_words=tuple(normalize_text(w) for w in lists["trailing_words"]),
         asr_noise_phrases=tuple(normalize_text(p) for p in lists["asr_noise_phrases"]),
         ack_phrases=lists["ack_phrases"],
         filler_phrases=lists["filler_phrases"],

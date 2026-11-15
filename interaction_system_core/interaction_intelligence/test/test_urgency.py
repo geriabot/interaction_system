@@ -73,10 +73,13 @@ class FakeLLM:
         self.asked.append(user_text)
         return user_text in self.urgent
 
-    def detect_cancel_intent(self, user_text, ctx=None, strict=False, task=""):
+    def detect_cancel_intent(self, user_text, ctx=None, strict=False, task="", stage="",
+                             robot_line="", local=True, reading=False):
+        if reading:
+            return "cancel" if self.cancel else "none"
         return self.cancel
 
-    def classify_cancel_reply(self, user_text, ctx=None):
+    def classify_cancel_reply(self, user_text, ctx=None, task="", request=""):
         return self.reply
 
     def ask_cancel_confirmation(self, task, ctx=None):

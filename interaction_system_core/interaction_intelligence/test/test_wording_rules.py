@@ -21,14 +21,14 @@ _PROMPTS = os.path.join(os.path.dirname(__file__), "..", "config", "prompts.yaml
 # grounded answer, the parts of the role play feedback)
 SPOKEN = {
     "opening", "resume_opening", "opening_direct", "generate_response", "ask_confirmation",
-    "response_to_intent", "answer_confirmation_question",
+    "response_to_intent", "answer_confirmation_question", "rephrase_slot_question",
     "quiz_opening", "evaluate_quiz_answer", "quiz_next_question", "quiz_rephrase_question",
     "quiz_summary",
     "explanation_opening", "explanation_opening_direct", "repair_explanation",
     "targeted_question", "ask_missing_points", "answer_explanation_question",
     "rephrase_explanation",
     "understanding_confirmed",
-    "qa_opening", "answer_from_material",
+    "qa_opening", "answer_from_material", "qa_topics",
     "procedure_opening", "procedure_step", "procedure_answer_question", "procedure_help_step",
     "procedure_remind", "procedure_summary",
     "roleplay_intro", "roleplay_reply", "roleplay_coach", "roleplay_feedback",
@@ -71,6 +71,8 @@ def rendered(pb: PromptBuilder) -> dict:
         "ask_confirmation": pb.ask_confirmation("rent a kayak", f),
         "response_to_intent": pb.response_to_intent("rent a kayak", "confirms", {}, f),
         "answer_confirmation_question": pb.answer_confirmation_question("why?", "rent", f),
+        "rephrase_slot_question": pb.rephrase_slot_question("rent a kayak", f, "first",
+                                                            "Which one?", True),
         "quiz_opening": pb.quiz_opening("lakes", 3),
         "evaluate_quiz_answer": pb.evaluate_quiz_answer("Deepest lake?", "Baikal", "Ness")[0],
         "quiz_next_question": pb.quiz_next_question("Right!", 2, 3, "Largest lake?"),
@@ -85,6 +87,7 @@ def rendered(pb: PromptBuilder) -> dict:
         "rephrase_explanation": pb.rephrase_explanation("paddling", [], 2),
         "understanding_confirmed": pb.understanding_confirmed("paddling"),
         "qa_opening": pb.qa_opening("the rental desk"),
+        "qa_topics": pb.qa_topics("the rental desk", MATERIAL),
         "answer_from_material": pb.answer_from_material("when?", "desk", MATERIAL, HISTORY)[0],
         "procedure_opening": pb.procedure_opening("launch a kayak", 3),
         "procedure_step": pb.procedure_step("Hold the paddle", 1, 3, "first"),
@@ -208,7 +211,8 @@ def test_the_cancel_question_does_not_explain_how_to_answer_it():
     assert "positive answer" not in tpl and "confirms cancellation" not in tpl
     # Still asked so that "yes" means stopping (classify_cancel_reply reads it that way)
     assert "whether they want to stop" in one_line(tpl)
-    assert "whether they want to stop" in templates()["classify_cancel_reply"]
+    assert "whether they want to end this conversation" in one_line(
+        templates()["classify_cancel_reply"])
 
 
 # ==== Grounded questions: a wrong check of the last answer is not a reaction ====

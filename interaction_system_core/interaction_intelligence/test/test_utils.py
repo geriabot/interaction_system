@@ -123,14 +123,14 @@ def test_cancel_check_exact_abort():
 def test_cancel_check_spanish_exact_commands():
     # The whole utterance, normalised (case, accents, punctuation), or one command repeated
     for text in ("Para.", "¡Para!", "Para, para.", "Para ya.", "Cancela.", "Cancelar.",
-                 "Déjalo.", "dejalo", "Basta.", "Basta ya.", "Detente."):
+                 "Déjalo ya.", "Basta.", "Basta ya.", "Detente."):
         assert local_cancel_check(text, "Spanish") is True, text
 
 
 def test_cancel_check_spanish_not_a_command():
     # A command word inside a longer utterance, or an answer: the LLM decides
     for text in ("Para mí un café.", "No, para el martes.", "No.", "no", "Para llevar.",
-                 "Cancela la segunda.", "Terminar.", "Alto."):
+                 "Cancela la segunda.", "Terminar.", "Alto.", "Déjalo."):
         assert local_cancel_check(text, "Spanish") is None, text
 
 
