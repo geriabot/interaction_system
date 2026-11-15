@@ -8,8 +8,9 @@ Draw the Behavior Trees of the dialogue strategies, from their XML, with Graphvi
 
     python3 interaction_system_behaviors/scripts/bt_diagrams.py [--out media/bt] [--xml DIR] [--format png]
 
-One SVG per strategy (its main tree, with the subtrees of its own file expanded and the shared
-subtrees of common.xml drawn as single boxes), common.svg with all the shared subtrees, and
+One SVG per strategy (its main tree: the shared dialogue loop DialogueLoop expanded with the
+strategy's StrategyOpening and StrategyTurn and the other subtrees of its own file, and the other
+shared subtrees of common.xml drawn as single boxes), common.svg with all the shared subtrees, and
 common/<ID>.svg with each shared subtree alone (the shared subtrees it uses drawn as boxes). Run it
 after changing a tree, so that the figures of the documentation stay in sync with the trees. Needs
 the `dot` command of Graphviz.
@@ -31,6 +32,7 @@ import xml.etree.ElementTree as ET
 HERE = os.path.dirname(os.path.abspath(__file__))
 XML_DIR = os.path.normpath(os.path.join(HERE, "..", "behavior_tree_xml"))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
+LOOP = "DialogueLoop"   # the shared dialogue loop (common.xml)
 
 CONTROL = {"Sequence": "→  Sequence", "Fallback": "?  Fallback", "ReactiveSequence": "→  Reactive",
            "ReactiveFallback": "?  Reactive fallback", "IfThenElse": "if / then / else",
@@ -164,7 +166,11 @@ def main() -> None:
         own = trees_of(path)
         if main_id not in own:
             continue
-        drawer = Drawer(own, shared)
+        # The loop shared by every strategy is drawn expanded in each strategy's figure, with the
+        # strategy's own StrategyOpening and StrategyTurn inside it
+        if LOOP in common:
+            own = {LOOP: common[LOOP], **own}
+        drawer = Drawer(own, shared - {LOOP})
         drawer.draw(list(own[main_id])[0])
         out = os.path.join(args.out, name.replace(".xml", "." + args.format))
         render(graph(f"{main_id} (behavior_tree_xml/{name})", drawer.lines), out)
