@@ -42,8 +42,47 @@ cancel_commands: ["stop", "exit", "cancel", "quit", "abort"]
 # answer to "do you want to stop?", the whole answer, normalised, is exactly one of these words
 # of the dialogue's language (utils.local_yes_no; decided by the author, 2026-10-30). A word
 # cannot be yes in one file and no in another.
-yes_words: ["yes", "ok", "okay", "correct"]
-no_words: ["no", "nope"]
+yes_words: ["yes", "yeah", "yep", "sure", "yes please", "ok", "okay", "correct"]
+no_words: ["no", "nope", "nah", "no thanks", "no thank you"]
+
+# Replies that report a step done ("Done.", "Ready."): in a procedure (DialogueMode.done_words_are_answers)
+# a reply that is, normalised, exactly one of these answers the step and is never read as a
+# request to stop, without asking the model (utils.local_step_done). Only whole replies: "I'm done"
+# or "Done, but I want to stop" still go to the model. Never a word that can mean stopping the
+# conversation.
+step_done_words: ["done", "all done", "it's done", "it is done", "done it", "i've done it", "i have done it", "i did it", "done now", "ok done", "okay done", "ready", "finished"]
+
+# Ordinal words, lowercase, by position (the first entry is the first option; alternatives of one
+# position are separated by "|"), and the words for the last option: an answer such as "the
+# second one" just after slot filling read the options of a closed slot picks that option
+ordinal_words: ["first", "second", "third", "fourth", "fifth", "sixth"]
+last_words: ["last"]
+
+# Words of an answer that hedges between options ("2 or 4", "between morning and afternoon"):
+# slot filling takes no value when the user says two or more options of a closed slot with one of
+# these (and no "no", which marks a correction)
+hedge_words: ["or", "between", "either", "maybe", "perhaps"]
+
+# Words and phrases that deny or set aside a value said next to them ("not a tadpole", "Rome, not
+# Paris", "a froglet rather than a tadpole"): a quiz reply that names the expected answer is graded
+# correct without the model only when it has none of these, no hedge word and no negative
+# contraction ("wouldn't", "won't": any word ending in n't). A word listed here that does not deny
+# the answer only leaves the grade to the model
+negation_words: ["no", "not", "never", "nor", "neither", "nope", "nothing", "cannot", "rather",
+                 "instead", "except", "but", "than", "unlike"]
+
+# Words of a reply that refer to the previous questionnaire item ("for the previous question I meant
+# often"): a change of the previous answer is taken only when the reply refers to that item (one
+# of these, or a word of its text); otherwise the reply answers the current item
+previous_item_words: ["previous", "last one", "last question", "the one before", "before that",
+                      "earlier", "first one", "first question", "other question", "change my answer",
+                      "my answer to"]
+
+# Short words that never end a value said on its own (articles, prepositions, conjunctions,
+# hesitations): slot filling removes them from the end of a free-text value ("Marta the" is
+# "Marta"; a recognizer or a noisy line adds them)
+trailing_words: ["the", "a", "an", "and", "or", "to", "of", "in", "at", "it", "is", "that",
+                 "uh", "um", "er"]
 
 # Transcriptions discarded as noise when the WHOLE utterance is made of these (one or more,
 # normalised as the cancel commands; decided by the author, 2026-10-30): fillers and the
@@ -100,7 +139,7 @@ phrases:
   quiz_wrong: "No, the answer was {expected}."
   quiz_unanswered: "We'll leave that one unanswered."
   # Spoken cancellation (the question, the cancelled closing, the denied cancellation)
-  cancel_ask: "Do you want to stop here?"
+  cancel_ask: "Do you want to end our conversation here?"
   cancel_ok: "Alright, cancelled."
   cancel_no: "OK, let's continue."
   # Silence: the first prompt ("take your time"; timeout_prompt / phrases.timeout override it)
@@ -115,17 +154,41 @@ phrases:
   close_error: "I'm sorry, something went wrong and I have to stop here."
   # Slot filling: a slot left blank
   slot_skipped: "Alright, we'll leave that one blank."
+  # Slot filling: a value out of the allowed range (said by the system, so that no bound is
+  # left out), and the parts of the range ({low}, {high}: the bounds as numbers)
+  slot_out_of_range: "{value} is not possible: it must be {range}."
+  range_between: "between {low} and {high}"
+  range_at_least: "at least {low}"
+  range_more_than: "more than {low}"
+  range_at_most: "at most {high}"
+  range_less_than: "less than {high}"
+  # Slot filling: the closed question of a slot's last asking, and of an answer that matched
+  # several options ({options}: "a, b or c", joined with questionnaire_or)
+  slot_options: "Is it {options}?"
+  # Slot filling: after an answer between the options of a closed slot ("about 3, or 4" for 2, 4
+  # or 6), the options again ({options} as in slot_options)
+  slot_between: "I need one of these: {options}."
+  # Slot filling: after answering a question at the read-back, the confirmation again
+  confirm_again: "Are the details I read out correct?"
+  # Slot filling: the read-back built by code when the generated one leaves a value out or adds
+  # something ({details}: the values; readback_blank: the slots left blank)
+  readback: "Let me check: {details}. Is that right?"
+  readback_blank: "left blank: {slots}"
   # Grounded question answering
   qa_invite: "What would you like to know?"
   qa_more: "Is there anything else you'd like to know?"
   qa_abstain: "I don't have that information."
   qa_decline: "That is outside what we are talking about here, so I can't help you with it; I can only answer questions about the information I have."
   qa_bye: "Alright. Have a good day!"
+  # A second turn in a row not understood: this, then what can be asked
+  qa_unclear_again: "Sorry, I still didn't understand."
+  qa_topics: "I can answer questions about the information I have here."
   # Questionnaire (questionnaire_or joins the last two options: "a, b or c")
   questionnaire_intro: "I will ask you {total} questions. For each one, choose one of the options."
   questionnaire_item: "Question {n} of {total}:"
   questionnaire_options: "The options are: {options}."
   questionnaire_or: "or"
+  questionnaire_corrected: "All right, I have changed your answer to the previous question."
   questionnaire_end: "We have finished. Thank you for your answers."
   # Procedure
   procedure_opening: "Let's go through it step by step."

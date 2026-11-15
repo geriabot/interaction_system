@@ -55,7 +55,9 @@ def test_every_value_is_filled(path):
         assert isinstance(data[key], str) and data[key].strip()
     for key, value in data["phrases"].items():
         assert isinstance(value, str) and value.strip(), key
-    for key in ("cancel_commands", "yes_words", "no_words", "asr_noise_phrases", "ack_phrases",
+    for key in ("cancel_commands", "yes_words", "no_words", "ordinal_words", "last_words",
+                "hedge_words", "previous_item_words", "trailing_words", "asr_noise_phrases",
+                "ack_phrases",
                 "filler_phrases"):
         assert data[key] and all(isinstance(s, str) and s.strip() for s in data[key]), key
     for key, kind in SPEECH_KEYS.items():

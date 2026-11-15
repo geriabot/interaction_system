@@ -20,8 +20,8 @@ speech:
 # Only the whole utterance counts (normalised: "¡Para, para!" is "para para", a repeated
 # command): "Para." stops, "Para mí un café." or "No, para el martes." do not (the model decides
 # them). Left out on purpose: "no" (an answer), "alto" and "salir" (answers to a question),
-# "olvídalo" (may drop only the last value), "terminar" (the role play's way to end the practice,
-# evaluated: roleplay_intro).
+# "olvídalo" and "déjalo" (may drop only the last value, or mean "leave it as it is"),
+# "terminar" (the role play's way to end the practice, evaluated: roleplay_intro).
 cancel_commands:
   - "para"
   - "para ya"
@@ -34,14 +34,36 @@ cancel_commands:
   - "cancelar"
   - "cancélalo"
   - "cancela por favor"
-  - "déjalo"
   - "déjalo ya"
   - "dejémoslo"
   - "detente"
 
 # Only fallbacks (english.yaml): "vale" and "correcto" confirmed by the author (2026-10-30)
-yes_words: ["sí", "si", "vale", "correcto"]
-no_words: ["no"]
+yes_words: ["sí", "si", "vale", "correcto", "claro", "de acuerdo", "sí por favor"]
+no_words: ["no", "no gracias", "qué va"]
+
+# Replies that report a step done: see english.yaml (step_done_words).
+step_done_words: ["hecho", "ya está", "ya lo he hecho", "ya lo hice", "hecho ya", "ya", "listo", "lista", "terminado", "terminada", "vale hecho", "ok hecho"]
+
+# Ordinales por posición (english.yaml), con sus variantes de género
+ordinal_words: ["primero|primera|primer", "segundo|segunda", "tercero|tercera|tercer",
+                "cuarto|cuarta", "quinto|quinta", "sexto|sexta"]
+last_words: ["último", "última"]
+
+# Palabras de una respuesta que duda entre opciones (english.yaml)
+hedge_words: ["o", "u", "entre", "quizá", "quizás", "tal vez"]
+
+# Palabras que niegan un valor dicho a su lado (english.yaml)
+negation_words: ["no", "ni", "nunca", "jamás", "tampoco", "nada", "sino", "excepto", "salvo",
+                 "en vez de", "en lugar de"]
+
+# Palabras de una respuesta que se refieren al ítem anterior del cuestionario (english.yaml)
+previous_item_words: ["anterior", "la de antes", "la otra", "la primera", "el primero",
+                      "cambia mi respuesta", "mi respuesta a", "la última", "lo de antes"]
+
+# Palabras que nunca terminan un valor dicho solo (english.yaml)
+trailing_words: ["el", "la", "los", "las", "un", "una", "y", "o", "de", "del", "a", "al", "en",
+                 "que", "es", "eh", "em"]
 
 # Only a whole utterance made of these is noise (english.yaml). Left out on purpose: "próxima
 # semana" and "hasta la próxima (vez / semana)", which a user may say as an answer or a goodbye
@@ -106,15 +128,30 @@ phrases:
   close_turn_limit: "Hemos llegado al tiempo previsto, así que lo dejamos aquí."
   close_error: "Lo siento, ha habido un problema y tengo que parar aquí."
   slot_skipped: "De acuerdo, lo dejamos sin rellenar."
+  slot_out_of_range: "{value} no es posible: tiene que ser {range}."
+  range_between: "entre {low} y {high}"
+  range_at_least: "como mínimo {low}"
+  range_more_than: "más de {low}"
+  range_at_most: "como máximo {high}"
+  range_less_than: "menos de {high}"
+  slot_options: "¿Es {options}?"
+  slot_between: "Necesito una de estas: {options}."
+  confirm_again: "¿Son correctos los datos que te he leído?"
+  readback: "Repasemos: {details}. ¿Es correcto?"
+  readback_blank: "sin rellenar: {slots}"
   qa_invite: "¿Qué quieres saber?"
   qa_more: "¿Quieres saber algo más?"
   qa_abstain: "No dispongo de esa información."
   qa_decline: "Eso queda fuera de lo que tratamos aquí, así que no puedo ayudarte con ello; solo puedo responder dudas sobre la información que tengo."
   qa_bye: "De acuerdo. ¡Que vaya bien!"
+  # A second turn in a row not understood: this, then what can be asked
+  qa_unclear_again: "Perdona, sigo sin entenderte."
+  qa_topics: "Puedo responder dudas sobre la información que tengo aquí."
   questionnaire_intro: "Te voy a hacer {total} preguntas. En cada una, elige una de las opciones."
   questionnaire_item: "Pregunta {n} de {total}:"
   questionnaire_options: "Las opciones son: {options}."
   questionnaire_or: "o"
+  questionnaire_corrected: "De acuerdo, he cambiado tu respuesta a la pregunta anterior."
   questionnaire_end: "Hemos terminado. Gracias por tus respuestas."
   procedure_opening: "Vamos a hacerlo paso a paso."
   procedure_step: "Paso {n} de {total}: {step}"

@@ -41,6 +41,7 @@ _ROLEPLAY_ENDINGS = {
     "scene": "the scene reached its natural end",
     "limit": "the practice reached the length planned for it (say nothing of a timer)",
     "silence": "the user stopped answering after their last line of the scene",
+    "breakdown": "several turns in a row could not be understood, so the practice stops here",
 }
 
 
@@ -365,6 +366,24 @@ class PromptBuilder:
         )
         return self._inject(prompt, ctx)
 
+    def rephrase_slot_question(
+        self, task: str, frame: DialogFrame, slot: str | None, question: str, example: bool,
+        ctx: DialogContext | None = None,
+    ) -> str:
+        what = (slot or "").replace("_", " ")
+        if slot:
+            what += self._canonical_hint(slot, frame)
+            rng = frame.describe_bounds(slot)
+            if rng:
+                what += f" [allowed range: {rng}]"
+        example_rule = (
+            "- Add a short example of the kind of answer expected, saying that it is only an "
+            "example (an invented value in the right form, never one of the options as a "
+            "yes/no question)." if example else "")
+        prompt = self._t("rephrase_slot_question", task=task, slot=what, question=question,
+                         example_rule=example_rule)
+        return self._inject(prompt, ctx)
+
     def answer_confirmation_question(
         self, user_text: str, task: str, frame: DialogFrame, ctx: DialogContext | None = None
     ) -> str:
@@ -434,8 +453,12 @@ class PromptBuilder:
         schema = {
             "type": "object",
             "properties": {
+                # Whether the words make sense: a word salad with one word of a key point was
+                # judged an incomplete restatement (E2 pre-run verification)
+                "sense": {"type": "string", "enum": ["yes", "no"]},
                 "kind": {"type": "string", "enum": [
-                    "restates", "question", "declines", "not_understood", "other"]},
+                    "restates", "question", "declines", "not_understood", "repeat",
+                    "other"]},
                 # One entry per key point (a shorter list was renumbered from 1 by small
                 # models, so the status of one point landed on another)
                 "points": {"type": "array", "minItems": len(key_points),
@@ -450,7 +473,7 @@ class PromptBuilder:
                     "required": ["id", "status"],
                 }},
             },
-            "required": ["kind", "points"],
+            "required": ["sense", "kind", "points"],
         }
         points = "\n".join(f"{i + 1}. {p['point']}" for i, p in enumerate(key_points))
         prompt = self._t("judge_teach_back", key_points=points, asked=asked, user_text=user_text)
@@ -461,8 +484,10 @@ class PromptBuilder:
         ctx: DialogContext | None = None,
     ) -> str:
         lines = "\n".join(f"- {p['point']}{_said_note(p)}" for p in points)
+        # Only how many: given the points, the model restated them in the repair (E2 pre-run
+        # verification), which lengthens it and buries the points to explain again
         prompt = self._t("repair_explanation", task=task, points=lines,
-                         correct="; ".join(correct) or "(nothing yet)")
+                         correct=str(len(correct)) if correct else "none")
         return self._inject(prompt, ctx)
 
     def targeted_question(self, point: str, ctx: DialogContext | None = None) -> str:
@@ -550,14 +575,25 @@ class PromptBuilder:
                   "required": ["wrong_check"]}
         return self._t("detect_wrong_check", user_text=user_text, answer=answer), schema
 
+    def check_intelligible(self, user_text: str, robot: str) -> tuple[str, dict]:
+        schema = {"type": "object", "properties": {"intelligible": {"type": "boolean"}},
+                  "required": ["intelligible"]}
+        return self._t("check_intelligible", user_text=user_text,
+                       robot=robot or "(nothing yet)"), schema
+
+    def qa_topics(self, task: str, material: list[dict], ctx: DialogContext | None = None) -> str:
+        return self._t("qa_topics", task=task, material=self._fmt_material(material))
+
     # ==== QUESTIONNAIRE ====
 
-    def map_scale_answer(self, user_text: str, item: str, options: list[str]) -> tuple[str, dict]:
+    def map_scale_answer(self, user_text: str, item: str, options: list[str],
+                         previous: dict | None = None) -> tuple[str, dict]:
         schema = {
             "type": "object",
             "properties": {
                 "kind": {"type": "string", "enum": [
-                    "option", "ambiguous", "meaning", "refuses", "repeat", "other"]},
+                    "option", "ambiguous", "meaning", "refuses", "repeat", "corrects_previous",
+                    "other"]},
                 "option": {"type": "string"},
             },
             "required": ["kind", "option"],
@@ -565,7 +601,13 @@ class PromptBuilder:
         # The options by their label, not numbered: a number before a scale of numbers ("5. 4")
         # was answered with the label for the position (E1 development, 2026-11-07)
         opts = "\n".join(f"- {o}" for o in options)
-        return self._t("map_scale_answer", item=item, options=opts, user_text=user_text), schema
+        if previous:
+            prev = (f'"{previous["item"]}", answered "{previous["answer"] or "(declined)"}"; '
+                    "its options:\n" + "\n".join(f"- {o}" for o in previous["options"]))
+        else:
+            prev = "(none)"
+        return self._t("map_scale_answer", item=item, options=opts, user_text=user_text,
+                       previous=prev), schema
 
     # ==== PROCEDURE ====
 
@@ -695,7 +737,7 @@ class PromptBuilder:
             "properties": {
                 "intent": {
                     "type": "string",
-                    "enum": ["continue", "repeat", "coach", "end", "scene_end"],
+                    "enum": ["continue", "repeat", "coach", "end", "scene_end", "unclear"],
                 }
             },
             "required": ["intent"],
@@ -780,11 +822,13 @@ class PromptBuilder:
 
     def detect_cancel_intent(
         self, user_text: str, ctx: DialogContext | None = None, strict: bool = False,
-        task: str = "",
+        task: str = "", stage: str = "", robot_line: str = "",
     ) -> tuple[str, dict]:
         # No context injection (fast and unambiguous): only the task description, so that
         # "cancel" as content of the task is not taken for a request to stop (provisional,
-        # 2026-11-01)
+        # 2026-11-01); the strategy's stage (e.g. "nothing has been booked yet") and the robot's
+        # last line, so that dropping what the conversation is preparing ("cancel the
+        # booking") is read as stopping it (decided by the author, 2026-11-13)
         schema = {
             "type": "object",
             "properties": {"about": {"type": "string", "enum": ["conversation", "task"]},
@@ -794,20 +838,25 @@ class PromptBuilder:
         }
         prompt = self._t(
             "detect_cancel_intent", user_text=user_text, strict="true" if strict else "false",
-            task=task or "(not given)"
+            task=task or "(not given)", stage=stage or "(not given)",
+            robot_line=robot_line or "(none)"
         )
         return prompt, schema
 
     def classify_cancel_reply(
-        self, user_text: str, ctx: DialogContext | None = None
+        self, user_text: str, ctx: DialogContext | None = None, task: str = "",
+        request: str = "",
     ) -> tuple[str, dict]:
+        # The task and the user's words that led to the question, so that a "yes" about the
+        # task's own object ("yes, cancel my card") is not read as a yes to ending the conversation
         schema = {
             "type": "object",
             "properties": {"answer": {"type": "string",
                                       "enum": ["yes", "no", "finished", "other"]}},
             "required": ["answer"],
         }
-        return self._t("classify_cancel_reply", user_text=user_text), schema
+        return self._t("classify_cancel_reply", user_text=user_text, task=task or "(not given)",
+                       request=request or "(not given)"), schema
 
     def ask_cancel_confirmation(self, task: str, ctx: DialogContext | None = None) -> str:
         return self._inject(self._t("ask_cancel_confirmation", task=task), ctx)
@@ -854,6 +903,7 @@ def _said_note(point: dict) -> str:
         return f" (the person said instead: \"{said}\")"
     if point.get("status") == "incomplete":
         # "Right" alone made the model confirm the point as complete and ask again, so the
-        # person never learnt what was missing
-        return f" (the person said only this part, right but INCOMPLETE: \"{said}\")"
+        # person never learnt what was missing. The person's words are not given: a wrong
+        # content judged incomplete was then confirmed as right (E2 pre-run verification)
+        return " (the person said only part of it: INCOMPLETE)"
     return ""

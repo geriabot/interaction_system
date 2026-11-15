@@ -80,12 +80,20 @@ def test_anything_else_is_not_read(language, text):
 
 
 def test_the_model_decides_the_reply_whenever_it_answers():
-    # The model reads "Sí." as "no" (whatever the reason): its answer stands, no word list
+    # The model reads a reply that is not a bare yes: its answer stands, no word list
     c, calls = client(['{"answer": "no"}'], "Spanish")
-    assert c.classify_cancel_reply("Sí.") == "no"
+    assert c.classify_cancel_reply("Sí, pero antes una cosa.") == "no"
     c, calls = client(['{"answer": "other"}'], "English")
-    assert c.classify_cancel_reply("yes") == "other"
+    assert c.classify_cancel_reply("No.") == "other"
     assert c.model_status is True
+
+
+def test_a_bare_yes_is_yes_without_the_model():
+    # The 8B model read a bare "Yes." as "other" (the robot went on against the user's answer)
+    for language, yes in (("English", "Yes."), ("English", "Yes, please!"), ("Spanish", "Sí.")):
+        c, calls = client(['{"answer": "other"}'], language)
+        assert c.classify_cancel_reply(yes) == "yes"
+        assert calls == []
 
 
 @pytest.mark.parametrize("answers", [
@@ -97,18 +105,18 @@ def test_the_model_decides_the_reply_whenever_it_answers():
 def test_when_the_model_fails_the_fallback_reads_the_whole_utterance(answers):
     for language, yes, no in (("English", "Yes.", "No."), ("Spanish", "Sí.", "No.")):
         c, _ = client(answers, language)
-        assert c.classify_cancel_reply(yes) == "yes"
-        assert c.model_status is False
+        assert c.classify_cancel_reply(yes) == "yes"          # a bare yes: never asked
         c, _ = client(answers, language)
         assert c.classify_cancel_reply(no) == "no"
+        assert c.model_status is False
         c, _ = client(answers, language)
         assert c.classify_cancel_reply("drink=tea, please") == "other"
 
 
 def test_a_call_not_made_falls_back_too():
     limits = CallLimits(15.0, 0.1)  # the budget is spent: no call is made
-    c, calls = client(['{"answer": "no"}'], "Spanish", limits)
-    assert c.classify_cancel_reply("Vale.") == "yes"
+    c, calls = client(['{"answer": "yes"}'], "Spanish", limits)
+    assert c.classify_cancel_reply("No.") == "no"
     assert calls == [] and c.model_status is False
 
 
@@ -227,11 +235,12 @@ class Roleplay:
     def roleplay_feedback(self, scene, evaluation, ended_by, ctx=None):
         return {"text": f"[feedback {ended_by}]", "highlight": "h", "improve": "i"}
 
-    def classify_cancel_reply(self, user_text, ctx=None):
+    def classify_cancel_reply(self, user_text, ctx=None, task="", request=""):
         return self.reply
 
-    def detect_cancel_intent(self, user_text, ctx=None, strict=False, task=""):
-        return True
+    def detect_cancel_intent(self, user_text, ctx=None, strict=False, task="", stage="",
+                             robot_line="", local=True, reading=False):
+        return "cancel" if reading else True
 
     def ask_cancel_confirmation(self, task, ctx=None):
         return "[cancel?]"

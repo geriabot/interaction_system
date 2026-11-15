@@ -27,8 +27,8 @@ from .dialog_frame import TURN_ACTS, DialogFrame, _VALID_TYPES
 # canonical_language: re-exported for the node and the evaluation
 from .languages import canonical_language, language_names, load_language  # noqa: F401
 from .prompt_builder import PromptBuilder
-from .utils import (cancel_intent_of, local_cancel_check, local_yes_no, normalize_text,
-                    parse_loose_json, spoken_ask, to_snake_case)
+from .utils import (local_cancel_check, local_yes_no, normalize_text, parse_loose_json,
+                    spoken_ask, stop_request_of, to_snake_case)
 
 InferFn = Callable[[str, str, int | None, dict | None], str | None]
 
@@ -43,7 +43,10 @@ _MIN_NLG_CHARS = 3
 _STEP_INTENTS = ("done", "question", "problem", "repeat", "back", "skip", "unclear")
 
 # Turn intents of the roleplay strategy (classify_roleplay_turn) and its score range.
-_ROLEPLAY_INTENTS = ("continue", "repeat", "coach", "end", "scene_end")
+# "unclear" is also the reading of a line that makes no sense (a word salad): the robot asks to
+# repeat it, and it is not an exchange of the scene (E2 pre-run verification: garbled lines
+# were read as scene lines and used up the scene)
+_ROLEPLAY_INTENTS = ("continue", "repeat", "coach", "end", "scene_end", "unclear")
 _ROLEPLAY_SCORE_MIN, _ROLEPLAY_SCORE_MAX = 1, 5
 # Two character questions at least this similar count as the same question.
 _REPEAT_SIMILARITY = 0.75
@@ -511,12 +514,20 @@ class LLMDialogClient:
             try:
                 data = parse_loose_json(raw)
                 intent = data.get("intent", "unclear")
-                if intent not in ("confirms", "corrects", "question", "unclear"):
+                if intent not in ("confirms", "corrects", "question", "repeat", "unclear"):
                     intent = "unclear"
 
                 corrs: dict = {}
                 for slot, val in (data.get("corrections") or {}).items():
                     if val is None or slot not in frame.all_keys():
+                        continue
+                    if (frame.slot_type(slot) == "list_str" and isinstance(val, dict)
+                            and ("remove_items" in val or "add_items" in val)):
+                        # Take some items out and put others in, in one correction ("take out
+                        # B and put C"): two operations on the slot, the removal first
+                        ops = self._remove_and_add(slot, val, frame)
+                        if ops:
+                            corrs[slot] = ops
                         continue
                     coerced = self._coerce_value(val, frame.slot_type(slot))
                     if coerced is None:
@@ -540,6 +551,17 @@ class LLMDialogClient:
             except Exception as exc:
                 self._log.warning(f"Intent parse error (attempt {attempt + 1}): {exc}")
         return "unclear", {}
+
+    def rephrase_slot_question(
+        self, task: str, frame: DialogFrame, slot: str | None, question: str,
+        example: bool = False, ctx: DialogContext | None = None,
+    ) -> str:
+        """The question for a slot again, in simpler words (with an example of the kind of
+        answer when example is true), after the user asked to hear it again. Falls back to the
+        question as it was said."""
+        prompt = self._pb.rephrase_slot_question(task, frame, slot, question, example, ctx)
+        res = self._call_nlg(prompt, max_tokens=80)
+        return self._clean(res) or question or self._fb["unclear"]
 
     def answer_confirmation_question(
         self, user_text: str, task: str, frame: DialogFrame, ctx: DialogContext | None = None
@@ -597,11 +619,13 @@ class LLMDialogClient:
     ) -> dict:
         """What the reply to a check is and, if it says content back, the status of each key
         point in it (correct, incomplete: part of it right and nothing false, wrong or
-        missing). Returns {"kind", "points": [(index, status, said)]}; kind is restates,
-        question, declines, not_understood or other ("other" if the LLM fails, so that a
+        missing). A reply whose words make no sense ("sense": "no") is
+        "other". Returns {"kind", "points": [(index, status, said)]}; kind is restates,
+        question, declines, not_understood, repeat (asks to hear it again) or
+        other ("other" if the LLM fails, so that a
         sustained failure ends as a communication breakdown, not in a loop)."""
         prompt, schema = self._pb.judge_teach_back(user_text, key_points, asked, ctx)
-        kinds = ("restates", "question", "declines", "not_understood", "other")
+        kinds = ("restates", "question", "declines", "not_understood", "repeat", "other")
         for _ in range(self.MAX_RETRIES):
             # One entry per key point (with what was said wrong): room for all of them
             raw = self._call_nlu(prompt, schema, max_tokens=120 + 60 * len(key_points))
@@ -612,6 +636,10 @@ class LLMDialogClient:
             except Exception:
                 continue
             kind = data.get("kind") if data.get("kind") in kinds else "other"
+            if data.get("sense") == "no":
+                # Words that make no sense are not content, whatever the rest says (a word salad
+                # with one word of a key point was judged incomplete: E2 pre-run verification)
+                kind = "other"
             points = []
             for item in data.get("points", []) if kind == "restates" else []:
                 try:
@@ -631,7 +659,7 @@ class LLMDialogClient:
         self, task: str, points: list[dict], correct: list[str], ctx: DialogContext | None = None
     ) -> str:
         """Explain again only the given key points (with what the user said wrong), in other
-        words; confirm briefly what was right."""
+        words, without restating the points already said right (only how many are given)."""
         prompt = self._pb.repair_explanation(task, points, correct, ctx)
         res = self._call_nlg(prompt, max_tokens=200)
         return self._clean(res) or " ".join(p["point"] for p in points)
@@ -772,16 +800,49 @@ class LLMDialogClient:
                 return value
         return None
 
+    def check_intelligible(self, user_text: str, robot: str = "") -> bool | None:
+        """Whether what the person said is intelligible (a question, request or statement that
+        makes sense, even short or with recognition errors) or a word salad. Asked only for a
+        turn that would get an abstention (answer_from_material read it as a question whose
+        answer is not in the material): a small model without reasoning read word salads as
+        questions, abstained, and the abstention counted as progress, so the dialogue never
+        ended as a breakdown (E2 pre-run verification). None when the LLM fails: the turn keeps
+        its abstention."""
+        prompt, schema = self._pb.check_intelligible(user_text, robot)
+        for _ in range(self.MAX_RETRIES):
+            raw = self._call_nlu(prompt, schema, max_tokens=20)
+            if not raw:
+                continue
+            try:
+                value = parse_loose_json(raw).get("intelligible")
+            except Exception:
+                continue
+            if isinstance(value, bool):
+                return value
+        return None
+
+    def qa_topics(self, task: str, material: list[dict], ctx: DialogContext | None = None) -> str:
+        """One sentence naming what the person can ask about (topics of the material, without
+        its facts): said after a second turn in a row that was not understood. On failure the
+        fixed qa_topics phrase."""
+        prompt = self._pb.qa_topics(task, material, ctx)
+        res = self._call_nlg(prompt, max_tokens=60)
+        return self._clean(res) or self._fb["qa_topics"]
+
     # ==== QUESTIONNAIRE ====
 
     def map_scale_answer(
-        self, user_text: str, item: str, options: list[str], ctx: DialogContext | None = None
+        self, user_text: str, item: str, options: list[str], ctx: DialogContext | None = None,
+        previous: dict | None = None
     ) -> dict:
         """The option of the scale the answer chooses. Returns {"kind", "option"}: kind is
-        option (with the option's index), ambiguous, meaning, refuses, repeat or other ("other"
-        if the LLM fails: nothing is recorded for the user)."""
-        prompt, schema = self._pb.map_scale_answer(user_text, item, options)
-        kinds = ("option", "ambiguous", "meaning", "refuses", "repeat", "other")
+        option (with the option's index), ambiguous, meaning, refuses, repeat,
+        corrects_previous (the user changes the answer to the previous item: the index of the
+        new option among the previous item's options; only with previous, {item, options,
+        answer}) or other ("other" if the LLM fails: nothing is recorded for the user)."""
+        prompt, schema = self._pb.map_scale_answer(user_text, item, options, previous)
+        kinds = ("option", "ambiguous", "meaning", "refuses", "repeat", "corrects_previous",
+                 "other")
         for _ in range(self.MAX_RETRIES):
             raw = self._call_nlu(prompt, schema, max_tokens=80)
             if not raw:
@@ -791,6 +852,12 @@ class LLMDialogClient:
             except Exception:
                 continue
             kind = data.get("kind") if data.get("kind") in kinds else "other"
+            if kind == "corrects_previous":
+                index = (self._scale_option_index(data.get("option"), previous["options"])
+                         if previous else None)
+                if index is None:
+                    return {"kind": "other", "option": -1}
+                return {"kind": kind, "option": index}
             if kind == "option":
                 index = self._scale_option_index(data.get("option"), options)
                 if index is None:
@@ -826,7 +893,9 @@ class LLMDialogClient:
         when the reply is not an attempt to answer (asks to repeat or clarify the question, did
         not hear or understand it). If the LLM fails every retry, the answer is right only when it
         is the expected one exactly (normalised): a substring match would grade "Mercury... no,
-        lead" as "Mercury", and a wrong answer graded right is the error to avoid."""
+        lead" as "Mercury", and a wrong answer graded right is the error to avoid. The quiz then
+        also grades right a reply that names the whole answer with no word that denies or hedges
+        it (utils.local_names_answer), with or without the LLM."""
         prompt, json_schema = self._pb.evaluate_quiz_answer(question, expected, given)
         for _ in range(self.MAX_RETRIES):
             raw = self._call_nlu(prompt, json_schema, max_tokens=120)
@@ -1077,27 +1146,34 @@ class LLMDialogClient:
 
     def detect_cancel_intent(
         self, user_text: str, ctx: DialogContext | None = None, strict: bool = False,
-        task: str = "",
-    ) -> bool:
+        task: str = "", stage: str = "", robot_line: str = "", local: bool = True,
+        reading: bool = False,
+    ) -> bool | str:
         """Two-stage: an exact stop command is decided locally; anything else by the LLM
         (in strict mode, told to accept only an explicit request to stop). The model chooses
         among cancel, finished (the user has nothing more to ask or add: the normal end of the
         task, not abandoning it) and none; only "cancel" is True: "finished" goes to the
         strategy like any other turn (decided by the author, 2026-10-31). An answer in the
-        former form ({"cancel": true}) is still read."""
-        local = local_cancel_check(user_text, self.language)
-        if local is not None:
-            return local
-        prompt, schema = self._pb.detect_cancel_intent(user_text, ctx, strict=strict, task=task)
+        former form ({"cancel": true}) is still read. `stage` (where the strategy is, e.g. that
+        nothing has been booked yet) and `robot_line` (the robot's last line) let the model read
+        dropping what the conversation is preparing ("cancel the booking") as stopping it.
+        reading=True returns the whole reading instead: "cancel", "finished" or "none" (also
+        when the model gives no usable answer); local=False skips the local check of the exact
+        commands (the command word is an answer the robot expects, e.g. an option). The model
+        is asked here (the question's name is this method's)."""
+        if local and local_cancel_check(user_text, self.language):
+            return "cancel" if reading else True
+        prompt, schema = self._pb.detect_cancel_intent(user_text, ctx, strict=strict, task=task,
+                                                       stage=stage, robot_line=robot_line)
         raw = self._call_nlu(prompt, schema, max_tokens=30)
-        if not raw:
-            return False
         try:
-            return cancel_intent_of(parse_loose_json(raw))
+            request = stop_request_of(parse_loose_json(raw)) if raw else "none"
         except Exception:
-            return False
+            request = "none"
+        return request if reading else request == "cancel"
 
-    def classify_cancel_reply(self, user_text: str, ctx: DialogContext | None = None) -> str:
+    def classify_cancel_reply(self, user_text: str, ctx: DialogContext | None = None,
+                              task: str = "", request: str = "") -> str:
         """The answer to "do you want to stop?": "yes", "no", "finished" (the user has nothing
         more to ask or add: not abandoning, the task is done; cancel_check decides what that
         means for the strategy) or "other" (no answer to whether to stop, or it is
@@ -1106,8 +1182,17 @@ class LLMDialogClient:
         reads it: the whole utterance, normalised, exactly one of the language's yes_words is
         "yes", one of its no_words "no" (utils.local_yes_no; decided by the author,
         2026-10-30); anything else "other", so that nothing is cancelled and the turn is not
-        lost."""
-        prompt, schema = self._pb.classify_cancel_reply(user_text, ctx)
+        lost. `task` and `request` (the user's words that led to the question) let the model
+        read a "yes" about the task's own object ("yes, cancel my card") as not a yes to ending
+        the conversation. A bare yes (the whole utterance, normalised, exactly one of the
+        language's yes_words: "Yes.", "Yes, please", "OK") is "yes" without the model: it answers
+        the yes/no question and nothing else, and the 8B model read it as "other" in about one
+        confirmation in four even when told it is always "yes" (E2 debug round, 2026-11-14), so
+        the robot went on against the user's answer."""
+        if local_yes_no(user_text, self.language) == "yes":
+            return "yes"
+        prompt, schema = self._pb.classify_cancel_reply(user_text, ctx, task=task,
+                                                        request=request)
         for _ in range(self.MAX_RETRIES):
             raw = self._call_nlu(prompt, schema, max_tokens=30)
             if not raw:
@@ -1354,6 +1439,23 @@ class LLMDialogClient:
 
         self._log.info(f"Validated extractions: {valid}")
         return valid
+
+    @classmethod
+    def _remove_and_add(cls, slot: str, val: dict, frame: DialogFrame) -> list[dict]:
+        """The operations of a combined list correction {"remove_items": [...], "add_items":
+        [...]}: the removal, then the addition (items added must be canonical)."""
+        def items(key):
+            raw = val.get(key) or []
+            raw = raw if isinstance(raw, list) else [raw]
+            return [str(i).strip() for i in raw if i is not None and str(i).strip()]
+        ops = []
+        removed = items("remove_items")
+        if removed:
+            ops.append({"_remove": True, "items": removed})
+        added = cls._enforce_canonical_list(slot, items("add_items"), frame)
+        if added:
+            ops.append({"_add": True, "items": added})
+        return ops
 
     @staticmethod
     def _enforce_canonical_list(slot: str, items: list, frame: DialogFrame) -> list[str]:

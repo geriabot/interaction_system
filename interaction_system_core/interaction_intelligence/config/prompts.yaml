@@ -235,11 +235,16 @@ interaction_intelligence:
         First decide whether the user's reply is an ATTEMPT TO ANSWER THIS
         question ("kind": "answer") or not ("kind": "repeat"). An attempt names
         something that could be the answer to THIS question; "I don't know" and
-        any guess, however wrong, ARE answers. NOT an attempt ("repeat"): the
+        any guess, however wrong, ARE answers, and so is a tentative answer said
+        as a question or with doubt ("Is it Rome?", "maybe Paris?", "¿Es Roma?"):
+        grade what it names, never take it for a question back. NOT an attempt
+        ("repeat"): the
         user asks to repeat or clarify the question, says they did not hear or
         did not understand it, talks about something else (their own matters, a
         comment on the conversation, a question back to the robot), answers a
-        different question, or says something unintelligible.
+        different question, or says something unintelligible. A request to
+        repeat is "repeat" even when it says a number ("one more time", "can you
+        say question two again?", "una vez más").
 
         Then, only for an answer, decide whether it is essentially correct,
         tolerating:
@@ -319,7 +324,7 @@ interaction_intelligence:
         Output strict JSON only:
         {{"extractions": [
           {{"slot": "...", "value": <see below>, "source_span": "verbatim fragment"}}
-        ], "act": "values" | "question" | "skip" | "repeat" | "other"}}
+        ], "act": "values" | "question" | "skip" | "repeat" | "between" | "other"}}
 
         "act" is what the user does this turn:
         - "values": gives or corrects at least one value (extractions not empty).
@@ -329,6 +334,12 @@ interaction_intelligence:
           not say", "skip it", or their {language} equivalents).
         - "repeat": asks to repeat, or says they did not hear or understand the
           question.
+        - "between": for the closed slot asked ([must be one of: ...]), the
+          user does not settle on one of its values: they hedge between two or
+          more of them, or give something that falls between them ("about 3,
+          or 4" when the values are 2, 4 and 6; "between morning and
+          afternoon"; "either X or Y, I'm not sure"). Extract NOTHING for that
+          slot.
         - "other": anything else (off-topic, filler, unintelligible).
 
         Slot-state markers in the SLOTS list:
@@ -383,8 +394,16 @@ interaction_intelligence:
           takes the words the user gives for it. Words around a value (a
           confirmation, "please", "as I said", "that's me") never turn it into
           "skip" or "repeat": the act is "values".
+        - A line that does not make sense (words that do not form a sentence
+          or an answer, as a garbled transcription: "table the of green
+          across") gives NO value, not even to a free-text slot: return
+          {{"extractions": []}} with act "other". A free-text value must be
+          words the user says AS that value (a name, an address), never a
+          stretch of a garbled line.
         - Choice slots marked [must be one of: ...] MUST be normalised to one
-          of those canonical values. For list_str with canonical_values, each
+          of those canonical values. Never pick one of them for an answer that
+          hedges between them or falls between them: that is the act
+          "between", with no extraction for the slot. For list_str with canonical_values, each
           item must be canonical; drop items that do not match.
         - ASR tolerance: input is voice-transcribed, spelling may differ. Map
           phonetic intent to the closest canonical value.
@@ -445,10 +464,11 @@ interaction_intelligence:
         or preferences not listed as slots).
 
         If "Rejected this turn" is not None: the user gave a number outside
-        the allowed range and it was NOT recorded. Say so briefly, state the
-        allowed range in plain words (e.g. "between 18 and 99", "more than
-        0"), and ask for that slot again. Max 30 words. This takes priority
-        over the subcases below.
+        the allowed range and it was NOT recorded. The system has ALREADY
+        told the user that the value is not possible and the allowed range:
+        do NOT mention the value, the range or the rejection; just ask for
+        that slot again in ONE short question. This takes priority over the
+        subcases below.
 
         If "Extracted this turn" is None / empty:
         Nothing was recorded this turn. Go directly to one of these subcases:
@@ -467,8 +487,9 @@ interaction_intelligence:
            the same wording twice in a row. Rotate among four short options
            that ask the user to clarify or repeat. Max 20 words.
 
-        If a slot is in repeated failures, switch to a simpler closed yes/no
-        or pick-one question for it.
+        If a slot is in repeated failures, ask for it again in simpler words,
+        with a short example of the kind of answer expected; never a yes/no
+        question that proposes a value for it.
 
         Never recap the overall task during gathering — that belongs to the
         confirmation step.
@@ -517,10 +538,12 @@ interaction_intelligence:
         - "confirms": accepts the data as correct.
         - "corrects": wants to change one or more values.
         - "question": asking about details, price, availability…
+        - "repeat": asks to hear the data again, or says they did not hear or
+          understand them ("can you say that again?", "sorry, what?").
         - "unclear": ambiguous reply.
 
         Output strict JSON only:
-        {{"intent": "confirms"|"corrects"|"question"|"unclear",
+        {{"intent": "confirms"|"corrects"|"question"|"repeat"|"unclear",
           "corrections": {{"slot_name": <new value OR list operation>}}}}
 
         List slots in this phase: a plain string or array is interpreted as
@@ -528,6 +551,8 @@ interaction_intelligence:
         - {{"_add": true,     "items": [...]}}
         - {{"_remove": true,  "items": [...]}}
         - {{"_replace": true, "items": [...]}}  ← overwrites the list
+        - {{"remove_items": [...], "add_items": [...]}}  ← takes some items out
+          AND puts others in, in the same reply (both changes are applied)
 
         Examples (abstract — adapt to the actual {language} input):
         - "[any short affirmative: yes, ok, perfect, correct, fine, great,
@@ -537,12 +562,14 @@ interaction_intelligence:
         - "[user explicitly adds C]"     → corrects, {{"list_slot": {{"_add":true,"items":["C"]}}}}
         - "[user removes B]"             → corrects, {{"list_slot": {{"_remove":true,"items":["B"]}}}}
         - "[user replaces all with C]"   → corrects, {{"list_slot": {{"_replace":true,"items":["C"]}}}}
+        - "[user takes out B and puts C instead]"
+                                         → corrects, {{"list_slot": {{"remove_items":["B"],"add_items":["C"]}}}}
         - "[user updates scalar slot_x]" → corrects, {{"slot_x": "Y"}}
         - "[user asks a factual question]" → question, {{}}
         - "[vague or off-topic reply]"   → unclear, {{}}
 
         Rules:
-        - confirms / question / unclear → corrections must be {{}}.
+        - confirms / question / repeat / unclear → corrections must be {{}}.
         - For scalar corrections, value is a plain string; normalise choice
           slots to their canonical value.
         - BIAS TOWARD confirms: any reply whose only plausible reading is
@@ -550,7 +577,11 @@ interaction_intelligence:
           a value back, or a plain "ok" / "yes" in any form — MUST be confirms.
           Do NOT classify as corrects unless the user names a specific new value.
           Do NOT classify as unclear unless the reply is genuinely unrelated.
-        - Any question → question. Vague / off-topic → unclear.
+        - A reply that says no, or that something is wrong or must change
+          ("no", "that's not right", "wrong", "change that"), but gives no
+          new value you can read, is unclear: NEVER confirms.
+        - Any question → question, except a request to hear the data again
+          (repeat). Vague / off-topic → unclear.
         - Return ONLY the JSON.
 
         CURRENT TURN
@@ -582,6 +613,27 @@ interaction_intelligence:
           is all the information correct?" Do NOT ask about any specific slot.
           Do NOT ask "is there anything else?" or any open-ended question.
         - Max 1–2 sentences.
+
+      rephrase_slot_question: |
+        The robot asked the user for one piece of information, and the user
+        asked to hear the question again: they did not hear or understand it.
+        Say the question again in simpler, shorter words. The task, the
+        information and the question as it was said are given at the end,
+        under CURRENT TURN.
+
+        Rules:
+        - {language} only. No markdown. No greeting. Return only the question.
+        - {address}
+        - ONE short question (max 20 words) with everyday words, asking only
+          for this information.
+        - Never turn it into a yes/no question that proposes a value, and
+          never invent options that are not listed.
+        {example_rule}
+
+        CURRENT TURN
+        Task: "{task}"
+        Information asked for: {slot}
+        The question as it was said: "{question}"
 
       answer_confirmation_question: |
         Answer the user's question during the confirmation step.
@@ -657,14 +709,22 @@ interaction_intelligence:
         THE ROBOT ASKED: "{asked}"
         PERSON'S REPLY: "{user_text}"
 
-        First, what the reply is ("kind"):
+        First decide "sense": "yes" if the words make sense as something a
+        person could say here (even short, wrong or with speech recognition
+        errors), "no" if they do not (a word salad, words that do not form any
+        meaning together, even when one of them is a word of the key points:
+        "Lamp beneath the blue forty singing").
+
+        Then, what the reply is ("kind"):
         - "restates": it says back some content of the explanation, or answers
           the direct question (also "I don't know" to a direct question).
         - "question": it asks something about the topic and says nothing back.
         - "declines": it only says they understood, or refuses to say it back,
           without any content.
-        - "not_understood": it says they did not understand, or asks to hear the
-          explanation again.
+        - "not_understood": it says they did not understand the explanation.
+        - "repeat": it asks to hear the explanation or the question again, or
+          says they did not hear it ("Sorry, can you say that again?", "What
+          did you say?"), without saying they did not understand it.
         - "other": anything else (off-topic, unintelligible: a word salad or
           words that make no sense is "other", never "not_understood").
 
@@ -679,18 +739,24 @@ interaction_intelligence:
           the person is not in such as "and blankets" for someone washing a
           duvet).
         - "incomplete": an essential part of the point (a place, an amount, a
-          time, a step, a condition) is missing, and what is stated is right
-          (e.g. "I pay 5 euros" for "Pay at the central machine: choose the
-          machine number and insert 5 euros"); copy into "said" the part stated.
-          A missing part is NOT a mistake: never "wrong" for it.
-        - "wrong": stated with a different, incorrect content (a misconception);
-          copy into "said" the words that are wrong.
+          time, a step, a condition) is missing, and EVERYTHING stated about it
+          is part of the point: it adds or changes nothing that the point does
+          not say (e.g. "I pay 5 euros" for "Pay at the central machine: choose
+          the machine number and insert 5 euros"); copy into "said" the part
+          stated. A missing part is NOT a mistake: never "wrong" for it.
+        - "wrong": stated with a different, incorrect content (a misconception),
+          also when part of it is right: a reply that adds or changes something
+          the point does not say (another way, channel, place, time, amount,
+          person or condition: "they send me the code by email" when the point
+          says it comes by text message) is "wrong", never "incomplete"; copy
+          into "said" the words that are wrong.
         - "missing": not mentioned in this reply.
         Be strict with facts: a different time, dose, place or order is "wrong".
         The input is voice-transcribed: tolerate speech recognition errors.
 
         Output strict JSON only:
-        {{"kind": "restates" | "question" | "declines" | "not_understood" | "other",
+        {{"sense": "yes" | "no",
+          "kind": "restates" | "question" | "declines" | "not_understood" | "repeat" | "other",
           "points": [{{"id": 1, "status": "correct" | "incomplete" | "wrong" | "missing", "said": ""}}]}}
 
       repair_explanation: |
@@ -700,7 +766,7 @@ interaction_intelligence:
         TOPIC: "{task}"
         POINTS TO EXPLAIN AGAIN:
         {points}
-        WHAT THE PERSON ALREADY SAID RIGHT: {correct}
+        POINTS THE PERSON ALREADY SAID RIGHT: {correct}
 
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
@@ -708,13 +774,15 @@ interaction_intelligence:
         - Speak TO the person ("you"), never about them in the third person.
         - If the person said something wrong, say what they said and correct
           it kindly ("you said X, but it is Y").
-        - If they said only part of a point (marked "INCOMPLETE"), confirm that
-          part and say clearly what it still lacks (e.g. "yes, with breakfast,
-          and it is at 8"): never call the point complete, and
-          never say it was wrong.
+        - If they said only part of a point (marked "INCOMPLETE"), explain the
+          whole point again in its own words, without repeating the person's
+          words and without confirming them: never call the point complete,
+          and never say it was wrong.
         - A point they did not mention: just explain it again; never say that
           they said it or got it right.
-        - If they said something right, confirm it in a few words first.
+        - Never restate or repeat the points the person already said right: if
+          there are any, at most say in a few words that the rest was right
+          ("the rest was fine").
         - Use the resources in [CONTEXT] as ground truth. Never add facts.
         - Max 3 short sentences.
         - End BEFORE the check (the check is appended separately).
@@ -747,9 +815,11 @@ interaction_intelligence:
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
         - {address}
-        - A few words confirming what was right (also the part of a point said
-          only in part), then ONE short question about what is still missing
-          that does NOT contain or suggest its content.
+        - A few words confirming only the points in SAID RIGHT, with their own
+          content (never repeat the person's words), then ONE short question
+          about what is still missing that does NOT contain or suggest its
+          content. A point still missing may have been said in part: do not
+          confirm that part, just ask for the point.
         - Max 2 short sentences (for a missing point "The cat is fed twice a
           day": "Good, you remember the litter. And how often is the cat fed?").
 
@@ -950,6 +1020,37 @@ interaction_intelligence:
 
         Output strict JSON only: {{"wrong_check": true | false}}
 
+      check_intelligible: |
+        A person is talking to a robot. Decide whether what they said is
+        intelligible: a question, a request or a statement that makes sense as
+        something a person would say, even when it is short, off-topic or has
+        speech recognition errors ("How much is it?", "Is there a lift?",
+        "The tickets for tomorrow"); or not intelligible: words that do not
+        form any meaning together (a word salad such as "Lamp beneath forty
+        the singing"), or a meaningless fragment.
+
+        THE ROBOT HAD SAID: "{robot}"
+        PERSON SAID: "{user_text}"
+
+        Output strict JSON only: {{"intelligible": true | false}}
+
+      qa_topics: |
+        A robot answers questions only from the MATERIAL below, and the person
+        has not managed to ask a question that the robot understood. Tell them
+        in ONE short sentence what they can ask about: two to four topics of
+        the MATERIAL, each named in a few words, without giving any of its
+        facts (no times, prices, days or numbers).
+
+        TASK: "{task}"
+        MATERIAL:
+        {material}
+
+        Rules:
+        - {language} only. No markdown. No greeting. Return raw text only.
+        - {address}
+        - At most 25 words (e.g. "You can ask me about the opening hours,
+          the shows or the cafeteria.").
+
       map_scale_answer: |
         A questionnaire item was read to a person, with its answer options. Map
         the person's reply to ONE option, only if the reply clearly chooses it.
@@ -957,23 +1058,35 @@ interaction_intelligence:
         ITEM: "{item}"
         OPTIONS (one per line):
         {options}
+        PREVIOUS ITEM: {previous}
         PERSON'S REPLY: "{user_text}"
 
         "kind":
         - "option": the reply clearly chooses one option (its words, a synonym, or
           a clear paraphrase of it); write that option in "option" exactly as
           it is written in OPTIONS (for a scale of numbers, the number the
-          person said: "a seven" is "7").
-        - "ambiguous": the reply is between two options, or does not match any
-          (never choose for the person).
+          person said: "a seven" is "7"). Keep every word that changes the
+          option: "very satisfied" is not "Satisfied", "not sure" is not "Yes".
+        - "ambiguous": the reply is between two options (never choose for the
+          person).
         - "meaning": the person asks what the item or a word means.
         - "refuses": the person does not want to answer this item.
         - "repeat": the person asks to hear the item or the options again.
-        - "other": anything else (unintelligible, filler).
+        - "corrects_previous": only when there is a PREVIOUS ITEM: the person
+          changes their answer to it ("for the last one I meant quite", "about
+          the previous question, I'd rather say no") instead of answering this
+          item; write the new option in "option" exactly as it is written in the
+          previous item's options. A reply right after the robot explained a
+          word or read the options again answers THIS item, and so does a
+          correction inside the reply itself ("no, make it yes", "sorry, I
+          meant yes"): those are "option", never "corrects_previous".
+        - "other": anything else (unintelligible, filler, a reply that matches
+          no option).
         The input is voice-transcribed: tolerate speech recognition errors.
 
         Output strict JSON only: {{"kind": "option" | "ambiguous" | "meaning" |
-        "refuses" | "repeat" | "other", "option": "the option, or empty"}}
+        "refuses" | "repeat" | "corrects_previous" | "other", "option": "the
+        option, or empty"}}
 
       procedure_opening: |
         Generate the OPENING line of a guided procedure: the robot will walk
@@ -1226,7 +1339,8 @@ interaction_intelligence:
         - "continue" (the default, nearly every turn): anything the user says
           TO THE CHARACTER inside the scene: good or bad answers, questions
           for the character, agreeing ("ok", "you're right"), apologising,
-          hesitating, small talk, and garbled or partial transcriptions.
+          hesitating, small talk, and partial transcriptions that still make
+          sense.
         - "repeat": the user did not hear or understand the character's last
           line, or asks to hear it again ("sorry, could you repeat that?",
           "what did you say?").
@@ -1238,13 +1352,17 @@ interaction_intelligence:
           ("let's stop here", "I want to finish", "that's enough").
         - "scene_end": the character already closed the scene and the user is
           saying goodbye or thanks.
+        - "unclear": the words make no sense: a word salad or garbled words
+          that the character could not answer in the scene ("Lamp beneath
+          forty the singing"). Never for a short, clumsy or wrong line that
+          makes sense.
 
         Agreeing with or apologising to the character is "continue", never
         "coach". If you hesitate between two intents, choose "continue". The
         input is voice-transcribed: expect ASR errors and fragments.
 
         Output strict JSON only:
-        {{"intent": "continue"|"repeat"|"coach"|"end"|"scene_end"}}
+        {{"intent": "continue"|"repeat"|"coach"|"end"|"scene_end"|"unclear"}}
 
         SCENE
         {scene}
@@ -1347,6 +1465,8 @@ interaction_intelligence:
         FINISHED the task, or neither.
 
         TASK OF THE CONVERSATION: "{task}"
+        WHERE THE CONVERSATION IS: {stage}
+        ROBOT'S LAST LINE: "{robot_line}"
         USER SAID: "{user_text}"
         DIALOG LANGUAGE: {language}
         STRICT MODE: {strict}
@@ -1354,14 +1474,23 @@ interaction_intelligence:
         First decide "about", what the words are about:
         - "conversation": they are about this conversation itself: stopping it,
           leaving it, going on with it ("stop", "enough of this", "forget it",
-          "I'd rather not carry on", "let's end here").
+          "I'd rather not carry on", "let's end here"). Dropping what this
+          conversation is preparing is about the conversation too: the robot
+          carries nothing out until the conversation ends, so withdrawing the
+          booking, order or request being arranged means stopping the
+          conversation ("cancel the booking, I've changed my mind", "forget
+          the order", "cancel the whole thing", "I don't want the appointment
+          any more").
         - "task": they are about something of the task: an answer, a value, a
-          step done, a thing the task deals with, even if a word such as
-          "cancel" or "stop" appears ("I need to cancel my card" when the task
-          is about cards, "I've pressed the cancel button", "the bus stop is
-          far").
+          step done, a thing the task deals with that exists apart from this
+          conversation, even if a word such as "cancel" or "stop" appears ("I
+          need to cancel my card" when the task is about cards: the card is
+          what the request is about, not the request being dropped; "I've
+          pressed the cancel button"; "the bus stop is far").
         A word such as "stop" or "cancel" counts only when it is about this
-        conversation.
+        conversation. Read short replies against the robot's last line: "cancel
+        it" or "forget it" right after the robot read a booking back for
+        confirmation drops that booking: "conversation".
 
         Then "request", one of three:
         - "cancel": the user wants to stop or abandon this conversation (only
@@ -1393,12 +1522,15 @@ interaction_intelligence:
         {{"about": "conversation" | "task", "request": "cancel" | "finished" | "none"}}
 
       classify_cancel_reply: |
-        The user was asked whether they want to stop the conversation.
+        The robot asked the user whether they want to end this conversation
+        here, after the user said: "{request}"
         Classify their reply.
 
+        TASK OF THE CONVERSATION: "{task}"
         USER REPLY: "{user_text}"
 
-        - "yes": a clear affirmative to stopping.
+        - "yes": a clear affirmative to ending this conversation. A bare yes
+          ("yes", "yes, please", "sure", "OK") is always "yes".
         - "no": a clear negative: they want to continue ("no", "no, go on, please",
           "no, let's continue"), without giving content of the task.
         - "finished": the reply says they have finished or have nothing more to
@@ -1406,7 +1538,11 @@ interaction_intelligence:
           do not want to abandon the task, it is already done.
         - "other": the reply does not answer the question but goes on with the
           task (e.g. it gives the information the robot had asked for, or asks
-          something about the task), or it is ambiguous.
+          something about the task), or it is ambiguous. Also a "yes" followed by
+          words about something the task deals with, not about ending this
+          conversation ("Yes, I need to cancel my card" when the task is about
+          cards, "Yes, stop the delivery" when the task is about the delivery):
+          the user goes on with the task.
 
         Output strict JSON only: {{"answer": "yes" | "no" | "finished" | "other"}}
 

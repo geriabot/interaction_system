@@ -24,12 +24,60 @@
        keeps none: every AskIntelligence sends it and gets it back updated, with the reply, the
        label, the phase and the data of the dialogue. -->
 
+  <!-- The dialogue of every strategy: the opening (with fillers while it is prepared, and its own
+       time budget), then one user turn per cycle until the dialogue is done:
+         listen -> (spoken cancellation | the strategy's turn) -> count progress -> turn limit ->
+         speak; a silence goes to UserSilent;
+       and the conclusion with the outcome. The loop ends (fails) when the dialogue is done, at the
+       turn limit, or on a failure of the system; it does not start when the opening already ended
+       the dialogue (slot filling: the frame could not be designed, its closing was said). Each
+       strategy's file includes this file and defines two subtrees: StrategyOpening (the opening:
+       Begin, then the strategy's first reply) and StrategyTurn (the reply to a user turn) -->
+  <BehaviorTree ID="DialogueLoop">
+    <Sequence>
+      <WithFillers budget_s="{opening_budget}">
+        <SubTree ID="StrategyOpening" _autoremap="true"/>
+      </WithFillers>
+      <Speak text="{reply}"/>
+      <Fallback>
+        <Sequence>
+          <ScriptCondition code="done == false"/>
+          <Repeat num_cycles="-1">
+            <Sequence>
+              <IfThenElse>
+                <SubTree ID="ListenToUser" _autoremap="true"/>
+                <Sequence>
+                  <!-- The reply to the turn, with fillers while it is prepared -->
+                  <WithFillers>
+                    <Fallback>
+                      <SubTree ID="CancelCheck" _autoremap="true"/>
+                      <SubTree ID="StrategyTurn" _autoremap="true"/>
+                    </Fallback>
+                  </WithFillers>
+                  <SubTree ID="CountProgress" _autoremap="true"/>
+                  <!-- The last turn allowed: the closing line replaces the reply -->
+                  <SubTree ID="TurnLimit" _autoremap="true"/>
+                  <Speak text="{reply}"/>
+                </Sequence>
+                <SubTree ID="UserSilent" _autoremap="true"/>
+              </IfThenElse>
+              <ScriptCondition code="done == false"/>
+            </Sequence>
+          </Repeat>
+        </Sequence>
+        <SubTree ID="Conclude" _autoremap="true"/>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
   <!-- The start of every dialogue: the state from the request, the closing line for a
        failure of the system, fetched now so that the robot can say it even if the
        intelligence fails later, and the conversational fillers (one per line), fetched now
        because they are said while the intelligence is busy -->
   <BehaviorTree ID="Begin">
     <Sequence>
+      <!-- No element follows one given up yet (NoProgress) -->
+      <Script code="new_element := false"/>
       <AskIntelligence skill="begin" args="{goal}"/>
       <AskIntelligence skill="closing" option="error" reply="{error_closing}"/>
       <AskIntelligence skill="fillers" reply="{fillers}"/>
@@ -41,16 +89,34 @@
     </Sequence>
   </BehaviorTree>
 
-  <!-- Fails when the dialogue has used every turn allowed (max_turns, 0 = unlimited), after
-       the robot says the closing line -->
+  <!-- After the reply to a user turn is prepared, before it is said: on the last turn allowed
+       (max_turns user turns heard, 0 = unlimited) a dialogue not done yet ends here. The user's
+       last turn was handled by the strategy (what it said is recorded), and the closing line
+       replaces the reply, so that the robot never asks a question it will not listen to. The
+       strategy may give its own closing for what was done (DialogueMode.on_turn_limit, skill
+       turn_limit_end: the quiz's score so far, the procedure's summary, the role play's
+       evaluation), followed by the fixed closing line; otherwise the fixed closing line alone.
+       Either way the ending is turn_limit. The caller says the reply -->
   <BehaviorTree ID="TurnLimit">
     <Fallback>
-      <ScriptCondition code="max_turns &lt;= 0 || turns &lt; max_turns"/>
-      <Sequence>
+      <ScriptCondition code="done == true || max_turns &lt;= 0 || turns &lt; max_turns"/>
+      <Fallback>
+        <Sequence>
+          <WithFillers>
+            <AskIntelligence skill="turn_limit_end" label="{turn_limit_end}"/>
+          </WithFillers>
+          <ScriptCondition code="turn_limit_end == 'closed'"/>
+          <Script code="ending := 'turn_limit'; done := true"/>
+        </Sequence>
+        <!-- The last turn asked to stop (the question whether to stop is pending): the dialogue
+             ends as the user asked, with the cancel closing (outcome cancelled) or, where
+             stopping is finishing, the strategy's normal end -->
+        <Sequence>
+          <ScriptCondition code="turn_limit_end == 'cancelled' || turn_limit_end == 'finished'"/>
+          <Script code="done := true"/>
+        </Sequence>
         <SubTree ID="EndDialogue" _autoremap="true" reason="turn_limit"/>
-        <Speak text="{reply}"/>
-        <AlwaysFailure/>
-      </Sequence>
+      </Fallback>
     </Fallback>
   </BehaviorTree>
 
@@ -64,8 +130,8 @@
   </BehaviorTree>
 
   <!-- The user said nothing for wait_timeout seconds. Silence is not abandonment: the robot
-       says it is waiting, repeats what it had asked, or stays quiet (the silence skill
-       chooses, with fixed phrases); a step that takes time (wait) is not counted. After
+       says it is waiting, repeats what it had asked (the element pending, as the strategy gives
+       it: DialogueMode.pending), or stays quiet (the silence skill chooses, with fixed phrases); a step that takes time (wait) is not counted. After
        max_silent_waits waits in a row (max_silence seconds; 0 = never) the strategy may close
        the dialogue itself (silent_end: the role play gives its evaluation once the user said a
        line of the scene; its own outcome); otherwise the robot says the closing line and the
@@ -75,6 +141,13 @@
       <AskIntelligence skill="silence" number="{timeouts}" option="{last_utterance}"/>
       <Fallback>
         <ScriptCondition code="label == 'wait'"/>
+        <!-- Asked whether they want to stop, the user said nothing again: the dialogue ends as
+             they asked (closed: the cancel closing in reply; the outcome cancelled) -->
+        <Sequence>
+          <ScriptCondition code="label == 'closed'"/>
+          <Script code="done := true"/>
+          <Speak text="{reply}"/>
+        </Sequence>
         <Sequence>
           <Script code="timeouts += 1"/>
           <IfThenElse>
@@ -86,7 +159,11 @@
             <Sequence>
               <Fallback>
                 <Sequence>
-                  <AskIntelligence skill="silent_end"/>
+                  <!-- The strategy's closing may call the model (the role play's evaluation):
+                       with fillers while it is prepared, as every reply -->
+                  <WithFillers>
+                    <AskIntelligence skill="silent_end"/>
+                  </WithFillers>
                   <ScriptCondition code="label == 'closed'"/>
                   <Script code="done := true"/>
                 </Sequence>
@@ -111,17 +188,23 @@
     <Sequence>
       <AskIntelligence skill="cancel_check" user_text="{user_text}" option="{last_utterance}"/>
       <ScriptCondition code="label != 'none'"/>
-      <Script code="done := label == 'confirmed' || label == 'finished'"/>
+      <!-- A question whether to stop, or a denied request, is not progress: it leaves the count
+           of turns without progress as it was (it neither resets it nor adds to it) -->
+      <Script code="done := label == 'confirmed' || label == 'finished'; progress := done"/>
     </Sequence>
   </BehaviorTree>
 
   <!-- A user turn without progress (not understood, asked to repeat): counts it, and fails
        when max_stalled turns in a row had no progress (0 = unlimited). The condition of an
-       IfThenElse: then the strategy's recovery, else EndDialogue (breakdown) -->
+       IfThenElse: then the strategy's recovery, else EndDialogue (breakdown). The count goes on
+       across elements, but an element presented after one was given up (new_element, set by
+       the strategy) always gets its first repair: its first turn without progress never ends
+       the dialogue -->
   <BehaviorTree ID="NoProgress">
     <Sequence>
       <Script code="stalled += 1; progress := false"/>
-      <ScriptCondition code="max_stalled &lt;= 0 || stalled &lt; max_stalled"/>
+      <ScriptCondition code="max_stalled &lt;= 0 || stalled &lt; max_stalled || new_element"/>
+      <Script code="new_element := false"/>
     </Sequence>
   </BehaviorTree>
 
@@ -130,7 +213,7 @@
   <BehaviorTree ID="CountProgress">
     <Fallback>
       <ScriptCondition code="progress == false"/>
-      <Script code="stalled := 0"/>
+      <Script code="stalled := 0; new_element := false"/>
     </Fallback>
   </BehaviorTree>
 

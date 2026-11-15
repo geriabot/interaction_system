@@ -374,6 +374,9 @@ InteractionOrchestrator::write_request_to_blackboard()
     {"initial_frame_json", goal->initial_frame_json},
     {"max_turns", max_turns},
     {"wait_timeout", wait_timeout},
+    // The silent waits that end the conversation: the intelligence asks for no prompt at the
+    // last one, which the tree never says
+    {"max_silent_waits", max_silent_waits},
     {"dialog_mode", behavior.mode},
     {"resources_json", goal->resources_json},
     {"domain", goal->domain},
