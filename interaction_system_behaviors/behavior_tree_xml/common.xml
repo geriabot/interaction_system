@@ -134,7 +134,8 @@
        says it is waiting, repeats what it had asked (the element pending, as the strategy gives
        it: DialogueMode.pending), or stays quiet (the silence skill chooses, with fixed phrases); a step that takes time (wait) is not counted. After
        max_silent_waits waits in a row (max_silence seconds; 0 = never) the strategy may close
-       the dialogue itself (silent_end: grounded question answering, once a question within the
+       the dialogue itself (silent_end: the role play gives its evaluation once the user said a
+       line of the scene, grounded question answering its closing once a question within the
        task got its reply; its own outcome); otherwise the robot says the closing line and the
        dialogue ends (user_silent) -->
   <BehaviorTree ID="UserSilent">

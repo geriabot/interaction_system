@@ -68,14 +68,23 @@ class DialogueMode:
 
     on_cancel(env, state) -> the closing line when the user's cancellation is confirmed and
     the strategy has something to give for what was done (the role play: its evaluation), or
-    "" for the generic cancel closing. The outcome stays "cancelled"; what the strategy
-    recorded is in the data.
+    "" for the generic cancel closing. With its own closing the stop is a normal end and the
+    outcome is the strategy's own (decided by the author, 2026-11-08); with the generic one it
+    is "cancelled".
 
     on_finished(env, state) -> the strategy's own closing line when the user, asked whether
     they want to stop, says instead that they have finished (nothing more to ask or add), for
     the strategies whose end the user decides (grounded question answering); it records the
     normal end (the outcome is the strategy's own, e.g. completed). None: the turn goes to the
     strategy like any other (decided by the author, 2026-10-31: finishing is not cancelling).
+
+    on_silent_end(env, state) -> the strategy's own closing line when the user's silence would
+    end the dialogue (max_silent_waits) and the strategy can close what was done as a normal
+    end (the role play: its evaluation, once the user said a line of the scene; grounded
+    question answering: its closing, once a question within the task got its reply), or "" for
+    the ending user_silent. When it closes, the outcome is the strategy's own (E1 development,
+    2026-11-07: a user who leaves the practice in silence after the scene still gets, and the
+    record still keeps, its evaluation, as after a cancellation).
 
     cancel_stage(state) -> where the strategy is, for the cancel detector, in one sentence (slot
     filling: the details are being collected or read back, and nothing has been booked, ordered
@@ -92,10 +101,6 @@ class DialogueMode:
     silence_grace: Callable[[dict], float] = lambda state: 0.0
     on_cancel: Callable[[SkillEnv, dict], str] | None = None
     on_finished: Callable[[SkillEnv, dict], str] | None = None
-    # The strategy's own closing line when the user's silence would end the dialogue
-    # (max_silent_waits) and the strategy can close what was done as a normal end (grounded
-    # question answering, once a question within the task got its reply), or "" for the ending
-    # user_silent. When it closes, the outcome is the strategy's own
     on_silent_end: Callable[[SkillEnv, dict], str] | None = None
     # on_turn_limit(env, state) -> what the strategy says for what was done when the dialogue
     # reaches its turn limit (max_turns) before its own end, after the user's last turn was

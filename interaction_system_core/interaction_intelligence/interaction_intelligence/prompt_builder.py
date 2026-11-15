@@ -39,7 +39,8 @@ _log = logging.getLogger("PromptBuilder")  # TRACE
 _ROLEPLAY_ENDINGS = {
     "user": "the user asked to stop",
     "scene": "the scene reached its natural end",
-    "limit": "the time for the practice ran out",
+    "limit": "the practice reached the length planned for it (say nothing of a timer)",
+    "silence": "the user stopped answering after their last line of the scene",
     "breakdown": "several turns in a row could not be understood, so the practice stops here",
 }
 

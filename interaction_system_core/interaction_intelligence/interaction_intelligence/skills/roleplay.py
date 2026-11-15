@@ -25,7 +25,8 @@ what was done (roleplay.breakdown_end), as a silence does. Only continue turns c
 asking to repeat or for a hint does not use up the scene. A scene whose evaluation could not
 score every criterion ends as partial, with the criteria not scored as the reason. A spoken
 cancellation, once confirmed, also closes with the evaluation when the user said at least one
-line of the scene (_on_cancel; outcome cancelled, the scores in the data). State
+line of the scene (_on_cancel; the outcome is then the role play's own, completed when every
+criterion was scored: the robot invites the user to finish whenever they want). State
 keys: "scene", "max_exchanges", "exchanges", "history", "repeats" (repeat requests in a row),
 "ended_by", "evaluation".
 """
@@ -156,11 +157,44 @@ def _on_cancel(env: SkillEnv, state: dict) -> str:
     confirmed cancellation (or an exact stop command while the model is down) closes the
     practice with the evaluation of what was done, as when the user ends it (ended_by "user"),
     when enough was done (MIN_EXCHANGES_TO_EVALUATE); "" (the cancel closing) otherwise, or when
-    no criterion could be scored. The outcome stays "cancelled", with the scores in the data."""
+    no criterion could be scored. With the evaluation the outcome is the role play's own
+    (completed; decided by the author, 2026-11-08), with the cancel closing "cancelled"."""
     if state.get("exchanges", 0) < MIN_EXCHANGES_TO_EVALUATE:
         return ""
     reply = finish(env, state, SkillInput(option="user")).reply
     return reply if state["evaluation"].get("scores") else ""
+
+
+def _on_turn_limit(env: SkillEnv, state: dict) -> str:
+    """The turn limit came before the end of the scene: once the user said at least
+    MIN_EXCHANGES_TO_EVALUATE lines of the scene, the robot steps out of the role and gives the
+    evaluation of what was done (ended_by "limit"), as after a silence; "" otherwise, or when no
+    criterion could be scored (the fixed closing line alone). The scene's own limit
+    (max_exchanges) counts lines of the scene; this one counts every turn, also the requests to
+    repeat and the hints."""
+    if state.get("exchanges", 0) < MIN_EXCHANGES_TO_EVALUATE:
+        return ""
+    reply = finish(env, state, SkillInput(option="limit")).reply
+    if state["evaluation"].get("scores"):
+        return reply
+    state["completed"] = False
+    return ""
+
+
+def _on_silent_end(env: SkillEnv, state: dict) -> str:
+    """The user stopped answering: once they said at least MIN_EXCHANGES_TO_EVALUATE lines of
+    the scene, the robot steps out of the role and gives the evaluation of what was done
+    (ended_by "silence"; the outcome is the strategy's own), as after a cancellation; ""
+    otherwise, or when no criterion could be scored (the ending user_silent). E1 development,
+    2026-11-07: a user who leaves the scene without a word once it is over (an order taken,
+    the directions given) lost the evaluation."""
+    if state.get("exchanges", 0) < MIN_EXCHANGES_TO_EVALUATE:
+        return ""
+    reply = finish(env, state, SkillInput(option="silence")).reply
+    if state["evaluation"].get("scores"):
+        return reply
+    state["completed"] = False
+    return ""
 
 
 register_mode(
@@ -179,27 +213,13 @@ register_mode(
         cancel_stage=lambda state: (
             "The user is acting a scene with the robot, which plays a character; what the user "
             "says in character is part of the practice, not about this conversation."),
-        on_turn_limit=lambda env, state: _on_turn_limit(env, state),
+        on_silent_end=_on_silent_end,
+        on_turn_limit=_on_turn_limit,
         pending=lambda env, state: next(
             (t["content"] for t in reversed(state.get("history", [])) if t["role"] == "assistant"),
             ""),
     ),
 )
-
-
-def _on_turn_limit(env: SkillEnv, state: dict) -> str:
-    """The turn limit came before the end of the scene: once the user said at least
-    MIN_EXCHANGES_TO_EVALUATE lines of the scene, the robot steps out of the role and gives the
-    evaluation of what was done (ended_by "limit"); "" otherwise, or when no criterion could be
-    scored (the fixed closing line alone). The scene's own limit (max_exchanges) counts lines of
-    the scene; this one counts every turn, also the requests to repeat and the hints."""
-    if state.get("exchanges", 0) < MIN_EXCHANGES_TO_EVALUATE:
-        return ""
-    reply = finish(env, state, SkillInput(option="limit")).reply
-    if state["evaluation"].get("scores"):
-        return reply
-    state["completed"] = False
-    return ""
 
 
 def _character_line(env: SkillEnv, state: dict) -> str:
@@ -290,7 +310,7 @@ def breakdown_end(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
 @skill("roleplay.finish")
 def finish(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     """Step out of the role, score the user on each criterion and give the feedback (option:
-    who ended the scene, user | scene | limit)."""
+    who ended the scene, user | scene | limit | silence)."""
     state["ended_by"] = inp.option
     evaluation = env.llm.evaluate_roleplay(state["scene"], state["history"], env.ctx)
     feedback = env.llm.roleplay_feedback(state["scene"], evaluation, inp.option, env.ctx)
