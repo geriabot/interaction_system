@@ -175,12 +175,14 @@ def test_without_a_last_answer_the_question_is_not_asked(language):
 
 @LANGUAGES
 def test_after_an_abstention_the_question_is_not_asked(language):
-    # An abstention gives no value to check
-    llm, calls = client([turn("asks", "not_in_material"), turn("reacts")], language)
+    # An abstention gives no value to check (the abstention asks first whether the turn is
+    # intelligible: check_intelligible)
+    llm, calls = client([turn("asks", "not_in_material"), '{"intelligible": true}',
+                         turn("reacts")], language)
     env, state = qa(llm)
     assert say(env, state, "Is there a cloakroom?").label == "abstained"
     result = say(env, state, "Oh, what a shame.")
-    assert result.label == "comment" and len(calls) == 2
+    assert result.label == "comment" and len(calls) == 3
 
 
 @LANGUAGES

@@ -99,14 +99,19 @@ def test_a_point_already_right_is_not_downgraded_to_incomplete():
     assert state["key_points"][0]["status"] == "correct"
 
 
-def test_the_robot_confirms_the_part_said_and_asks_for_the_rest():
+def test_the_robot_never_confirms_the_words_said_and_asks_for_the_rest():
+    # The person's words are never confirmed: a wrong content judged incomplete was confirmed
+    # as right (E2 pre-run verification). Only the points said right, with their own text
     llm, calls = client([judged(("correct", ""), ("incomplete", "I pay 5 euros"),
-                                ("correct", "")), "Good, it is 5 euros. And where do you pay?"])
+                                ("correct", "")), "Good. And where do you pay?"])
     env, state = explanation(llm)
     get_skill("explanation.check")(env, state, SkillInput(user_text="x"))
     get_skill("explanation.ask_missing")(env, state, SkillInput())
-    assert 'part of "Pay at the central machine' in calls[-1]
-    assert "I pay 5 euros" in calls[-1]
+    said_right = calls[-1].split("SAID RIGHT:")[1].split("STILL MISSING")[0]
+    assert POINTS[0] in said_right and POINTS[2] in said_right
+    assert "I pay 5 euros" not in calls[-1] and "part of" not in said_right
+    assert f"- {POINTS[1]}" in calls[-1].split("STILL MISSING")[1]
+    assert "never repeat the person's words" in " ".join(calls[-1].split())
 
 
 def test_the_repair_keeps_the_right_part_and_speaks_to_the_person():
@@ -114,7 +119,9 @@ def test_the_repair_keeps_the_right_part_and_speaks_to_the_person():
     prompt = pb.repair_explanation("Laundrette", [
         {"point": POINTS[1], "status": "incomplete", "said": "I pay 5 euros"},
         {"point": POINTS[2], "status": "wrong", "said": "60 degrees"}], [POINTS[0]])
-    assert 'said only this part, right but INCOMPLETE: "I pay 5 euros"' in prompt
+    # The part said is not quoted: the repair explains the whole point again
+    assert f"- {POINTS[1]} (the person said only part of it: INCOMPLETE)" in prompt
+    assert "I pay 5 euros" not in prompt
     assert 'the person said instead: "60 degrees"' in prompt
     assert "Speak TO the person" in prompt and "never say it was wrong" in prompt
 
@@ -125,6 +132,12 @@ def test_a_point_not_mentioned_is_never_attributed_to_the_person():
         {"point": POINTS[0], "status": "pending", "said": ""}], [])
     assert f"- {POINTS[0]} (the person did not mention it)" in prompt
     assert "never say that they said it or got it right" in " ".join(prompt.split())
+
+def test_the_judge_reads_a_part_right_with_something_added_as_wrong():
+    text = " ".join(prompts()["judge_teach_back"].split())
+    assert "adds or changes nothing that the point does not say" in text
+    assert "also when part of it is right" in text and 'never "incomplete"' in text
+
 
 def test_the_verification_accepts_an_immediate_inference():
     text = prompts()["verify_answer"]

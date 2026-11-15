@@ -113,15 +113,35 @@ def _step_duration(state: dict) -> float:
     return float(state["steps"][state["idx"]].get("duration_s") or 0.0)
 
 
+def _on_turn_limit(env: SkillEnv, state: dict) -> str:
+    """The turn limit came before the last step: how the steps went so far, as the procedure's
+    own closing (how each step not done ended, never its text); "" before any step was closed."""
+    if all(st is None for st in state["status"]):
+        return ""
+    return env.llm.procedure_summary(
+        state["task"],
+        completed=_count(state, "done"),
+        total=len(state["steps"]),
+        not_done=[st or "not reached" for st in state["status"] if st != "done"],
+        ctx=env.ctx,
+    )
+
+
 register_mode(
     "procedure",
     DialogueMode(
+        finishing_is_an_answer=True,  # "done" reports the step, "skip it" skips it
+        done_words_are_answers=True,  # a bare "Done." never asks whether to stop
         init=_init,
         phase=_phase,
         data=_data,
         succeeded=lambda state: bool(state.get("completed")) and not state.get("user_cancelled"),
         outcome=_outcome,
         silence_grace=_step_duration,
+        on_turn_limit=_on_turn_limit,
+        pending=lambda env, state: (
+            "" if state.get("completed") or state["idx"] >= len(state["steps"])
+            else state["steps"][state["idx"]]["step"]),
     ),
 )
 

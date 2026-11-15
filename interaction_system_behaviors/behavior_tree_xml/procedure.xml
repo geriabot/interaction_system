@@ -12,40 +12,12 @@
        result says which steps were done (partial if a step that is not optional was skipped
        or stuck). -->
   <BehaviorTree ID="Procedure">
-    <Sequence>
-      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
-      <WithFillers budget_s="{opening_budget}">
-        <SubTree ID="ProcedureOpening" _autoremap="true"/>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <!-- The reply to the turn, with fillers while it is prepared -->
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="ProcedureTurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
-    </Sequence>
+    <!-- The dialogue loop shared by every strategy (common.xml), with this file's
+         StrategyOpening and StrategyTurn -->
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
   </BehaviorTree>
 
-  <BehaviorTree ID="ProcedureOpening">
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
       <SubTree ID="Begin" _autoremap="true"/>
       <IfThenElse>
@@ -56,7 +28,7 @@
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="ProcedureTurn">
+  <BehaviorTree ID="StrategyTurn">
     <Sequence>
       <AskIntelligence skill="procedure.classify" user_text="{user_text}"/>
       <Switch6 variable="{label}" case_1="done" case_2="skip" case_3="question"

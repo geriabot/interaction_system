@@ -19,16 +19,22 @@ answer with another value ("Nine euros? Fine." after "It costs 19 euros") is a m
 not a reaction: a question of its own (detect_wrong_check), asked only for a reaction after an
 answer from the material, turns it into a request to repeat, so that the robot says the answer
 again. Before an answer is said, a second question verifies that every claim in it is supported
-by the material; an answer that is not is replaced by the abstention. The phrases of abstention,
-declining and closing are fixed: no LLM. Asked whether they want to stop, a user who says
+by the material; an answer that is not is replaced by the abstention. A turn that would get an
+abstention is first checked to be intelligible (check_intelligible): a word salad read as a
+question is a turn not understood, not an abstention. A turn not understood is answered with a
+request to repeat; from the second in a row, the robot says what can be asked (qa_topics). The
+phrases of abstention, declining and closing are fixed: no
+LLM. Asked whether they want to stop, a user who says
 instead that they have no more questions gets the same closing (DialogueMode.on_finished: the
-end of this strategy is the user's to decide).
+end of this strategy is the user's to decide), and so does a user who stops answering once a
+question within the task got its reply (DialogueMode.on_silent_end).
 
 The material: the resources of the request with plain text (a structured resource, such as a
 question bank, is not material). A resource named "handover" holds the sentence that offers a
 person when the robot does not know (e.g. "The staff at the desk can help you with that").
 State keys: "material", "handover", "questions" ([{question, resolution: answered | abstained |
-declined, answer}]), "last_answer", "history".
+declined, answer}]), "last_answer", "history", "unclear_run" (turns not understood in a row),
+"topics" (what can be asked, generated once when first needed).
 """
 
 from ..utils import parse_loose_json
@@ -86,8 +92,25 @@ register_mode(
         },
         succeeded=lambda state: bool(state.get("completed")) and not state.get("user_cancelled"),
         on_finished=lambda env, state: _close(env, state),
+        stop_is_finishing=lambda state: any(q["resolution"] in ("answered", "abstained")
+                                            for q in state.get("questions", [])),
+        on_silent_end=lambda env, state: _close_silent(env, state),
+        pending=lambda env, state: (
+            env.llm.phrase("qa_more") if any(
+                q["resolution"] in ("answered", "abstained") for q in state.get("questions", []))
+            else ""),
     ),
 )
+
+
+def _close_silent(env: SkillEnv, state: dict) -> str:
+    """The user's silence would end the dialogue (max_silent_waits): once at least one question
+    within the task got its reply (answered from the material, or abstained), a visitor who
+    walks away after their answers has finished; the robot says the normal closing and the
+    outcome is completed. "" otherwise (the ending user_silent)."""
+    if not any(q["resolution"] in ("answered", "abstained") for q in state.get("questions", [])):
+        return ""
+    return _close(env, state)
 
 
 def _close(env: SkillEnv, state: dict) -> str:
@@ -121,6 +144,25 @@ def _say(state: dict, reply: str, label: str) -> SkillResult:
     return SkillResult(reply=reply, label=label)
 
 
+def _robot_before(state: dict) -> str:
+    """The robot's line before the user's last turn ("" at the start)."""
+    return next((h["content"] for h in reversed(state["history"][:-1])
+                 if h["role"] == "assistant"), "")
+
+
+def _unclear(env: SkillEnv, state: dict) -> SkillResult:
+    """A turn not understood (label other: a turn without progress). The first in a row asks
+    to repeat; from the second in a row the robot says what it can answer about (qa_topics,
+    generated once from the material), so that the same request to repeat is not said again
+    and again to a person who does not know what to ask."""
+    state["unclear_run"] = state.get("unclear_run", 0) + 1
+    if state["unclear_run"] < 2:
+        return _say(state, env.llm.phrase("unclear"), "other")
+    if not state.get("topics"):
+        state["topics"] = env.llm.qa_topics(state["task"], state["material"], env.ctx)
+    return _say(state, f"{env.llm.phrase('qa_unclear_again')} {state['topics']}", "other")
+
+
 @skill("grounded_qa.open")
 def open_(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     return _say(state, env.llm.qa_opening(state["task"], env.ctx), "")
@@ -142,7 +184,15 @@ def answer(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     "done" (the person has finished: the closing), "repeat" (the last answer again) or "other"
     (not understood). What the person does is read first (llm_client.answer_from_material):
     only a request reaches the answer. A reaction that repeats back the last answer with another
-    value is handled as a request to repeat it (detect_wrong_check)."""
+    value is handled as a request to repeat it (detect_wrong_check). A turn that would get an
+    abstention and is not intelligible (check_intelligible) is not understood."""
+    result = _turn(env, state, inp)
+    if result.label != "other":
+        state["unclear_run"] = 0
+    return result
+
+
+def _turn(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     state["history"].append({"role": "user", "content": inp.user_text})
     result = env.llm.answer_from_material(
         inp.user_text, state["task"], state["material"], state["history"][-6:], env.ctx
@@ -154,10 +204,8 @@ def answer(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
         kind = "repeat"
     if kind == "done":
         # The closing cannot be undone: verified first (provisional, 2026-11-01)
-        robot = next((h["content"] for h in reversed(state["history"][:-1])
-                      if h["role"] == "assistant"), "")
-        if not env.llm.verify_finished(inp.user_text, robot):
-            return _say(state, env.llm.phrase("unclear"), "other")
+        if not env.llm.verify_finished(inp.user_text, _robot_before(state)):
+            return _unclear(env, state)
         return SkillResult(reply=_close(env, state), label="done")
     if kind == "repeat":
         last = state.get("last_answer") or ""
@@ -166,7 +214,7 @@ def answer(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
         # An abstention was kept with the invitation already
         return _say(state, last if last.endswith(more) else f"{last} {more}", "repeat")
     if kind == "other":
-        return _say(state, env.llm.phrase("unclear"), "other")
+        return _unclear(env, state)
     if kind == "comment":
         return _say(state, more, "comment")
     if kind == "off_task":
@@ -179,7 +227,11 @@ def answer(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
         state["questions"].append({"question": inp.user_text, "resolution": "answered",
                                    "answer": result["answer"]})
         return _say(state, f"{result['answer']} {more}", "answered")
-    # Not in the material, or an answer the material does not support
+    # Not in the material, or an answer the material does not support. A word salad read as a
+    # question would get the abstention, which counts as progress: checked first (a failed check
+    # keeps the abstention)
+    if env.llm.check_intelligible(inp.user_text, _robot_before(state)) is False:
+        return _unclear(env, state)
     reply = " ".join(p for p in (env.llm.phrase("qa_abstain"), state.get("handover", ""), more) if p)
     state["last_answer"] = reply
     state["questions"].append({"question": inp.user_text, "resolution": "abstained",

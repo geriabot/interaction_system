@@ -17,9 +17,11 @@ explicitly, and only the evaluation sees the criteria.
 
 The tree (roleplay.xml) decides what each kind of turn does: continue (the character
 replies), repeat (the character's last line again: literally first, then in other words),
-coach (a hint out of character), end / scene_end / limit (close and score), unclear (the model
-could not read the turn: the robot asks to repeat it; a turn without progress, so that a
-sustained failure of the model ends as a breakdown). Only continue turns count as exchanges:
+coach (a hint out of character), end / scene_end / limit (close and score), unclear (a line
+that makes no sense, or the model could not read the turn: the robot asks to repeat it; a turn
+without progress, so that a sustained failure ends as a breakdown, and not an exchange of the
+scene). A breakdown after at least one line of the scene still closes with the evaluation of
+what was done (roleplay.breakdown_end), as a silence does. Only continue turns count as exchanges:
 asking to repeat or for a hint does not use up the scene. A scene whose evaluation could not
 score every criterion ends as partial, with the criteria not scored as the reason. A spoken
 cancellation, once confirmed, also closes with the evaluation when the user said at least one
@@ -163,6 +165,22 @@ def _on_cancel(env: SkillEnv, state: dict) -> str:
     return reply if state["evaluation"].get("scores") else ""
 
 
+def _on_turn_limit(env: SkillEnv, state: dict) -> str:
+    """The turn limit came before the end of the scene: once the user said at least
+    MIN_EXCHANGES_TO_EVALUATE lines of the scene, the robot steps out of the role and gives the
+    evaluation of what was done (ended_by "limit"), as after a silence; "" otherwise, or when no
+    criterion could be scored (the fixed closing line alone). The scene's own limit
+    (max_exchanges) counts lines of the scene; this one counts every turn, also the requests to
+    repeat and the hints."""
+    if state.get("exchanges", 0) < MIN_EXCHANGES_TO_EVALUATE:
+        return ""
+    reply = finish(env, state, SkillInput(option="limit")).reply
+    if state["evaluation"].get("scores"):
+        return reply
+    state["completed"] = False
+    return ""
+
+
 def _on_silent_end(env: SkillEnv, state: dict) -> str:
     """The user stopped answering: once they said at least MIN_EXCHANGES_TO_EVALUATE lines of
     the scene, the robot steps out of the role and gives the evaluation of what was done
@@ -182,13 +200,24 @@ def _on_silent_end(env: SkillEnv, state: dict) -> str:
 register_mode(
     "roleplay",
     DialogueMode(
+        finishing_is_an_answer=True,  # the line belongs to the scene; its classifier ends the scene
         init=_init,
         phase=_phase,
         data=_data,
         succeeded=lambda state: bool(state.get("completed")) and not state.get("user_cancelled"),
         outcome=_outcome,
         on_cancel=_on_cancel,
+        # Where the conversation is, for the cancel detector: lines in character ("cancel my
+        # reservation") are part of the practice. Not strict mode: a hesitant wish to stop the
+        # practice ("maybe we should stop") is still asked about
+        cancel_stage=lambda state: (
+            "The user is acting a scene with the robot, which plays a character; what the user "
+            "says in character is part of the practice, not about this conversation."),
         on_silent_end=_on_silent_end,
+        on_turn_limit=_on_turn_limit,
+        pending=lambda env, state: next(
+            (t["content"] for t in reversed(state.get("history", [])) if t["role"] == "assistant"),
+            ""),
     ),
 )
 
@@ -260,6 +289,22 @@ def coach(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     hint = env.llm.roleplay_coach(inp.user_text, state["scene"], state["history"], env.ctx)
     state["history"].pop()
     return SkillResult(reply=hint)
+
+
+@skill("roleplay.breakdown_end")
+def breakdown_end(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
+    """max_stalled turns in a row without progress would end the dialogue as a breakdown: once
+    the user said at least MIN_EXCHANGES_TO_EVALUATE lines of the scene, the robot steps out of
+    the role and gives the evaluation of what was done (ended_by "breakdown"; the outcome is the
+    strategy's own), as after a silence or a cancellation. label: "closed" (reply: the
+    evaluation) or "none" (the tree ends the dialogue as a breakdown, without evaluation)."""
+    if state.get("exchanges", 0) < MIN_EXCHANGES_TO_EVALUATE:
+        return SkillResult(label="none")
+    result = finish(env, state, SkillInput(option="breakdown"))
+    if state["evaluation"].get("scores"):
+        return SkillResult(reply=result.reply, label="closed")
+    state["completed"] = False
+    return SkillResult(label="none")
 
 
 @skill("roleplay.finish")

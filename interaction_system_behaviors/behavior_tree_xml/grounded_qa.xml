@@ -7,43 +7,17 @@
        which answers from the material and verifies the answer against it, or abstains (not in
        the material), or declines (outside the task), and sets the reply in every case. The tree
        decides the rest: the user has no more questions (the closing: success), asks to repeat
-       the last answer, or says something not understood (both turns without progress). The
+       the last answer, or says something not understood (both turns without progress; from the
+       second turn not understood in a row the robot says what can be asked), or only reacts
+       (neutral: the count of turns without progress is neither reset nor increased). The
        result is each question with its resolution: answered, abstained or declined. -->
   <BehaviorTree ID="GroundedQA">
-    <Sequence>
-      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
-      <WithFillers budget_s="{opening_budget}">
-        <SubTree ID="GroundedQAOpening" _autoremap="true"/>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <!-- The reply to the turn, with fillers while it is prepared -->
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="GroundedQATurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
-    </Sequence>
+    <!-- The dialogue loop shared by every strategy (common.xml), with this file's
+         StrategyOpening and StrategyTurn -->
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
   </BehaviorTree>
 
-  <BehaviorTree ID="GroundedQAOpening">
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
       <SubTree ID="Begin" _autoremap="true"/>
       <IfThenElse>
@@ -54,7 +28,7 @@
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="GroundedQATurn">
+  <BehaviorTree ID="StrategyTurn">
     <Sequence>
       <AskIntelligence skill="grounded_qa.answer" user_text="{user_text}"/>
       <Switch5 variable="{label}" case_1="done" case_2="repeat" case_3="other"
@@ -80,8 +54,10 @@
             <SubTree ID="EndDialogue" _autoremap="true" reason="off_task"/>
           </Fallback>
         </Sequence>
-        <!-- A reaction: the count of requests outside the task goes on -->
-        <AlwaysSuccess/>
+        <!-- A reaction ("Okay"): neutral, neither progress nor a turn without progress (the
+             count of turns without progress is not reset, nor increased); the count of
+             requests outside the task goes on -->
+        <Script code="progress := false"/>
         <!-- Answered or abstained (a question within the task): the reply is set, and the count
              of requests outside the task starts again -->
         <Script code="off_task := 0"/>
