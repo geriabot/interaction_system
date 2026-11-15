@@ -126,6 +126,10 @@ def test_the_prompt_is_the_one_of_prompt_builder(language):
         "roleplay_reply": {"scene": {"scenario": "s", "role": "r"},
                            "history": [{"role": "assistant", "content": "Hi?"}],
                            "ctx": None, "avoid": "Hi?"},
+        # The answer is verified with the question it answers
+        "verify_answer": {"answer": "Yes.", "question": "Can I borrow three books?",
+                          "material": [{"name": "i",
+                                        "content": "Members may borrow up to five books."}]},
     }
     for question, args in calls.items():
         method = QUESTIONS[question][0]
@@ -216,3 +220,19 @@ def test_the_answer_is_the_model_text_or_nothing():
     assert answer_text(True, '{"text": ""}', "llm") == ""
     assert answer_text(True, "", "invalid") is None
     assert answer_text(False, "", "") is None
+
+
+def test_the_client_sends_the_question_that_the_answer_answers():
+    sent = []
+
+    def infer(session, prompt, max_tokens, schema):
+        sent.append(prompt)
+        return '{"supported": true, "unsupported": []}'
+
+    llm = LLMDialogClient("nlu", "nlg", infer, InterpretationPromptBuilder(templates()))
+    material = [{"name": "i", "content": "Members may borrow up to five books."}]
+    assert llm.verify_answer("Yes.", material, question="Can I borrow three books?")
+    question, context = asked_question(sent[0])
+    assert question == "verify_answer"
+    assert context["args"]["question"] == "Can I borrow three books?"
+    assert build_prompt(question, templates(), decode_context(context))[0] == sent[0]

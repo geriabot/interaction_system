@@ -3,8 +3,9 @@
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
 """The fixes found in the development run of E1: a scale answer read by its label (a scale of
-numbers is never read by position) and the role play closed with its evaluation when the user
-leaves the scene in silence."""
+numbers is never read by position), the answer of grounded QA verified with its question, the
+role play closed with its evaluation when the user leaves the scene in silence, a list slot that
+says what it holds, and a procedure closing that never gets the text of the steps not done."""
 
 import json
 import os
@@ -53,6 +54,13 @@ def test_an_option_that_is_not_a_label_is_ambiguous():
     llm, _ = client(['{"kind": "option", "option": "Sometimes"}'])
     assert llm.map_scale_answer("Sometimes", "item", ["Yes", "No"]) == {
         "kind": "ambiguous", "option": -1}
+
+
+def test_the_answer_is_verified_with_its_question():
+    llm, calls = client(['{"supported": true, "unsupported": []}'])
+    material = [{"name": "i", "content": "Members may borrow up to five books."}]
+    assert llm.verify_answer("Yes.", material, question="Can I borrow three books?")
+    assert 'QUESTION: "Can I borrow three books?"' in calls[0]
 
 
 SCENE = {"scenario": "A café", "role": "The waiter", "criteria": ["Orders", "Is polite"],
@@ -117,3 +125,40 @@ def test_a_silent_leave_without_scores_is_the_silent_ending():
     get_skill("roleplay.classify")(env, state, SkillInput(user_text="A coffee."))
     result = get_skill("silent_end")(env, state, SkillInput())
     assert result.label == "none" and not state.get("completed")
+
+
+FORM = {"dialog_mode": "slot_filling", "task_description": "Take an order",
+        "frame_schema_json": json.dumps({"slots": [
+            {"name": "size", "type": "str", "canonical_values": ["small", "large"]},
+            {"name": "extras", "type": "list_str", "canonical_values": ["a", "b", "c"]}]})}
+
+
+def test_a_list_slot_says_whether_it_is_empty_or_what_it_holds():
+    llm, calls = client([
+        '{"extractions": [{"slot": "size", "value": "large", "source_span": "large"}],'
+        ' "act": "values"}',
+        '{"extractions": [{"slot": "extras", "value": ["a"], "source_span": "a"}],'
+        ' "act": "values"}',
+        '{"extractions": [], "act": "other"}'])
+    env, state = SkillEnv(llm=llm, ctx=DialogContext()), {}
+    get_skill("begin")(env, state, SkillInput(args=FORM))
+    get_skill("slot_filling.prepare")(env, state, SkillInput())
+    for text in ("large", "a", "hmm"):
+        get_skill("slot_filling.update")(env, state, SkillInput(user_text=text, number=2))
+    extract = [p for p in calls if "SLOTS YOU CAN UPDATE" in p]
+    assert "extras (type: list_str) [LIST — empty — needs a value;" in extract[1]
+    assert "extras (type: list_str) [LIST — currently holds ['a'];" in extract[2]
+
+
+def test_the_procedure_closing_gets_how_steps_ended_not_their_text():
+    llm, calls = client(['{"label": "skip"}', "[closing]"])
+    env, state = SkillEnv(llm=llm, ctx=DialogContext()), {}
+    goal = {"dialog_mode": "procedure", "task_description": "Make tea",
+            "resources_json": json.dumps([{"name": "steps", "content": json.dumps(
+                [{"step": "Boil the water"}])}])}
+    get_skill("begin")(env, state, SkillInput(args=goal))
+    state["status"] = ["skipped"]
+    state["idx"] = 0
+    get_skill("procedure.advance")(env, state, SkillInput(option="skipped"))
+    closing = calls[-1]
+    assert "Boil the water" not in closing and ": skipped" in closing

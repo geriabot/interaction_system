@@ -311,6 +311,8 @@ interaction_intelligence:
         - ONE short encouraging sentence mentioning the score.
         - If the user got 0 wrong: celebrate briefly.
         - If the user got everything wrong: stay kind, suggest practising.
+        - Never state an answer, a correction or any fact of the questions:
+          only the score and encouragement.
         - Max 25 words. Return only the raw text.
 
       extract_slots: |
@@ -769,13 +771,15 @@ interaction_intelligence:
         Rules:
         - {language} only. No markdown. No greeting. Return raw text only.
         - {address}
-        - Speak TO the person ("you said..."), never about them in the third
-          person.
-        - If the person said something wrong, correct it directly and kindly
-          (it is not X, it is Y).
+        - Speak TO the person ("you"), never about them in the third person.
+        - If the person said something wrong, say what they said and correct
+          it kindly ("you said X, but it is Y").
         - If they said only part of a point (marked "INCOMPLETE"), explain the
           whole point again in its own words, without repeating the person's
-          words and without confirming them: never say it was wrong.
+          words and without confirming them: never call the point complete,
+          and never say it was wrong.
+        - A point they did not mention: just explain it again; never say that
+          they said it or got it right.
         - Never restate or repeat the points the person already said right: if
           there are any, at most say in a few words that the rest was right
           ("the rest was fine").
@@ -922,9 +926,14 @@ interaction_intelligence:
         Only "asks" can be answered: never answer what was not asked.
 
         Then, only when "act" is "asks", decide "kind" in this order:
-        1. Is the question ABOUT the place or service of the TASK? If not, it is
+        1. Does the person ask the robot to DO something (book, reserve, order,
+           buy, call someone, take a message) or to give its opinion or a
+           recommendation? Then it is "off_task": the robot only answers
+           questions, whatever the place or service ("Can you call me a taxi?"
+           at a library, "Do you like this film?" at a cinema).
+        2. Is the question ABOUT the place or service of the TASK? If not, it is
            "off_task", even when the MATERIAL says nothing about it.
-        2. Only then: is its answer in the MATERIAL?
+        3. Only then: is its answer in the MATERIAL?
         - "answerable": a question about the task whose answer IS in the MATERIAL.
         - "not_in_material": a question within the scope of the task whose answer
           is NOT in the MATERIAL (do not guess; do not answer from general
@@ -971,15 +980,20 @@ interaction_intelligence:
         Output strict JSON only: {{"finished": true | false}}
 
       verify_answer: |
-        Check whether EVERY claim of the ANSWER is supported by the MATERIAL. A
-        paraphrase is fine, and so is an immediate inference (17:00 is in the
-        afternoon; "on Sundays" covers "this Sunday") and an answer that gives
-        only the part of the MATERIAL that was asked for. A fact that is not in
-        the MATERIAL, or that contradicts it (a different time, price, place,
-        number), is unsupported.
+        Check whether EVERY claim of the ANSWER to the QUESTION is supported by
+        the MATERIAL. Read the ANSWER together with the QUESTION ("Yes." to
+        "Can I park here overnight?" claims that overnight parking is
+        allowed). A paraphrase is fine, and so is an immediate inference
+        (17:00 is in the afternoon; "on Sundays" covers "this Sunday"; a rule
+        of the MATERIAL applied to the case asked about: "members may borrow
+        up to five books" answers that a member may borrow three) and an
+        answer that gives only the part of the MATERIAL that was asked for. A fact that is not in the MATERIAL,
+        or that contradicts it (a different time, price, place, number), is
+        unsupported.
 
         MATERIAL:
         {material}
+        QUESTION: "{question}"
         ANSWER: "{answer}"
 
         Output strict JSON only:
@@ -1107,10 +1121,13 @@ interaction_intelligence:
         - Keep EVERY instruction of the step and its meaning; you may rephrase
           for speech but never drop, add or change actions, quantities or
           safety warnings.
+        - Add NOTHING the step does not say: no advice, tips, checks, safety
+          reminders, durations, sounds or details of your own.
         - Say ONLY this step: never mention, anticipate or join other steps
           of the procedure.
         - End by asking the user to tell you when it is done.
-        - Max 3 short sentences. Return raw text only.
+        - Max 2 short sentences: the step, then the request. Return raw text
+          only.
 
         Situation: {situation}
         STEP {n} of {total}: "{step}"
@@ -1136,6 +1153,9 @@ interaction_intelligence:
         - The input is voice-transcribed: tolerate ASR errors.
         - A bare affirmative after being asked to report completion means
           "done".
+        - A reply that says the user does not want to do the step, will not do
+          it or skips it is "skip", even if it ends with "done" or "that's
+          all" ("I'd rather leave this one out. Done.").
         - A reply that reports the step finished is "done" even if it also asks
           something ("It's done. What's the next step?", "Done. And can you
           give me some tips?"): the next step is given anyway.
@@ -1180,6 +1200,9 @@ interaction_intelligence:
         - Explain the SAME step from a clearly different angle: smaller
           sub-actions in plain prose, a concrete example or what it should look
           like when done. Never change the step's actions or safety warnings.
+        - Use only what the step and [CONTEXT] say: never invent details you
+          cannot know (where a button is, its colour, shape or sound, a
+          number), and never give an action of another step.
         - If [CONTEXT] flags frustration, acknowledge it briefly.
         - End by asking the user to tell you when it is done.
         - Max 3 short sentences. Return raw text only.
@@ -1212,10 +1235,12 @@ interaction_intelligence:
         - If every step was completed, congratulate briefly.
         - Otherwise mention, without blame, that some steps were not completed
           and could be reviewed later.
+        - Never give an instruction, repeat a step or tell the user what to do
+          next.
 
         TASK: "{task}"
         Steps completed: {completed} of {total}
-        Steps not completed (skipped or stuck): {not_done}
+        Steps not completed, by how each one ended (their content is not given): {not_done}
 
       roleplay_intro: |
         You are a robot about to run a spoken practice roleplay with the user.

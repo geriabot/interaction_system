@@ -126,6 +126,13 @@ def test_the_repair_keeps_the_right_part_and_speaks_to_the_person():
     assert "Speak TO the person" in prompt and "never say it was wrong" in prompt
 
 
+
+def test_a_point_not_mentioned_is_never_attributed_to_the_person():
+    prompt = PromptBuilder(prompts()).repair_explanation("Laundrette", [
+        {"point": POINTS[0], "status": "pending", "said": ""}], [])
+    assert f"- {POINTS[0]} (the person did not mention it)" in prompt
+    assert "never say that they said it or got it right" in " ".join(prompt.split())
+
 def test_the_judge_reads_a_part_right_with_something_added_as_wrong():
     text = " ".join(prompts()["judge_teach_back"].split())
     assert "adds or changes nothing that the point does not say" in text

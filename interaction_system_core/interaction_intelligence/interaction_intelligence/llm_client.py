@@ -787,11 +787,14 @@ class LLMDialogClient:
         return False
 
     def verify_answer(
-        self, answer: str, material: list[dict], ctx: DialogContext | None = None
+        self, answer: str, material: list[dict], ctx: DialogContext | None = None,
+        question: str = "",
     ) -> bool:
-        """Whether every claim of the answer is supported by the material. False if the LLM
-        fails: an answer that cannot be verified is not said."""
-        prompt, schema = self._pb.verify_answer(answer, material)
+        """Whether every claim of the answer is supported by the material, the answer read with
+        the question it answers ("Yes." to "Can I park here overnight?"; without it a short
+        answer could not be verified: E1 development, 2026-11-07). False if the LLM fails: an
+        answer that cannot be verified is not said."""
+        prompt, schema = self._pb.verify_answer(answer, material, question)
         for _ in range(self.MAX_RETRIES):
             raw = self._call_nlu(prompt, schema, max_tokens=200)
             if not raw:
@@ -1038,6 +1041,8 @@ class LLMDialogClient:
         not_done: list[str],
         ctx: DialogContext | None = None,
     ) -> str:
+        """The closing line of a procedure. not_done: how each step not done ended ("skipped",
+        "stuck"), never the step's text, so that the closing gives no instruction."""
         prompt = self._pb.procedure_summary(task, completed, total, "; ".join(not_done), ctx)
         res = self._call_nlg(prompt, max_tokens=80)
         return self._clean(res) or self._fb["procedure_summary"]
