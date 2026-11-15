@@ -20,7 +20,7 @@ left unanswered; the score is in the data either way.
 """
 
 from ..spoken_numbers import grade_number
-from ..utils import parse_loose_json
+from ..utils import local_names_answer, parse_loose_json
 from . import DialogueMode, SkillEnv, SkillInput, SkillResult, register_mode, skill
 
 
@@ -83,6 +83,20 @@ def _outcome(state: dict) -> tuple[str, str]:
     return "completed", ""
 
 
+def _on_turn_limit(env: SkillEnv, state: dict) -> str:
+    """The turn limit came before the last question: the score of the questions asked so far
+    (the outcome stays turn_limit); "" before any answer."""
+    results = state["results"]
+    if not results:
+        return ""
+    return env.llm.quiz_summary(
+        task=state["task"],
+        correct=sum(1 for r in results if r["correct"]),
+        total=len(results),
+        wrongs=[r["question"] for r in results if not r["correct"] and r.get("answered", True)],
+    )
+
+
 register_mode(
     "quiz",
     DialogueMode(
@@ -91,6 +105,13 @@ register_mode(
         data=_data,
         succeeded=lambda state: bool(state.get("completed")) and not state.get("user_cancelled"),
         outcome=_outcome,
+        on_turn_limit=_on_turn_limit,
+        pending=lambda env, state: (
+            "" if state.get("completed") or state["idx"] >= len(state["questions"])
+            else state["questions"][state["idx"]]["question"]),
+        expected_answers=lambda state: (
+            [] if state.get("completed") or state["idx"] >= len(state["questions"])
+            else [str(state["questions"][state["idx"]]["answer"])]),
     ),
 )
 
@@ -113,18 +134,28 @@ def evaluate(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     label: "next", "last" after the last question, or "repeat" when the reply is not an
     attempt to answer (nothing is recorded: the tree asks the question again)."""
     current = state["questions"][state["idx"]]
-    # A number is compared without the LLM when the answer says exactly one (spoken_numbers.py)
+    # The LLM first decides whether the reply is an answer at all: a request to hear the
+    # question again can say a number ("one more time", "una vez más", "say question two
+    # again"), which the numeric grading alone would take for the answer
+    evaluation = env.llm.evaluate_quiz_answer(
+        question=current["question"], expected=current["answer"], given=inp.user_text
+    )
+    if evaluation.get("kind") == "repeat":
+        return SkillResult(label="repeat")
+    # An answer whose expected value is a number is then graded by comparing the number it says
+    # (spoken_numbers.py), not by the LLM's grade, with the fixed feedback
     graded = grade_number(current["question"], current["answer"], inp.user_text,
                           getattr(env.llm, "language", "English"))
     if graded is not None:
         evaluation = {"kind": "answer", "correct": graded,
                       "feedback": env.llm.quiz_feedback(graded, current["answer"])}
-    else:
-        evaluation = env.llm.evaluate_quiz_answer(
-            question=current["question"], expected=current["answer"], given=inp.user_text
-        )
-    if evaluation.get("kind") == "repeat":
-        return SkillResult(label="repeat")
+    elif not evaluation.get("correct") and local_names_answer(
+            inp.user_text, current["answer"], getattr(env.llm, "language", "English")):
+        # A reply that names the whole expected answer, with no word that denies or hedges it, is
+        # correct: the model, given only this line, reads the words a recognizer garbled around
+        # the answer ("A young to is all a tadpole.") as a wrong answer
+        evaluation = {"kind": "answer", "correct": True,
+                      "feedback": env.llm.quiz_feedback(True, current["answer"])}
     state["feedback"] = evaluation["feedback"]
     state["results"].append(
         {

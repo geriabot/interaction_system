@@ -9,40 +9,12 @@
        The result is the score and the answer to each question (partial if one was left
        unanswered). -->
   <BehaviorTree ID="Quiz">
-    <Sequence>
-      <!-- The opening, with fillers while it is prepared (and its own time budget) -->
-      <WithFillers budget_s="{opening_budget}">
-        <SubTree ID="QuizOpening" _autoremap="true"/>
-      </WithFillers>
-      <Speak text="{reply}"/>
-      <Fallback>
-        <Repeat num_cycles="-1">
-          <Sequence>
-            <SubTree ID="TurnLimit" _autoremap="true"/>
-            <IfThenElse>
-              <SubTree ID="ListenToUser" _autoremap="true"/>
-              <Sequence>
-                <!-- The reply to the turn, with fillers while it is prepared -->
-                <WithFillers>
-                  <Fallback>
-                    <SubTree ID="CancelCheck" _autoremap="true"/>
-                    <SubTree ID="QuizTurn" _autoremap="true"/>
-                  </Fallback>
-                </WithFillers>
-                <SubTree ID="CountProgress" _autoremap="true"/>
-                <Speak text="{reply}"/>
-              </Sequence>
-              <SubTree ID="UserSilent" _autoremap="true"/>
-            </IfThenElse>
-            <ScriptCondition code="done == false"/>
-          </Sequence>
-        </Repeat>
-        <SubTree ID="Conclude" _autoremap="true"/>
-      </Fallback>
-    </Sequence>
+    <!-- The dialogue loop shared by every strategy (common.xml), with this file's
+         StrategyOpening and StrategyTurn -->
+    <SubTree ID="DialogueLoop" _autoremap="true"/>
   </BehaviorTree>
 
-  <BehaviorTree ID="QuizOpening">
+  <BehaviorTree ID="StrategyOpening">
     <Sequence>
       <SubTree ID="Begin" _autoremap="true"/>
       <IfThenElse>
@@ -53,7 +25,7 @@
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="QuizTurn">
+  <BehaviorTree ID="StrategyTurn">
     <Sequence>
       <AskIntelligence skill="quiz.evaluate" user_text="{user_text}"/>
       <IfThenElse>
@@ -70,6 +42,7 @@
               <AskIntelligence skill="quiz.repeat" number="{attempts}"/>
               <Sequence>
                 <AskIntelligence skill="quiz.unanswered"/>
+                <Script code="new_element := true"/>
                 <SubTree ID="QuizNext" _autoremap="true"/>
               </Sequence>
             </IfThenElse>
