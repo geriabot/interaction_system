@@ -33,7 +33,13 @@ the English one, and so does the test `test/test_languages.py`.
 | `aliases` | list | Other names accepted, in any case (`français`); may be empty | The loader |
 | `speech` | mapping | `stt_language`, `piper_voice`, `piper_speaker`, `mms_voice` ([3. Speech](#3-speech)) | `main.launch.py` |
 | `cancel_commands` | list | The exact stop commands ([below](#exact-stop-commands)) | The spoken cancellation |
-| `yes_words`, `no_words` | lists | Yes and no, lowercase; only fallbacks ([below](#words-shared-across-languages)) | The dialogue frame; the spoken cancellation |
+| `yes_words`, `no_words` | lists | Yes and no, lowercase; only fallbacks ([below](#words-shared-across-languages)) | The dialogue frame; the spoken cancellation; slot filling (a "yes" to a question that named one value) |
+| `step_done_words` | list | Whole replies that report a step done ("done", "ready"); never words that can mean stopping the conversation | The procedure: such a reply is never read as a request to stop |
+| `ordinal_words`, `last_words` | lists | The ordinal words by position ("first", "second"…; the variants of one position separated by `\|`: `primero\|primera\|primer`) and the words for the last one | Slot filling: "the second one" just after the options were read |
+| `hedge_words` | list | The words of an answer that hedges between options ("or", "between", "maybe") | Slot filling: two or more options of a closed slot said with one of them (and no "no") take no value; the options are read again ; the questionnaire: a reply with one of them is ambiguous (the options again); the quiz: a reply with one of them is never graded correct by naming the answer |
+| `negation_words` | list | Words that deny a value said next to them ("no", "not", "never", "isn't") | The quiz: a reply with one of them is never graded correct by naming the expected answer ("Rome, not Paris") |
+| `previous_item_words` | list | The words of a reply that refer to the previous questionnaire item ("previous", "the one before") | Questionnaire: a change of the previous answer is taken only when the reply refers to that item (one of these words, or a word of its text); otherwise the reply answers the current item |
+| `trailing_words` | list | Short words that never end a value said on its own (articles, prepositions, hesitations) | Slot filling: removed from the end of a free-text value ("Marta the") |
 | `asr_noise_phrases` | list | Filler words and recurrent hallucinations of the recognizer ("thanks for watching") that are never a turn ([below](#words-shared-across-languages)) | The transcriptions |
 | `ack_phrases` | list | Acknowledgments said after slot filling takes a value ("Noted.") | Slot filling |
 | `filler_phrases` | list | Conversational fillers said while the reply is prepared, in the order of the ladder: five, one per step (2, 5, 9 and 14 s) and the one that repeats ("Hmm…", "One moment…"…) | [Fillers](behaviors/fillers.md) |

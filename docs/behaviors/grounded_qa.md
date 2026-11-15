@@ -23,7 +23,8 @@ material before saying it.
   before the robot speaks.
 - **Returns:** `{questions, answered, abstained, declined}`; each question with its resolution
   (`answered`, `abstained` or `declined`) and the answer given.
-- **Outcome:** `completed` when the user says they have no more questions.
+- **Outcome:** `completed` when the user says they have no more questions, or stops answering
+  once at least one question within the task got its reply.
 
 ## How each turn is understood
 
@@ -71,11 +72,11 @@ without the question.
 | Asks something within the topic whose answer is not in the material | "I don't have that information.", the handover if given, and "Is there anything else you'd like to know?" (fixed phrases) | Yes |
 | Asks something whose drafted answer is not supported by the material | The same abstention: an answer that does not pass the verification is never said | Yes |
 | Asks something outside the task (also help with their own matters: what to buy or choose), or asks for an opinion or a service the robot does not give | "That is outside what we are talking about here, so I can't help you with it; I can only answer questions about the information I have." and "Is there anything else you'd like to know?" | Yes |
-| Only reacts, without asking and without saying they have finished ("Thanks, that was helpful", "what a shame", the answer repeated back with its value) | "Is there anything else you'd like to know?" (not recorded as a question) | Yes |
+| Only reacts, without asking and without saying they have finished ("Thanks, that was helpful", "what a shame", the answer repeated back with its value) | "Is there anything else you'd like to know?" (not recorded as a question) | Neutral: the count of turns without progress is neither reset nor increased |
 | Repeats the last answer back with another value, with or without a comment | The last answer again (`detect_wrong_check`; no LLM for the line) | No |
 | Has finished: wants nothing more ("No", "No, thanks", "That will be all", "I have no more questions", "Goodbye") | "Alright. Have a good day!" and the conversation ends (`completed`) | — |
 | Asks to repeat the last answer | The last answer again (no LLM), or the invitation to ask if there is none yet | No |
-| Anything else (off-topic noise, unintelligible) | "Could you repeat that?" | No |
+| Anything else (off-topic noise, unintelligible) | "Could you repeat that?"; from the second such turn in a row, "Sorry, I still didn't understand." and one sentence naming what can be asked (`qa_topics`) | No |
 
 Finishing is never a cancellation: the cancellation detector answers "finished" and leaves the
 turn to the behavior. The end of this behavior is the user's to decide, so a request to stop is
@@ -99,6 +100,25 @@ before the dialogue ends (`verify_finished`: did the person say they want nothin
 of any kind is not), just as an answer is verified before it is said; an unverified closing is a
 turn not understood ("Could you repeat that?").
 
+A word salad can also be read as a question whose answer is not in the material. It would then
+get the abstention, which counts as progress, and a person who cannot make themselves understood
+would never reach the breakdown. So a turn that would get an abstention is first checked by a
+narrow question of its own (`check_intelligible`: is it a question, request or statement that
+makes sense, or words without meaning?). If it is not intelligible, the turn is not understood;
+if the check fails, the abstention stands. The check is asked only for these turns: an answer
+from the material, a reaction or a closing does not pay for it.
+
+The same request to repeat, said again and again, does not help a person who does not know what
+to ask. From the second turn in a row not understood, the robot says
+"Sorry, I still didn't understand." followed by one sentence naming two to four topics of the
+material, without their facts (`qa_topics`, generated once per dialogue; the fixed phrase
+`qa_topics` if the LLM fails).
+
+A reaction ("Okay", "Thanks") is neutral for the count of turns without progress: it neither
+resets the count nor increases it. Counted as progress, a person alternating unintelligible turns
+with "okay" would never reach the breakdown; counted as no progress, a person who thanks the robot
+several times would.
+
 ## Tree
 
 ![The tree of grounded question answering](../../media/bt/grounded_qa.svg)
@@ -107,7 +127,7 @@ turn not understood ("Could you repeat that?").
 
 | Situation | What happens |
 |---|---|
-| Silence | [Silence](silence.md) |
+| Silence | [Silence](silence.md). When the silence would end the conversation (`max_silent_waits`) and at least one question within the task got its reply (answered or abstained), the visitor has left after their answers: the robot says the normal closing and the outcome is `completed`; otherwise `user_silent` |
 | "Stop" | The same closing as when the user has finished, without a confirmation, and the outcome is `completed` ([Spoken cancellation](cancellation.md)) |
 | `max_stalled` turns in a row without progress | [Breakdown](no_progress.md) |
 | The LLM fails to read a turn | The label `other` (a turn not understood, as for the value `unclear` [above](#how-each-turn-is-understood)): the robot asks to repeat; a sustained failure ends as a breakdown |
@@ -124,5 +144,5 @@ and the requesting behavior decides what follows.
 
 The shared limits are described in
 [What every behavior shares](README.md#what-every-behavior-shares). The fixed phrases are
-`phrases.qa_invite`, `phrases.qa_more`, `phrases.qa_abstain`, `phrases.qa_decline` and
-`phrases.qa_bye` ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)).
+`phrases.qa_invite`, `phrases.qa_more`, `phrases.qa_abstain`, `phrases.qa_decline`,
+`phrases.qa_bye`, `phrases.qa_unclear_again` and `phrases.qa_topics` ([CONFIGURATION.md](../CONFIGURATION.md#interaction_intelligence)).

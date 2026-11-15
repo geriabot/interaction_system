@@ -25,11 +25,11 @@ Shared by every dialogue behavior: subtrees `Begin`, `TurnLimit`, `EndDialogue` 
 | `completed` | The behavior: every element done | The behavior's own (confirmation, score, summary, feedback) | Empty |
 | `partial` | The behavior: it ended normally, some element left unfinished | The behavior's own | Which elements: `Unanswered slots: ...`, `Steps not done: ...`, and the like |
 | `failed` | The behavior: its goal was not achieved | The behavior's own (e.g. the explanation gives up) | E.g. `Critical points not verified after 3 checks: ...` |
-| `cancelled` | The user (spoken cancellation, below) or the requesting behavior (action cancel) | Generated, or fixed with the LLM down (below); none when the requesting behavior cancels | `Cancelled by the user` / `Cancelled` |
+| `cancelled` | The user (spoken cancellation, below) or the requesting behavior (action cancel) | Generated, or fixed with the LLM down (below); none when the requesting behavior cancels | `Cancelled by the user` / `The user asked to stop, then said nothing` / `The user asked to stop at the turn limit` ([silence after the question](cancellation.md#silence-after-the-question-and-a-question-left-over)) / `Cancelled` |
 | `user_silent` | The tree: `max_silence` reached ([Silence](silence.md)) | Fixed, `close_user_silent` | `The user stayed silent for max_silence seconds` |
 | `breakdown` | The tree: `max_stalled` turns in a row without progress ([Recovery and breakdown](no_progress.md)) | Fixed, `close_breakdown` | `Communication breakdown: max_stalled turns in a row without progress` |
 | `breakdown` (off task) | The tree of grounded QA: `max_off_task` requests in a row outside the task ([grounded QA](grounded_qa.md)) | Fixed, `close_off_task` | `Off-task: max_off_task requests outside the task in a row` |
-| `turn_limit` | The tree: `max_turns` reached | Fixed, `close_turn_limit` | `Max turns reached` |
+| `turn_limit` | The tree: `max_turns` reached, after the user's last turn was handled | Fixed, `close_turn_limit`; the behavior may say something for what was done first (the quiz's score so far, the procedure's summary, the role play's evaluation) | `Max turns reached` |
 | `error` | A failure of the system, or a malformed request | Fixed, `close_error` ("I'm sorry, something went wrong and I have to stop here."), when the conversation had started | What failed (below) |
 | `not_feasible` | The first phase of the request, before any conversation: no dialogue behavior fits the task, or the request lacks the material of the one it needs ([the choice of the dialogue behavior](../ARCHITECTURE.md#the-choice-of-the-dialogue-behavior)) | None: nothing is said, and `total_turns` is 0 | `No dialogue behavior fits the task`, or `The task needs <behavior>, but no <material> was provided` (e.g. `The task needs a procedure, but no steps were provided`) |
 
@@ -71,8 +71,14 @@ The `failure_reason` of an `error` says what failed:
 - `EndDialogue` (reason: `user_silent`, `breakdown`, `turn_limit` or `off_task`) asks for the fixed
   closing line (`closing`, no LLM: it works when the LLM is what failed), records the ending and
   marks the conversation as done; the tree that called it says the line.
-- `TurnLimit` runs at the start of every cycle: when `max_turns` user turns have been taken
-  (`0` = unlimited) it ends the conversation with its closing line and stops the loop.
+- `TurnLimit` runs after the behavior has handled a user turn, before the reply is said: on
+  the last turn allowed (`max_turns` user turns heard; `0` = unlimited), a conversation not done
+  yet ends there. What the user said in that turn is handled and recorded, and the closing line
+  replaces the reply, so that the robot never asks a question it will not listen to. The
+  behavior may say something for what was done before the fixed closing line
+  (`DialogueMode.on_turn_limit`, skill `turn_limit_end`): the quiz gives the score of the
+  questions answered, the procedure how the steps went, and the role play its evaluation once the
+  user said a line of the scene. The ending is `turn_limit` in every case.
 - `Conclude` runs when the loop stops. If the conversation is not marked as done, the loop
   stopped because a skill failed: the robot says `error_closing` and the ending is `error`. Then
   `result` gives the outcome: the ending decided by the tree if any, `cancelled` if the user

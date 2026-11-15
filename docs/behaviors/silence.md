@@ -18,10 +18,13 @@ utterance of the user resets it):
 |---|---|---|
 | During a step that takes time (procedure, `duration_s`) | Says nothing | No |
 | 1st | "Take your time, I'm still here." | Yes |
-| 2nd | Repeats what it had asked (its last utterance before the silence) | Yes |
+| 2nd | Repeats what it had asked: the element the user was to answer (the slot's question, the quiz question, the questionnaire item with its options, the step, the teach-back request, the character's last line, "anything else?"; `DialogueMode.pending`), or its last utterance when the behavior gives none | Yes |
 | 3rd, 5th, ... | Says nothing | Yes |
 | 4th, 6th, ... | "Whenever you're ready, I'm here." | Yes |
-| The one that reaches `max_silence` | The closing line "Let's leave it here. We can pick it up whenever you like." and the dialogue ends: outcome `user_silent` | |
+| The one that reaches `max_silence` (no prompt is asked for it: the `silence` skill knows the last wait from `max_silent_waits` and answers `end`) | The closing line "Let's leave it here. We can pick it up whenever you like." and the dialogue ends: outcome `user_silent` | |
+
+The prompts are not the behavior's lines: they do not replace what the robot had asked, so a
+request to stop after a silence resumes with the element, not with "Take your time".
 
 The phrases are fixed, not generated: immediate and predictable, and the same whether or not the
 LLM works. They follow the language of the conversation (its language file,
@@ -53,7 +56,8 @@ on a step restarts when the step changes. Other behaviors have no such grace (th
 |---|---|
 | The user speaks during the waits | It is a normal turn: the silence count restarts |
 | The user says only a filler word ("hmm", "eh") or a recurrent hallucination of the recognizer ("Thanks for watching!") | The intelligence drops it as noise, so for the dialogue it is silence (below) |
-| The silence reaches `max_silence` | Closing line, outcome `user_silent`, reason "The user stayed silent for max_silence seconds" |
+| The silence reaches `max_silence` | Closing line, outcome `user_silent`, reason "The user stayed silent for max_silence seconds". Before that, the behavior may close what was done as a normal end, with its own closing and outcome (`DialogueMode.on_silent_end`, skill `silent_end`): the role play gives its evaluation once the user said a line of the scene (prepared with conversational fillers, as every reply), and grounded question answering says its normal closing once a question within the task got its reply |
+| The user is silent after the question whether to stop | The first wait asks it again; the next one ends the conversation as the user asked, outcome `cancelled` (or, where stopping is finishing, the behavior's own closing) ([Spoken cancellation](cancellation.md#silence-after-the-question-and-a-question-left-over)) |
 | `max_silence` is 0 | The dialogue never ends on silence; the prompts go on |
 | The intelligence does not answer the `silence` skill | A failure of the system: the error closing line, outcome `error` ([Endings](endings.md)) |
 | Speech-to-text is not available | Every wait ends empty: the prompts follow, and the conversation ends as `user_silent` |

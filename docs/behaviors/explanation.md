@@ -62,9 +62,15 @@ question about the most important point.
    different time, dose, place or order is wrong. A point said back correctly stays verified and
    is no longer sent to the judge, which judges only the points still to verify: with a verified
    point in the list, the LLM could put the content of another point in the verified point's
-   entry and lose that other point. A point said only in part, with nothing false, is
-   `incomplete` and is handled as missing, never as wrong: the robot confirms the part said and
-   asks only for the rest, and an incomplete point alone is not progress.
+   entry and lose that other point. A point said only in part, adding or changing nothing that
+   the point does not say, is `incomplete` and is handled as missing, never as wrong: the robot
+   asks for the rest, and an incomplete point alone is not progress. A reply that says part of a
+   point right but adds or changes something (another way, channel, place, time, amount or
+   condition: "they send me the code by email" when it comes by text message) is `wrong`, and the
+   robot corrects it. The robot never repeats the person's words as right: it confirms only the
+   points said back correctly, with their own text, and does not quote the part of an incomplete
+   point. Quoting it had let a wrong content judged incomplete be confirmed as right, which for
+   health or safety instructions is the worst outcome of a check.
 3. A reply that says some points back correctly and none wrongly makes progress: the robot
    confirms them and asks only for the critical points still missing, without explaining them
    again ("Good, you remember the green flag. And what does the red one mean?"). Otherwise the
@@ -76,11 +82,12 @@ question about the most important point.
 | The person | Label | The robot | Counts as a failed check |
 |---|---|---|---|
 | Says it back, every critical point correct | `verified` | Confirms briefly and closes (`completed`) | — |
-| Says some points back correctly (new ones) and none wrongly, a critical point still missing | `progress` | Confirms what was right and asks only for the critical points still missing, without explaining them again (`ask_missing_points`) | No |
-| Says it back, a critical point missing or wrong, without progress | `gaps` | Explains again only the points missing or wrong, reworded, correcting what was wrong and confirming what was right; asks again ("Could you tell me again in your own words?") | Yes |
+| Says some points back correctly (new ones) and none wrongly, a critical point still missing | `progress` | Confirms the points said right, with their own text, and asks only for the critical points still missing, without explaining them again or quoting the person (`ask_missing_points`) | No |
+| Says it back, a critical point missing or wrong, without progress | `gaps` | Explains again only the points missing or wrong, reworded, correcting what was wrong, without restating the points already right (the repair is told only how many there are); asks again ("Could you tell me again in your own words?") | Yes |
 | Asks a question | `question` | Answers it from the material, then asks the last check again | No |
 | Only says they understood, or does not want to say it back | `declines` | The fallback: a direct question about the most critical point not yet verified ("Just to be sure: until what time can you drink water?") | No (the first time); declining the direct question counts as `gaps` |
-| Says they did not understand, or asks to hear it again | `not_understood` | Explains the whole topic again in another way and asks again | Yes |
+| Says they did not understand | `not_understood` | Explains the whole topic again in another way and asks again | Yes |
+| Asks to hear it again, or did not hear it | `repeat` | The first time in a row, the robot's last line again, literally (no LLM); from the second, the explanation in other words and the last check again | No, but a turn without progress ([Recovery](no_progress.md)) |
 | Anything else (off-topic, unintelligible) | `other` | Asks the last check again | No, but a turn without progress ([Recovery](no_progress.md)) |
 
 After `max_attempts` failed checks (by default 3 checks, that is, 2 repairs), the robot closes by
@@ -90,7 +97,9 @@ you of the most important points: ...", fixed phrases and the points themselves)
 so a correct answer verifies that point; the other critical points still have to be said back.
 
 A restatement in which no key point is correct, incomplete or wrong (nothing of the explanation
-was said, e.g. unintelligible speech) is a turn without progress, not a failed check; an answer
+was said, e.g. unintelligible speech) is a turn without progress, not a failed check, and so is a
+reply whose words make no sense, even when one of them is a word of a key point (the judge first
+says whether the words make sense: `sense`); an answer
 of "I don't know" to the direct question of the fallback is still a failed check. A missing detail
 that changes nothing of what the person must know or do does not make a point incomplete.
 
