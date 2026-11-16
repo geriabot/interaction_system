@@ -773,7 +773,7 @@ interaction_intelligence:
         - {address}
         - Speak TO the person ("you"), never about them in the third person.
         - If the person said something wrong, say what they said and correct
-          it kindly ("you said X, but it is Y").
+          it kindly ("you said X, but it is Y", said in {language}).
         - If they said only part of a point (marked "INCOMPLETE"), explain the
           whole point again in its own words, without repeating the person's
           words and without confirming them: never call the point complete,
