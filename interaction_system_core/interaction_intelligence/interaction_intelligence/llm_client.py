@@ -27,8 +27,8 @@ from .dialog_frame import TURN_ACTS, DialogFrame, _VALID_TYPES
 # canonical_language: re-exported for the node and the evaluation
 from .languages import canonical_language, language_names, load_language  # noqa: F401
 from .prompt_builder import PromptBuilder
-from .utils import (local_cancel_check, local_yes_no, normalize_text, parse_loose_json,
-                    spoken_ask, stop_request_of, to_snake_case)
+from .utils import (in_english_by_mistake, local_cancel_check, local_yes_no, normalize_text,
+                    parse_loose_json, spoken_ask, stop_request_of, to_snake_case)
 
 InferFn = Callable[[str, str, int | None, dict | None], str | None]
 
@@ -683,10 +683,20 @@ class LLMDialogClient:
         self, task: str, points: list[dict], correct: list[str], ctx: DialogContext | None = None
     ) -> str:
         """Explain again only the given key points (with what the user said wrong), in other
-        words, without restating the points already said right (only how many are given)."""
+        words, without restating the points already said right (only how many are given). A
+        reply that came out in English when the conversation is in another language
+        (utils.in_english_by_mistake) is asked once more with the language stressed, and then
+        replaced by the points themselves, which are written in the conversation's language."""
         prompt = self._pb.repair_explanation(task, points, correct, ctx)
-        res = self._call_nlg(prompt, max_tokens=200)
-        return self._clean(res) or " ".join(p["point"] for p in points)
+        res = self._clean(self._call_nlg(prompt, max_tokens=200))
+        if in_english_by_mistake(res, self.language):
+            self._log.warning(f"repair_explanation in English, asked again: {res!r}")
+            res = self._clean(self._call_nlg(
+                f"{prompt}\n\nWrite the whole reply in {self.language}, never in English, "
+                f"including what the person said.", max_tokens=200))
+            if in_english_by_mistake(res, self.language):
+                res = ""
+        return res or " ".join(p["point"] for p in points)
 
     def targeted_question(self, point: str, ctx: DialogContext | None = None) -> str:
         """A direct question whose answer is the key point (the fallback of teach-back)."""

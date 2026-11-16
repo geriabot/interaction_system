@@ -235,6 +235,26 @@ def strip_leading(text: str, phrase: str) -> str:
     return text
 
 
+# English function words that are not words of the other languages of the system: a line said
+# in another language with several of them, making up a fair share of its words, is in English
+_ENGLISH_FUNCTION_WORDS = frozenset(
+    "the you your is are and to of it that said but can this with for what was have be "
+    "didn't don't you're it's isn't only".split())
+
+
+def in_english_by_mistake(text: str, language: str) -> bool:
+    """Whether a line meant to be said in language (not English) came out in English: at least
+    three English function words, a quarter of its words or more. The prompts are written in
+    English, and a small model asked for another language sometimes answers in English (E3
+    simulated twin, Spanish: the explanation said again after a wrong teach-back, "You said you
+    can take a game for two weeks, but...")."""
+    if not text or (language or "English").lower().startswith("english"):
+        return False
+    words = re.findall(r"[^\W\d_]+(?:['’][^\W\d_]+)?", text.lower().replace("’", "'"))
+    english = sum(w in _ENGLISH_FUNCTION_WORDS for w in words)
+    return english >= 3 and english * 4 >= len(words)
+
+
 def spoken_ask(text: str) -> str:
     """What a spoken line asks for: its question sentence, or its last sentence
     when it asks without a question mark ("...but first tell me X.")."""
