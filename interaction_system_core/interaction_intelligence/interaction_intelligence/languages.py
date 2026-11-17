@@ -36,7 +36,7 @@ REFERENCE = "english"
 _TEXT = ("name", "code")
 _LISTS = ("aliases", "cancel_commands", "yes_words", "no_words", "step_done_words",
           "ordinal_words", "last_words",
-          "hedge_words", "negation_words", "previous_item_words", "trailing_words",
+          "hedge_words", "negation_words", "denial_words", "previous_item_words", "trailing_words",
           "asr_noise_phrases",
           "ack_phrases", "filler_phrases")
 # Lists that may be empty (a language with no other name)
@@ -69,6 +69,7 @@ class Language:
     last_words: tuple
     hedge_words: tuple
     negation_words: tuple  # normalised
+    denial_words: tuple  # normalised
     previous_item_words: tuple  # normalised
     trailing_words: tuple  # normalised
     asr_noise_phrases: tuple  # normalised
@@ -176,6 +177,7 @@ def _read(path: str) -> Language:
         last_words=tuple(w.lower() for w in lists["last_words"]),
         hedge_words=tuple(w.lower() for w in lists["hedge_words"]),
         negation_words=tuple(normalize_text(w) for w in lists["negation_words"]),
+        denial_words=tuple(normalize_text(w) for w in lists["denial_words"]),
         previous_item_words=tuple(normalize_text(w) for w in lists["previous_item_words"]),
         trailing_words=tuple(normalize_text(w) for w in lists["trailing_words"]),
         asr_noise_phrases=tuple(normalize_text(p) for p in lists["asr_noise_phrases"]),

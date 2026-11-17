@@ -71,6 +71,13 @@ hedge_words: ["or", "between", "either", "maybe", "perhaps"]
 negation_words: ["no", "not", "never", "nor", "neither", "nope", "nothing", "cannot", "rather",
                  "instead", "except", "but", "than", "unlike"]
 
+# Words and phrases that set aside the value said right after them ("not the sauna", "without
+# ham", "instead of Sunday"): at the read-back of slot filling, a "yes" that names a value the
+# data do not have is read as a correction (an added or changed value), but not a value said right
+# after one of these
+denial_words: ["no", "not", "never", "without", "except", "instead of", "rather than", "nor",
+               "neither"]
+
 # Words of a reply that refer to the previous questionnaire item ("for the previous question I meant
 # often"): a change of the previous answer is taken only when the reply refers to that item (one
 # of these, or a word of its text); otherwise the reply answers the current item
