@@ -507,8 +507,12 @@ class PromptBuilder:
         lines = "\n".join(f"- {p['point']}{_said_note(p)}" for p in points)
         # Only how many: given the points, the model restated them in the repair (E2 pre-run
         # verification), which lengthens it and buries the points to explain again
+        # The language of the correction is said only in a conversation that is not in English
+        # (the model answered it in English in Spanish ones); English prompts stay as they were
+        said_in = "" if str(self._language or "English").lower().startswith("english") \
+            else f", said in {self._language}"
         prompt = self._t("repair_explanation", task=task, points=lines,
-                         correct=str(len(correct)) if correct else "none")
+                         correct=str(len(correct)) if correct else "none", said_in=said_in)
         return self._inject(prompt, ctx)
 
     def targeted_question(self, point: str, ctx: DialogContext | None = None) -> str:

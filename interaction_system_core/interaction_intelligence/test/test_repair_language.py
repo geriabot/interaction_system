@@ -78,3 +78,18 @@ def test_english_conversation_never_asked_again():
     llm, calls = client([ENGLISH], language="English")
     assert llm.repair_explanation("Board games", POINTS, [], None) == ENGLISH
     assert len(calls) == 1
+
+
+def test_the_language_is_named_only_outside_english():
+    import os
+    import yaml
+    from interaction_intelligence.prompt_builder import PromptBuilder
+    path = os.path.join(os.path.dirname(__file__), "..", "config", "prompts.yaml")
+    with open(path) as f:
+        prompts = yaml.safe_load(f)["interaction_intelligence"]["ros__parameters"]["prompts"]
+    english = " ".join(str(PromptBuilder(prompts, "English").repair_explanation(
+        "Board games", POINTS, [])).split())
+    spanish = " ".join(str(PromptBuilder(prompts, "Spanish").repair_explanation(
+        "Juegos", POINTS, [])).split())
+    assert '("you said X, but it is Y").' in english and "said in English" not in english
+    assert '("you said X, but it is Y", said in Spanish).' in spanish
