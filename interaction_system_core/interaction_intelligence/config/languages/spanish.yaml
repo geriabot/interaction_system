@@ -57,6 +57,11 @@ hedge_words: ["o", "u", "entre", "quizá", "quizás", "tal vez"]
 negation_words: ["no", "ni", "nunca", "jamás", "tampoco", "nada", "sino", "excepto", "salvo",
                  "en vez de", "en lugar de"]
 
+# Palabras que apartan el valor dicho justo después ("no la sauna", "sin jamón", "en vez del
+# domingo"; english.yaml)
+denial_words: ["no", "ni", "nunca", "sin", "excepto", "salvo", "menos", "en vez de", "en vez del",
+               "en lugar de", "en lugar del"]
+
 # Palabras de una respuesta que se refieren al ítem anterior del cuestionario (english.yaml)
 previous_item_words: ["anterior", "la de antes", "la otra", "la primera", "el primero",
                       "cambia mi respuesta", "mi respuesta a", "la última", "lo de antes"]

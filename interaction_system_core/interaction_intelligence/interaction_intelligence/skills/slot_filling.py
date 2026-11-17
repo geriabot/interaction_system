@@ -783,6 +783,45 @@ def _starts_negative(user_text: str) -> bool:
     return bool(words) and words[0] in {_plain(w) for w in bool_words()[1]}
 
 
+def _named_new_values(frame: DialogFrame, user_text: str, language: str) -> dict:
+    """The corrections a reply to the read-back makes by naming values the data do not have
+    ("Yes, free swim and aquagym" when only free swim was read back): for a list slot, the
+    canonical values it names that the list lacks (added); for a slot with one value, the one
+    canonical value it names, when it names only that one and it differs from the stored value.
+    A value with a denial word of the language file among the three words before it ("not the
+    sauna", "sin jamón") is not counted. Only canonical values (whole phrases) are looked at: free text and numbers
+    are left to the model."""
+    try:
+        denial = tuple(load_language(language).denial_words)
+    except Exception:
+        denial = ()
+    said = f" {_plain(user_text)} "
+    filled = frame.filled_slots()
+    out: dict = {}
+    for slot in frame.all_keys():
+        canon = frame.canonical_values(slot) or []
+        if not canon or frame.slot_type(slot) == "bool":
+            continue
+        named = []
+        for c in _named(canon, user_text):
+            at = said.find(f" {_plain(c)} ")
+            before = f" {' '.join(said[:at].split()[-3:])} "
+            if any(f" {d} " in before for d in denial):
+                continue
+            named.append(c)
+        if not named:
+            continue
+        value = filled.get(slot)
+        if frame.slot_type(slot) == "list_str":
+            have = {_plain(v) for v in (value or [])}
+            new = [c for c in named if _plain(c) not in have]
+            if new:
+                out[slot] = {"_add": True, "items": new}
+        elif len(named) == 1 and (value is None or _plain(named[0]) != _plain(value)):
+            out[slot] = named[0]
+    return out
+
+
 @skill("slot_filling.classify_confirmation")
 def classify_confirmation(env: SkillEnv, state: dict, inp: SkillInput) -> SkillResult:
     """Understand the answer to the confirmation question and apply its corrections.
@@ -790,7 +829,9 @@ def classify_confirmation(env: SkillEnv, state: dict, inp: SkillInput) -> SkillR
     label: "confirms", "question", "repeat" (asks to hear the data again: they are read back
     again, a turn without progress), "corrects_reopened" (a correction emptied a slot: gather
     again), "corrects_applied" (corrected and still complete: confirm again) or "unclear"
-    (also a "correction" that changed nothing: the user is almost certainly affirming)."""
+    (also a "correction" that changed nothing: the user is almost certainly affirming). A
+    confirmation that names canonical values the data lack ("Yes, free swim and aquagym" when only
+    free swim was read back) is read as a correction of them (_named_new_values)."""
     frame = _frame(state)
     frame.add_turn("user", inp.user_text)
     intent, corrections = env.llm.classify_intent(inp.user_text, frame, env.ctx)
@@ -800,6 +841,15 @@ def classify_confirmation(env: SkillEnv, state: dict, inp: SkillInput) -> SkillR
         # correction was taken as one): the data are read back again
         _log.info("A confirmation that starts with a negation: read as unclear.")
         intent = "unclear"
+    if intent == "confirms" and not corrections:
+        # "Yes, free swim and aquagym" when only free swim was read back: the model took the
+        # yes and left out the value it adds; a yes that names values the data lack is read as
+        # a correction of them (applied, and the data read back again)
+        named = _named_new_values(frame, inp.user_text, _language(env))
+        if named:
+            _log.info(f"A confirmation that names values the data lack: read as a correction "
+                      f"({named}).")
+            intent, corrections = "corrects", named
     state["last"] = {"extractions": [], "rejected": {}, "ack": "", "corrections": corrections}
     label = intent if intent in ("confirms", "question", "repeat") else "unclear"
 
