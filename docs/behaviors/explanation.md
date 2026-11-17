@@ -117,6 +117,7 @@ that changes nothing of what the person must know or do does not make a point in
 | The LLM fails to judge a reply | Read as `other`: the check is asked again, and a sustained failure ends as a breakdown |
 | The LLM fails to list the key points | The task itself becomes the only (critical) key point |
 | The LLM fails to generate a text | A fixed phrase of the language, or the key points themselves |
+| The correction after a wrong teach-back comes out in English in a conversation in another language (the prompts are written in English) | Asked once more, naming the language; if it is still in English, the key points themselves, which are written in the conversation's language. The prompt names the language of the correction only in conversations that are not in English |
 | Turn limit, failure of the system | [Endings](endings.md) |
 
 ## Parameters
