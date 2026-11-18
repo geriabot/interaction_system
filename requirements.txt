@@ -13,6 +13,5 @@
 # The speech capability: faster-whisper, Whisper, Piper, MMS-TTS, Silero VAD (PyTorch)
 -r ../third_party/simple_hri/simple_hri/requirements.txt
 
-# Optional, the perception of the user (MediaPipe, OpenCV, the emotion classifier): install it
-# apart, only if it is used
-#   pip install -r src/interaction_system/interaction_perception/interaction_perception/requirements.txt
+# The perception of the user (lip activity for barge-in, the emotion) is the perception system
+# (perception_system), installed in its own workspace with its own dependencies

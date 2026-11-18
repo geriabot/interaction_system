@@ -65,8 +65,8 @@ pixi regenerates `pixi.lock` when `pixi.toml` changes. To add a package, run
 `pixi add <package>` from `<workspace>` (with `--pypi` for a package of PyPI); it updates both
 files.
 
-User perception is built, but its dependencies (MediaPipe, OpenCV and `cv_bridge`, which only it
-needs) are not in the environment
+The perception of the user is the perception system, which runs from its own workspace and
+environment; only its interfaces are built here
 ([INSTALL_PIXI.md](INSTALL_PIXI.md#the-perception-of-the-user-optional)).
 
 ## ROS 2 Lyrical

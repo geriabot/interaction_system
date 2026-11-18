@@ -70,7 +70,7 @@ Two tools test the system without audio and without a model:
 | The outcome is `partial` | The conversation ended normally with an element left unfinished, which `failure_reason` lists (unanswered slots or questions, skipped or stuck steps). The data are in `final_frame_json` |
 | The robot says "something went wrong and I have to stop" (outcome `error`) | A skill failed, or the intelligence did not answer within `intelligence_timeout`. `failure_reason` says which, and the log of `/interaction_intelligence` has the trace ([Endings and outcome](behaviors/endings.md)) |
 | The robot does not speak, and the log says `Speak: text-to-speech not available, not said` | `/tts_action` is not served: start simple_hri (`speech:=simple_hri`) or the robot's speech. The conversation goes on without voice |
-| No barge-in | It needs `/user_speaking` (the lip activity detector of `interaction_perception`) and `user_speaking_topic` set; it is experimental ([Barge-in](behaviors/barge_in.md)) |
+| No barge-in | It needs `/user_speaking` (the lip activity of the perception system, `perception_system`) and `user_speaking_topic` set; it is experimental ([Barge-in](behaviors/barge_in.md)) |
 | The NAO's gestures and LEDs do not move | They follow `/is_speaking`, published by the `Speak` and `WithFillers` nodes while the robot speaks: check that the NAO nodes run on the same `ROS_DOMAIN_ID` |
 | The emotion never reaches the prompts | It is off by default (`user_state_service: ""`) because the detector is preliminary. Set `user_state_service` and run the perception; only a notable emotion (not neutral, confident enough, recent) reaches the prompts |
 | Two `/dialog/execute_task` servers | A previous run left its nodes running ([below](#leftover-nodes)) |

@@ -26,7 +26,7 @@ rosdep install --from-paths src --ignore-src -r -y \
 pip install --break-system-packages -r src/interaction_system/requirements.txt
 colcon build --symlink-install \
   --packages-up-to interaction_system interaction_system_behaviors interaction_intelligence \
-    ros2_llm_manager simple_hri interaction_perception dialostack_bt_client \
+    ros2_llm_manager simple_hri dialostack_bt_client \
     interaction_sim interaction_ablations
 ```
 
@@ -40,12 +40,8 @@ existing clone fetches the submodules with `git submodule update --init`.
 `requirements.txt` gathers the requirement files of the LLM gateway
 (`ros2_llm_manager/config/requirements.txt`) and of simple_hri
 (`src/third_party/simple_hri/simple_hri/requirements.txt`, the speech models' packages, with
-PyTorch). User perception (optional) has its own requirements file:
-
-```bash
-pip install --break-system-packages \
-  -r src/interaction_system/interaction_perception/interaction_perception/requirements.txt
-```
+PyTorch). The perception of the user (optional) is the perception system ([`perception_system`](https://github.com/geriabot/perception_system)), installed in its own
+workspace with its own requirements.
 
 Then, in every terminal where you run the system:
 

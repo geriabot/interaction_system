@@ -39,7 +39,7 @@ that is going nowhere instead of prolonging it.
 | Coordination | An FSM, the task plan | An FSM, the life of a request (below) | `/interaction_orchestrator`, a `BaseOrchestrator` |
 | Action | The behavior forest: one tree per phase of the task | One tree per dialogue behavior, each in its own `BehaviorRunner` (a lifecycle node); only the chosen one is active | `interaction_system_behaviors/behavior_tree_xml/*.xml` |
 | Interpretation (beside the layers, not one of them) | Optional, at any level; consulted by its layers | Answers, with the LLM, which dialogue behavior fits a request (asked by the FSM) and the narrow questions of the dialogue behaviors (asked by the trees); controls nothing and keeps no state | `/interaction_intelligence` |
-| Capabilities | Perception, navigation, attention, interaction; a task tree such as finding a person uses several of them | User perception (lip activity; emotion, preliminary) and, planned, emotion expression while the robot talks. Speaking and listening go through speech (simple_hri: speech-to-text and text-to-speech), a low-level sub-capability that the trees' own nodes call | simple_hri, `interaction_perception`, `robots/nao` |
+| Capabilities | Perception, navigation, attention, interaction; a task tree such as finding a person uses several of them | User perception (lip activity; emotion, preliminary) and, planned, emotion expression while the robot talks. Speaking and listening go through speech (simple_hri: speech-to-text and text-to-speech), a low-level sub-capability that the trees' own nodes call | simple_hri, the perception system (`perception_system`), `robots/nao` |
 | External service | — | The LLM, behind interpretation. It is interchangeable | `ros2_llm_manager` (the gateway) |
 
 A capability, in this sense, is a high-level, orchestrated subsystem of the robot, built with
@@ -150,7 +150,7 @@ or in VS Code with the Draw.io Integration extension, and save it to the same fi
 | | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior with the LLM, checks the material of the request, applies what was understood to the state of the conversation, and writes the transcript |
 | LLM gateway (`ros2_llm_manager`) | `/llm_manager_node` | One inference action and session services in front of Ollama and cloud providers |
 | Speech sub-capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and speaks on request ([SPEECH.md](SPEECH.md)) |
-| Perception (`interaction_perception`) | `/user_state_server`, `/emotion_detector`, `/lip_activity_detector_node` | The state of the user, served on request; the lip activity as a stream for barge-in |
+| Perception (the perception system, `perception_system`) | `/perception_system`, `/lip_activity_detector`, `/emotion_detector` | The state of the user, served on request; the lip activity as a stream for barge-in |
 
 The orchestrator decides the dialogue behavior by asking the intelligence, which uses the one the
 request names or chooses it from the task, and checks the material of the request. It
@@ -447,9 +447,8 @@ then has one more pair of sessions per routed model
 `DialogContext` renders a `[CONTEXT]` block with the domain and the resources (minus the hidden
 ones, such as a role play's scene) for the templates that use it
 ([PROMPTS.md](PROMPTS.md#placeholders-context-and-caching)). It can also carry the user's emotion
-from the perception subsystem, but that path is off by default (`user_state_service` is empty)
-because the emotion detector is preliminary and not validated
-([interaction_perception](../interaction_perception/interaction_perception/README.md)).
+from the perception system, but that path is off by default (`user_state_service` is empty)
+because its emotion is experimental and not validated ([perception_system](https://github.com/geriabot/perception_system)).
 
 ### Languages
 
@@ -523,10 +522,10 @@ and registering it in the node's startup ([ros2_llm_manager](../ros2_llm_manager
   `Listen` asks it to listen, and `Speak` (and `WithFillers`, for the conversational fillers) asks
   it to speak, through simple_hri's actions `/stt_action` and `/tts_action`. Both nodes publish
   `/is_speaking` for the embodiment ([SPEECH.md](SPEECH.md)).
-- User perception (`interaction_perception`) is a separate, optional subsystem, used through a
-  service (the state of the user) and a topic (the lip activity, for barge-in). Without it, the
-  conversation only loses the visual barge-in
-  ([interaction_perception](../interaction_perception/interaction_perception/README.md)).
+- User perception is the perception system ([perception_system](https://github.com/geriabot/perception_system)), a separate, optional capability with
+  its own workspace, used through a service (`/perception_system/get_user_state`, the state of
+  the user) and a topic (`/user_speaking`, the lip activity, for barge-in). Without it, the
+  conversation only loses the visual barge-in.
 - The embodiment (`robots/nao`) consumes only generic signals (`/is_speaking`, `/target_pose`,
   and `/user_vad` if something publishes it) to drive talking gestures, idle poses and eye LEDs.
   The interaction system has no NAO-specific code ([robots/nao](../robots/nao/README.md)).

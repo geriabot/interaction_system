@@ -86,12 +86,13 @@ ros-jazzy-behaviortree-cpp = "*"
 ros-jazzy-rclcpp-cascade-lifecycle = "*"
 ros-jazzy-rosbridge-suite = "*"
 ros-jazzy-ament-cmake-auto = "*"
+ros-jazzy-vision-msgs = "*"  # perception_system_interfaces (the state of the user)
 
 [feature.jazzy.tasks.build]
 description = "Build interaction_system and its dependencies (ROS 2 Jazzy)"
 cmd = """colcon build --symlink-install \
   --packages-up-to interaction_system interaction_system_behaviors interaction_intelligence \
-    ros2_llm_manager simple_hri interaction_perception dialostack_bt_client \
+    ros2_llm_manager simple_hri dialostack_bt_client \
     interaction_sim interaction_ablations \
   --cmake-args \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
@@ -107,12 +108,13 @@ ros-lyrical-behaviortree-cpp = "*"
 ros-lyrical-rclcpp-cascade-lifecycle = "*"
 ros-lyrical-rosbridge-suite = "*"
 ros-lyrical-ament-cmake-auto = "*"
+ros-lyrical-vision-msgs = "*"  # perception_system_interfaces (the state of the user)
 
 [feature.lyrical.tasks.build-lyrical]
 description = "Build interaction_system and its dependencies for ROS 2 Lyrical"
 cmd = """colcon build --symlink-install --build-base build_lyrical --install-base install_lyrical \
   --packages-up-to interaction_system interaction_system_behaviors interaction_intelligence \
-    ros2_llm_manager simple_hri interaction_perception dialostack_bt_client \
+    ros2_llm_manager simple_hri dialostack_bt_client \
     interaction_sim interaction_ablations \
   --cmake-args \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \

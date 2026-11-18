@@ -15,7 +15,7 @@ How the robot's software asks for a conversation is in [INTEGRATING.md](INTEGRAT
 | Speech: listening and speaking | Yes | simple_hri on a computer with a microphone and a speaker, or the robot's own speech serving the same actions | [Speech](#speech) |
 | A behavior that asks for conversations | Yes | A goal to `/dialog/execute_task`, from a Behavior Tree (`ExecuteDialog`) or any node | [INTEGRATING.md](INTEGRATING.md) |
 | Embodiment: gestures, lights | No | Robot nodes that follow `/is_speaking` and the other signals of the conversation | [Embodiment](#embodiment) |
-| User perception | No | A camera for `interaction_perception`, or the robot's own detector publishing `/user_speaking` | [User perception](#user-perception) |
+| User perception | No | A camera for the perception system (`perception_system`), or the robot's own detector publishing `/user_speaking` | [User perception](#user-perception) |
 | An LLM | Yes | Ollama on the robot's computer or on a GPU server; not part of the robot | [MODELS.md](MODELS.md) |
 
 The robot's software and the interaction system talk over ROS 2, so they run on the same ROS
@@ -61,11 +61,10 @@ alike.
 ## User perception
 
 Optional. It gives the visual barge-in (experimental, not validated) and the emotion of the user
-(preliminary, off by default;
-[interaction_perception](../interaction_perception/interaction_perception/README.md)):
+(experimental, off by default), from the perception system ([`perception_system`](https://github.com/geriabot/perception_system)):
 
-- With `interaction_perception`: pass the robot's camera topic,
-  `ros2 launch interaction_perception interaction_perception.launch.py image_topic:=<camera topic>`.
+- With the perception system, from its workspace, on the robot's camera topic:
+  `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>`.
 - With the robot's own detector: publish `/user_speaking` (`std_msgs/Bool`, true while the user
   speaks), the topic `Speak` reads (`user_speaking_topic` of `interaction_orchestrator`,
   [CONFIGURATION.md](CONFIGURATION.md#interaction_orchestrator)).
@@ -81,7 +80,7 @@ a consumer of the signals above; the interaction system does not depend on it.
 |---|---|
 | Speech | simple_hri on the computer next to the robot (its microphone and speaker), or with the synthesized audio forwarded |
 | Embodiment | `nao_pose_manager`: `arm_gesture_manager` (talking gestures and idle poses) and `eye_led_feedback` (the color of the eye LEDs), described below |
-| User perception | `interaction_perception`, with a camera |
+| User perception | The perception system (`perception_system`), with a camera |
 | The behaviors | Any behavior of the robot's architecture, with `ExecuteDialog` ([dialostack_bt_client](../dialostack_bt_client/README.md)) |
 
 In `nao_pose_manager`, `arm_gesture_manager` moves the arms with talking gestures and idle poses

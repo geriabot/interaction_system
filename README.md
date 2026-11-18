@@ -89,7 +89,7 @@ inside:
 | Coordination | An FSM, the task plan | An FSM, the life of a request: `IDLE`, `SETTING_BEHAVIOR_ACTION`, `SETTING_BEHAVIOR_INPUT`, `ACTING` |
 | Action | The behavior forest | One tree per dialogue behavior; only the chosen one is active |
 | Interpretation (beside the layers) | Optional, consulted by any layer | Consulted by the FSM (which dialogue behavior, and whether the request can run) and by the trees (understanding, phrasing); it asks the LLM and controls nothing |
-| Capabilities | Perception, navigation, attention, interaction... | User perception (lip activity for barge-in, experimental; emotion, preliminary) and, planned, emotion expression; speaking and listening go through speech (simple_hri), a low-level sub-capability that the trees call |
+| Capabilities | Perception, navigation, attention, interaction... | User perception, from the external [perception system](https://github.com/geriabot/perception_system) (lip activity for barge-in, experimental; emotion, preliminary) and, planned, emotion expression; speaking and listening go through speech (simple_hri), a low-level sub-capability that the trees call |
 | External service | — | The LLM, behind interpretation; it can be replaced |
 
 Beside the layers, and outside their chain of control, is **interpretation**. It turns what
@@ -190,6 +190,23 @@ that no conversation took place: no dialogue behavior fits the task, or the requ
 material of the one it needs. Each dialogue behavior and mechanism is
 described in detail, with its Behavior Tree, in [docs/behaviors](docs/behaviors/README.md).
 
+## Perception
+
+The perception of the user is not part of this repository: it is the
+[perception system](https://github.com/geriabot/perception_system) (`perception_system`), a separate
+system that runs from its own workspace with its own dependencies. The interaction system builds
+only its interfaces (`perception_system_interfaces`, fetched by `thirdparty.repos` at a fixed
+commit) and asks it for two things, both optional and off by default:
+
+| What | Through | Used for |
+|---|---|---|
+| The lip activity of the user (its skill `speaking`) | the topic `/user_speaking` | [Barge-in](docs/behaviors/barge_in.md) *(experimental)* |
+| The state of the user (the emotion) | the service `/perception_system/get_user_state` (`user_state_service` of the intelligence) | The context of the questions to the model *(preliminary)* |
+
+How to start it and what it offers are in its
+[INTEGRATING.md](https://github.com/geriabot/perception_system/blob/main/docs/INTEGRATING.md);
+[Running the system](#running-the-system) gives the command with the options this system uses.
+
 ## Using it from robot behaviors
 
 The rest of the robot sees one action and one topic. [INTEGRATING.md](docs/INTEGRATING.md)
@@ -279,8 +296,7 @@ Reference pages:
   every node, topic, service, action and launch argument.
 - [VALIDATION_AND_TROUBLESHOOTING.md](docs/VALIDATION_AND_TROUBLESHOOTING.md): checks and common
   problems.
-- Packages: [interaction_perception](interaction_perception/interaction_perception/README.md),
-  [ros2_llm_manager](ros2_llm_manager/README.md),
+- Packages: [ros2_llm_manager](ros2_llm_manager/README.md),
   [dialostack_bt_client](dialostack_bt_client/README.md), [robots/nao](robots/nao/README.md),
   [the web GUI](dialostack_gui/src/README.md).
 
@@ -297,7 +313,6 @@ Reference pages:
 | `interaction_system_behaviors` | The Behavior Trees of the dialogue behaviors (XML) and their nodes (`AskIntelligence`, `Speak`, `Listen`, `WithFillers`) |
 | `ros2_dialog_interfaces` | The public interface: the `DialogTask` action and the `BargeIn` message |
 | `ros2_llm_manager`, `ros2_llm_interfaces` | The LLM gateway: one inference action and session services for Ollama and cloud providers |
-| `interaction_perception/*` | User perception: lip activity (barge-in, experimental), facial emotion (preliminary, not validated), and the user-state service |
 | `dialostack_gui` | Web GUI to configure, launch and monitor conversations |
 | `dialostack_bt_client` | BehaviorTree.CPP node that runs a conversation as a step of a robot's tree |
 | `robots/nao` | NAO embodiment: URDF, talking gestures, eye LEDs, pose tooling |
@@ -403,7 +418,7 @@ every utterance; `ros2 topic echo /interaction_system/status` shows the state of
 | The whole stack | `ros2 launch interaction_system main.launch.py [speech:=simple_hri\|none] [stt:=faster_whisper\|whisper] [tts:=piper\|mms] [language:=en\|es]` ([languages](#languages)) |
 | Only the interaction system (speech and LLM started separately) | `ros2 launch interaction_system interaction_system.launch.py` |
 | The LLM gateway alone | `ros2 launch ros2_llm_manager llm_manager.launch.py` |
-| User perception (optional) | `ros2 launch interaction_perception interaction_perception.launch.py image_topic:=<camera>` |
+| User perception (optional; the perception system, from its workspace) | `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>` |
 | The web GUI | `./src/interaction_system/gui.sh`, then open <http://localhost:5173> ([INSTALLATION.md](docs/INSTALLATION.md#the-web-gui)) |
 
 `speech:=none` starts no speech nodes, for the simulation or for a robot that serves the speech

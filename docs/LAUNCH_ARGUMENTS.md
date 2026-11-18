@@ -76,22 +76,18 @@ Its `params.yaml` ships the same values as the `llm_manager_node` section of `ap
 
 ## The perception of the user
 
-### `interaction_perception interaction_perception.launch.py`
+It is the perception system ([`perception_system`](https://github.com/geriabot/perception_system)), started from its own workspace. For barge-in, its lip activity (the skill
+`speaking`) on the robot's camera, without its orchestrator or a detection model:
 
-This launch file starts `/user_state_server` and, optionally, the two detectors.
+```bash
+ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>
+```
 
-| Argument | Default value | Description |
-|---|---|---|
-| `image_topic` | `/camera/image_raw` | The camera image the detectors read |
-| `emotion` | `true` | Run the facial emotion detector (preliminary, not validated: [interaction_perception](../interaction_perception/interaction_perception/README.md)) |
-| `lips` | `true` | Run the lip activity detector (visual barge-in, experimental) |
-| `visualization` | `false` | Show the detectors' debug windows (sets `show_visualization` and `show_debug`) |
+`autostart_skills:=speaking,emotion` also starts the emotion (experimental, not validated). Every
+argument is in its `docs/LAUNCH_ARGUMENTS.md`.
 
 The emotion estimate reaches the conversation only if the intelligence's `user_state_service`
-is set (it is empty by default).
-
-`emotion_detector.launch.py` and `lip_detector.launch.py` start one detector each with its
-parameter file. They take no arguments, and the shipped files open the debug windows.
+is set to `/perception_system/get_user_state` (it is empty by default).
 
 ## simple_hri
 

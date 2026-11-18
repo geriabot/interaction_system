@@ -31,8 +31,9 @@ Topics published:
                                          llm_skipped); for diagnosis and evaluation.
 
 Downstream clients:
-  /interaction_perception/get_user_state (GetUserState service, optional) — the state of
-                         the user (emotion) for the context of the questions
+  /perception_system/get_user_state (perception_system_interfaces/srv/GetUserState,
+                         optional) — the state of the user (emotion) for the context of the
+                         questions, from the perception system
   /llm/inference         (LlmInference)
   /llm/session/create    (CreateSession service)
   /llm/session/delete    (DeleteSession service)
@@ -60,7 +61,7 @@ from std_msgs.msg import String
 from ros2_llm_interfaces.action import LlmInference
 from ros2_llm_interfaces.srv import CreateSession, DeleteSession
 from interaction_system_interfaces.srv import AskForDialogueBehavior, AskIntelligence
-from interaction_perception_msgs.srv import GetUserState
+from perception_system_interfaces.srv import GetUserState
 
 from .dialog_context import DialogContext, Resource, UserState
 from .languages import LanguageFileError, UnknownLanguageError, load_language
