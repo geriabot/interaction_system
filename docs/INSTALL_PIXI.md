@@ -33,7 +33,7 @@ packages it names: in a `pixi shell`, run the command of the `build` task of `pi
 
 The first `pixi run` downloads the environment into `<workspace>/.pixi`: about 8 GB, with
 PyTorch, and about 3.5 GB more for the Lyrical one. `pixi run build` builds the interaction
-system, simple_hri, user perception, the BehaviorTree.CPP client and the evaluation packages into
+system, simple_hri, the interfaces of the perception system, the BehaviorTree.CPP client and the evaluation packages into
 `build/` and `install/`; extra arguments go to colcon
 (`pixi run build --packages-select <package>`).
 
@@ -54,13 +54,17 @@ For ROS 2 Lyrical, use the `lyrical` environment
 
 ## The perception of the user (optional)
 
-`interaction_perception` is built, but its dependencies are not in the environment: `cv_bridge`
-(RoboStack's `ros-jazzy-cv-bridge`), and MediaPipe and OpenCV (PyPI, the versions of
-`interaction_perception/interaction_perception/requirements.txt`). To use it, add them with
-`pixi add` ([PIXI.md](PIXI.md#what-the-configuration-contains)); this changes `pixi.toml` and
-`pixi.lock` of the repository. A camera driver is not in the environment either;
-[REAL_SESSIONS.md](../evaluation/doc/REAL_SESSIONS.md#barge-in) lists the steps to add both for
-barge-in.
+The perception of the user (the lip activity for barge-in, the emotion) is the perception system ([`perception_system`](https://github.com/geriabot/perception_system)), a
+capability of its own, installed in its own workspace with its own environment (MediaPipe, OpenCV,
+`cv_bridge`). Only its interfaces (`perception_system_interfaces`, in `thirdparty.repos`) are
+built here. Start it from its workspace with the robot's camera:
+
+```bash
+ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>
+```
+
+A camera driver is not in the environment; [REAL_SESSIONS.md](../evaluation/doc/REAL_SESSIONS.md#barge-in)
+lists the steps for barge-in in the sessions.
 
 ## The web GUI
 

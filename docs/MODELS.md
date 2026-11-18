@@ -13,7 +13,7 @@ serve the models from a shared GPU server in [GPU_SERVER.md](GPU_SERVER.md).
 | A second LLM (optional) | The same | The questions routed to it, e.g. the slot extraction | `routes` of `interaction_intelligence` ([below](#one-model-per-question-routes)) |
 | Speech-to-text | simple_hri `stt_service_node` | Transcribes the user: faster-whisper with Silero VAD (default) or Whisper | `stt:=`, `whisper_model:=` of `main.launch.py` ([SPEECH.md](SPEECH.md)) |
 | Text-to-speech | simple_hri `tts_service_node` | Says the robot's utterances: a Piper voice of the language (default) or MMS-TTS | `tts:=`, `language:=` ([SPEECH.md](SPEECH.md)) |
-| Face landmarks, emotion (optional) | `interaction_perception` | Lip activity for barge-in (experimental), facial emotion (preliminary, off by default) | [interaction_perception](../interaction_perception/interaction_perception/README.md) |
+| Face landmarks, emotion (optional) | the perception system (`perception_system`, its skills `speaking` and `emotion`) | Lip activity for barge-in (experimental), facial emotion (experimental, off by default) | [perception_system](https://github.com/geriabot/perception_system) |
 
 The simulated users and the judge of the evaluation are not models of the system; they are set in
 the experiment files ([EXPERIMENTS.md](../evaluation/doc/EXPERIMENTS.md#who-plays-each-role)).

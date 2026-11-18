@@ -160,10 +160,10 @@ simple_hri ([SPEECH.md](SPEECH.md)).
 
 | Name | Type | Server / publisher | Used by |
 |---|---|---|---|
-| `/interaction_perception/get_user_state` | service `interaction_perception_msgs/srv/GetUserState` (response `available`, `state`) | `/user_state_server` | `/interaction_intelligence`, when `user_state_service` is set (off by default) |
-| `/user_speaking` | topic `std_msgs/Bool` | `/lip_activity_detector_node` | `Speak` (barge-in; `user_speaking_topic`), `/user_state_server`, the GUI |
-| `/user_emotion` | topic `std_msgs/String` (JSON `{emotion, confidence, source}`) | `/emotion_detector` | `/user_state_server` |
-| `/lip_activity` | topic `std_msgs/Float32` (the lip-gap ratio) | `/lip_activity_detector_node` | debugging |
+| `/perception_system/get_user_state` | service `perception_system_interfaces/srv/GetUserState` (response `available`, `state`) | `/perception_system` (the perception system) | `/interaction_intelligence`, when `user_state_service` is set (off by default) |
+| `/user_speaking` | topic `std_msgs/Bool` | `/lip_activity_detector` (the perception system's skill `speaking`) | `Speak` (barge-in; `user_speaking_topic`), `/perception_system`, the GUI |
+| `/user_emotion` | topic `std_msgs/String` (JSON `{emotion, confidence, source}`) | `/emotion_detector` (the perception system's skill `emotion`) | `/perception_system` |
+| `/lip_activity` | topic `std_msgs/Float32` (the lip-gap ratio) | `/lip_activity_detector` | debugging |
 | `/camera/image_raw` | topic `sensor_msgs/Image` | the camera | both detectors (`image_topic`, `input_topic`) |
 
 `UserState`: `stamp`, `emotion`, `confidence` (`float32`), `source`, `speaking` (`bool`).

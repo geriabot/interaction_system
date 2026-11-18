@@ -39,8 +39,9 @@ Topics published:
                                          architecture, which alerts a person.
 
 Downstream clients:
-  /interaction_perception/get_user_state (GetUserState service, optional) — the state of
-                         the user (emotion) for the context of the questions
+  /perception_system/get_user_state (perception_system_interfaces/srv/GetUserState,
+                         optional) — the state of the user (emotion) for the context of the
+                         questions, from the perception system
   /interaction/interpretation/interpret (koch2/srv/Interpret) — the questions
                          to the model (parameter interpretation_service)
   /interaction/interpretation/cancel    (koch2/srv/CancelInterpretation) — the
@@ -69,7 +70,7 @@ from std_msgs.msg import String
 from koch2.srv import CancelInterpretation, Interpret
 from ros2_llm_interfaces.msg import LlmError
 from interaction_system_interfaces.srv import AskForDialogueBehavior, AskIntelligence
-from interaction_perception_msgs.srv import GetUserState
+from perception_system_interfaces.srv import GetUserState
 
 from .dialog_context import DialogContext, Resource, UserState
 from .languages import LanguageFileError, UnknownLanguageError, load_language

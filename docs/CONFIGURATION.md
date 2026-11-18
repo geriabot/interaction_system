@@ -16,8 +16,6 @@ node of the system and of the subsystems around it, with their types and shipped
 | `interaction_system_core/interaction_intelligence/config/prompts.yaml` | `/interaction_intelligence` and the interpretation server (launch argument `prompts_file`) | The prompt templates, parameters `prompts.*` ([PROMPTS.md](PROMPTS.md)) |
 | `interaction_system_core/interaction_intelligence/config/interpretation/questions.yaml` | The interpretation server | The questions to the model ([below](#the-interpretation-server)) |
 | `ros2_llm_manager/config/params.yaml` | `llm_manager_node` when started by its own launch file | The former gateway's parameters (the same values as `app_params.yaml`); the interaction system does not start it |
-| `interaction_perception/interaction_perception/config/params.yaml` | `emotion_detector` | Its parameters |
-| `interaction_perception/interaction_perception/config/lip_activity_params.yaml` | `lip_activity_detector_node` | Its parameters |
 | `robots/nao/nao_pose_manager/config/nao_saved_poses.yaml` | The gesture managers | The saved arm poses (not a parameter file) |
 
 When `main.launch.py` starts the nodes, they take their values from `app_params.yaml`, and then,
@@ -166,7 +164,7 @@ are declared from the files.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `transcription_topics` | string[] | `["/listened_text", "/transcription"]` | What the user says: simple_hri's transcriptions (`/listened_text`) and typed text (`/transcription`, e.g. the GUI's composer), cleaned of noise and republished on `/interaction/user_utterance`. |
-| `user_state_service` | string | `""` | The perception subsystem's service for the user's state (emotion), `/interaction_perception/get_user_state`. Off by default ([below](#notes-on-the-intelligence-parameters)). |
+| `user_state_service` | string | `""` | The perception system's service for the user's state (emotion), `/perception_system/get_user_state`. Off by default ([below](#notes-on-the-intelligence-parameters)). |
 | `language` | string | `English` | The language of the conversation, which selects a language file ([below](#notes-on-the-intelligence-parameters)). English and Spanish ship. |
 | `history_max_turns` | int | `200` | Maximum turns kept in a frame's history. The oldest half is dropped when exceeded. |
 | `ack_phrases` | string[] | `[""]` (language default) | Acknowledgments that the system (not the LLM) adds after a successful slot extraction. Empty: the set of the language file (`ack_phrases`); set a list to override. |
@@ -191,8 +189,8 @@ are declared from the files.
 
 ### Notes on the intelligence parameters
 
-- `user_state_service` is off by default because the emotion detector is preliminary work and not
-  validated ([interaction_perception](../interaction_perception/interaction_perception/README.md)).
+- `user_state_service` is off by default because the emotion of the perception system is
+  experimental and not validated ([perception_system](https://github.com/geriabot/perception_system)).
   Without it, the emotion is neutral and never reaches the prompts.
 - `language` names a language file of `interaction_intelligence/config/languages/` by its name,
   code or an alias, in any case (`English`, `en`, `Spanish`, `es`, `español`), or gives the path
@@ -368,55 +366,12 @@ simple_hri's defaults; its README lists every parameter of every backend.
 | `tts_mms` (`tts_service_node`) | `lang_code` | `speech.mms_voice` of the language file (`eng`, `spa`) |
 | | `use_gpu`, `play_sound` | `true` |
 
-## user_state_server
+## The perception of the user
 
-Declared in
-`interaction_perception/interaction_perception/interaction_perception/user_state_server.py`. The
-node keeps the latest estimates of the detectors and serves them on
-`/interaction_perception/get_user_state`.
-
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `emotion_topic` | string | `/user_emotion` | The emotion detector's output. |
-| `speaking_topic` | string | `/user_speaking` | The lip activity detector's output. |
-
-## emotion_detector
-
-Preliminary work, not validated
-([interaction_perception](../interaction_perception/interaction_perception/README.md)). Declared
-in `interaction_perception/interaction_perception/interaction_perception/emotion_detector.py`;
-shipped values from `interaction_perception/interaction_perception/config/params.yaml`.
-
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `input_topic` | string | `/camera/image_raw` | Camera image topic consumed by the detector. |
-| `output_topic` | string | `/user_emotion` | Topic publishing the detected emotion as JSON (`{"emotion", "confidence", "source"}`). |
-| `model_name` | string | `dima806/face_emotions_image_detection` | Hugging Face model used for emotion classification. |
-| `show_visualization` | bool | `true` | Show an OpenCV visualization window when true. `interaction_perception.launch.py` sets it from its `visualization` argument (`false`). |
-
-## lip_activity_detector_node
-
-Declared in
-`interaction_perception/interaction_perception/interaction_perception/lip_activity_detector.py`;
-shipped values from `interaction_perception/interaction_perception/config/lip_activity_params.yaml`.
-The node detects that the user is speaking from the movement of the lips alone (MediaPipe face
-landmarks, no audio). The node key of the YAML file must match the node name of the launch file
-(`lip_activity_detector_node`).
-
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `image_topic` | string | `/camera/image_raw` | Camera image topic consumed by the detector. |
-| `speaking_topic` | string | `/user_speaking` | Topic publishing the user-speaking `Bool` signal. |
-| `lip_activity_topic` | string | `/lip_activity` | Topic publishing the raw lip-activity signal. |
-| `min_detection_confidence` | float | `0.5` | MediaPipe face detection confidence threshold. |
-| `min_tracking_confidence` | float | `0.5` | MediaPipe face tracking confidence threshold. |
-| `open_threshold` | float | `0.04` | Margin above the resting-mouth baseline counted as "mouth open". |
-| `smoothing_frames` | int | `4` | Light smoothing window that removes single-frame spikes. |
-| `roughness_threshold` | float | `7.0e-6` | Variance-of-diffs threshold used to classify movement as speech. |
-| `roughness_window` | int | `10` | Window (frames) over which roughness is computed (~0.33 s at 30 fps). |
-| `onset_secs` | float | `0.90` | Minimum continuous high-roughness time required to enter the SPEAKING state. |
-| `silence_secs` | float | `1.20` | Continuous closed-mouth time required before leaving the SPEAKING state. |
-| `show_debug` | bool | `true` | Show an OpenCV debug window with landmarks, lip bars, and state. `interaction_perception.launch.py` sets it from its `visualization` argument (`false`). |
+The lip activity (barge-in) and the emotion are skills of the perception system
+([perception_system](https://github.com/geriabot/perception_system)), configured in its own repository (its `docs/CONFIGURATION.md`). It publishes
+`/user_speaking` and `/user_emotion`, and serves `/perception_system/get_user_state`
+([ROS_INTERFACES.md](ROS_INTERFACES.md#the-perception-of-the-user)).
 
 ## dialostack_bt_runner
 
@@ -495,14 +450,6 @@ defaults.
 (`wait_timeout`, `max_silence`, `max_stalled`, `max_turns`, `max_attempts`, `max_off_task`) and
 the filler times (`filler_after_s`, `filler_repeat_s`) ship the same values as the code in both
 YAML files.
-
-### Perception
-
-`show_debug` of the lip activity detector has a code default of `false`;
-`lip_activity_params.yaml` ships `true`. `show_visualization` of the emotion detector is `true`
-in the code and in `params.yaml`. `interaction_perception.launch.py` sets both from its
-`visualization` argument (`false`); `lip_detector.launch.py` and `emotion_detector.launch.py`
-keep the YAML values.
 
 ### Arm gesture manager
 

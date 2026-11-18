@@ -56,9 +56,9 @@ interaction_intelligence:
     # Topics. What the user says: /listened_text (simple_hri's transcriptions) and
     # /transcription (typed text, e.g. from the GUI).
     transcription_topics: ["/listened_text", "/transcription"]
-    # The state of the user (emotion), from the perception subsystem. Off: the emotion detector is
-    # preliminary work, not validated (interaction_perception's README); set it to
-    # "/interaction_perception/get_user_state" to try it.
+    # The state of the user (emotion), from the perception system (perception_system). Off: its
+    # emotion detector is experimental, not validated; set it to
+    # "/perception_system/get_user_state" to try it.
     user_state_service: ""
 
     # The language of the conversation: a language file of interaction_intelligence

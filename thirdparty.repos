@@ -12,3 +12,10 @@ repositories:
     type: git
     url: https://github.com/rodperex/simple_hri.git
     version: main
+  # The perception system: only its interfaces (perception_system_interfaces) are built here, for
+  # the state of the user (get_user_state). The perception system itself (lip activity for
+  # barge-in, the emotion) runs from its own workspace, with its own dependencies
+  third_party/perception_system:
+    type: git
+    url: https://github.com/geriabot/perception_system.git
+    version: 588d680b11b0d9090261c98a7253bee48d6a8405  # perception_system main, the commit this version was tested with
