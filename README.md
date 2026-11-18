@@ -385,7 +385,7 @@ Run pixi from `<workspace>`, not from inside the repository
    server. Each has its own local port:
    - Ollama on this computer answers at `localhost:11434`, the gateway's default.
    - A GPU server is reached through an SSH tunnel at `localhost:11439`
-     (`ssh -N -L 11439:localhost:11434 <user>@<server>`; [GPU_SERVER.md](docs/GPU_SERVER.md)),
+     (`ssh -N -L 11439:localhost:11436 <user>@<server>`; [GPU_SERVER.md](docs/GPU_SERVER.md)),
      never at 11434, which would collide with an Ollama on this computer.
 
    Then pull the default model (on the server, if you use one):

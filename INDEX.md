@@ -30,7 +30,7 @@ the documents it links to.
 | Job | Command |
 |---|---|
 | Pull the default model | `ollama pull qwen2.5:7b` (the model is `ollama.model` in `app_params.yaml`; [MODELS.md](docs/MODELS.md)) |
-| Reach Ollama on a GPU server | `ssh -N -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes -L 11439:localhost:11434 <user>@<server>`, then start the stack with `ollama_host:=localhost:11439` ([GPU_SERVER.md](docs/GPU_SERVER.md#the-tunnel)). Local port 11434 is Ollama on this computer, 11439 the server through the tunnel |
+| Reach Ollama on a GPU server | `ssh -N -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes -L 11439:localhost:11436 <user>@<server>`, then start the stack with `ollama_host:=localhost:11439` ([GPU_SERVER.md](docs/GPU_SERVER.md#the-tunnel)). Local port 11434 is Ollama on this computer, 11439 the server through the tunnel |
 | Check that Ollama answers, and its loaded models | This computer: `curl -s localhost:11434/api/version`, `curl -s localhost:11434/api/ps`; the GPU server: the same on `localhost:11439` |
 | Port 11434 or 11439 taken | `ss -ltnp \| grep 11434` (or `11439`) shows the process that holds it ([GPU_SERVER.md](docs/GPU_SERVER.md#problems-and-fixes)) |
 | Free the GPU afterwards | `ollama stop <model>` on the server ([GPU_SERVER.md](docs/GPU_SERVER.md#on-a-shared-server)) |
