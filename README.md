@@ -366,9 +366,14 @@ Run pixi from `<workspace>`, not from inside the repository
 
 ### Quick start
 
-1. Serve the LLM so that Ollama answers at `localhost:11434`: install
-   [Ollama](https://ollama.com/download) on this computer, or open a tunnel to a GPU server that
-   runs it ([GPU_SERVER.md](docs/GPU_SERVER.md)). Then pull the default model:
+1. Serve the LLM with [Ollama](https://ollama.com/download), on this computer or on a GPU
+   server. Each has its own local port:
+   - Ollama on this computer answers at `localhost:11434`, the gateway's default.
+   - A GPU server is reached through an SSH tunnel at `localhost:11439`
+     (`ssh -N -L 11439:localhost:11434 <user>@<server>`; [GPU_SERVER.md](docs/GPU_SERVER.md)),
+     never at 11434, which would collide with an Ollama on this computer.
+
+   Then pull the default model (on the server, if you use one):
    ```sh
    ollama pull qwen2.5:7b
    ```
@@ -377,7 +382,10 @@ Run pixi from `<workspace>`, not from inside the repository
    directory:
    ```sh
    ros2 launch interaction_system main.launch.py            # language:=es for Spanish
+   ros2 launch interaction_system main.launch.py ollama_host:=localhost:11439   # GPU server
    ```
+   `ollama_host` chooses the Ollama: without it, the one of this computer (11434); with
+   `localhost:11439`, the GPU server through the tunnel.
 3. In another prepared terminal, request a conversation and speak to the robot:
    ```sh
    ros2 action send_goal --feedback /dialog/execute_task ros2_dialog_interfaces/action/DialogTask \
@@ -442,8 +450,9 @@ python scripts/run_parallel.py experiments/<experiment>.yaml experiments/hardwar
 python analysis/score_runs.py results/<name>                                  # score them
 ```
 
-These commands need the workspace built with pixi and the models answering (Ollama at
-`localhost:11434`). Cloud models are paid, so every command that would call one needs
+These commands need the workspace built with pixi and the models answering (Ollama at the
+address of the experiment file, `localhost:11434` by default; a GPU server through its tunnel needs
+that file's `ollama` port set to the tunnel's). Cloud models are paid, so every command that would call one needs
 `--allow-cloud`. The guides are [the control panel](evaluation/doc/CONTROL_PANEL.md),
 [the tools](evaluation/README.md) and [the experiments](evaluation/doc/EXPERIMENTS.md).
 
@@ -456,8 +465,13 @@ These commands need the workspace built with pixi and the models answering (Olla
   workspace ([PIXI.md](docs/PIXI.md#where-it-lives)).
 - A second request is rejected: only one conversation runs at a time, so cancel the running goal
   first.
-- The robot does not answer: check that Ollama answers (`curl -s localhost:11434/api/version`) and
-  that the model in `app_params.yaml` is pulled ([MODELS.md](docs/MODELS.md#the-local-model)).
+- The robot does not answer: check that Ollama answers (`curl -s localhost:11434/api/version` on
+  this computer, `curl -s localhost:11439/api/version` through the tunnel to a GPU server), that
+  the stack was started with the matching `ollama_host`, and that the model in `app_params.yaml`
+  is pulled ([MODELS.md](docs/MODELS.md#the-local-model)).
+- This computer's Ollama does not start (`bind: address already in use`), or `ollama list` shows
+  the server's models: a tunnel holds port 11434. `ss -ltnp | grep 11434` shows the process; close
+  that tunnel and open it on 11439 ([GPU_SERVER.md](docs/GPU_SERVER.md#the-tunnel)).
 
 [VALIDATION_AND_TROUBLESHOOTING.md](docs/VALIDATION_AND_TROUBLESHOOTING.md) has more checks and
 runtime problems.

@@ -12,7 +12,8 @@ ros2 lifecycle get /interaction_orchestrator      # active
 ros2 action list                                  # /dialog/execute_task, /llm/inference, /stt_action and /tts_action (simple_hri)
 ros2 service list | grep -E "interaction|llm"     # /interaction/ask_intelligence, /interaction/ask_intelligence_for_behavior, /llm/session/*
 ros2 topic echo /interaction_system/status        # 0 IDLE, 1 REASONING, 2 RUNNING, 3 FAILED
-curl -s localhost:11434/api/version               # Ollama answers (local or through a tunnel)
+curl -s localhost:11434/api/version               # Ollama on this computer answers
+curl -s localhost:11439/api/version               # or the GPU server, through its tunnel
 ```
 
 During a conversation:
@@ -57,6 +58,8 @@ Two tools test the system without audio and without a model:
 | Aborted with a message about the resources (`The quiz requires...`) | The material parses but the behavior cannot use it (e.g. a role-play scene without criteria) ([ROS_INTERFACES.md](ROS_INTERFACES.md#dialogtask-goal)) |
 | Aborted with `The interaction intelligence is not available` | `/interaction_intelligence` is not running (check its log: a malformed prompt template stops it at startup) |
 | The robot speaks the fixed phrases ("Could you repeat that?") | The LLM does not answer: Ollama is not reachable, the model is not pulled (`ollama.model`), or the calls time out (`llm_timeout`, or the reply's `reply_budget`). See [below](#notes-on-the-common-problems) |
+| This computer's Ollama does not start (`bind: address already in use`), or `ollama list` shows another computer's models | An SSH tunnel to a GPU server holds port 11434, the port of this computer's Ollama | `ss -ltnp \| grep 11434` shows the process; close that tunnel and open it on 11439, then start the stack with `ollama_host:=localhost:11439` ([GPU_SERVER.md](GPU_SERVER.md#the-tunnel)) |
+| The stack uses this computer's Ollama instead of the GPU server (or the other way round) | `ollama_host` does not match the Ollama in use | Without `ollama_host`: this computer (11434); `ollama_host:=localhost:11439`: the GPU server through its tunnel |
 | `LLM Manager connection failed` | `/llm_manager_node` is not running or its provider did not connect at startup |
 | The robot never hears the user | Check that `/stt_action` exists (`speech:=simple_hri`) and the microphone is the default input of the computer running simple_hri ([SPEECH.md](SPEECH.md)) |
 | Every utterance is ignored | The transcriptions are taken as noise (empty, fillers, subtitle credits), or they arrive on a topic not in `transcription_topics` |

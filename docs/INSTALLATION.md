@@ -13,10 +13,12 @@ Both guides end with a built workspace. What follows applies to both.
 
 ## Models
 
-- The interaction system asks an LLM served by [Ollama](https://ollama.com) at
-  `localhost:11434`, either on this computer (`curl -fsSL https://ollama.com/install.sh | sh`,
-  which uses `sudo`) or on a GPU server reached through an SSH tunnel
-  ([GPU_SERVER.md](GPU_SERVER.md)). Pull the model of `app_params.yaml`, `qwen2.5:7b`
+- The interaction system asks an LLM served by [Ollama](https://ollama.com), either on this
+  computer at `localhost:11434` (`curl -fsSL https://ollama.com/install.sh | sh`, which uses
+  `sudo`), or on a GPU server reached through an SSH tunnel at `localhost:11439` and selected with
+  the launch argument `ollama_host:=localhost:11439` ([GPU_SERVER.md](GPU_SERVER.md)). The tunnel
+  never uses 11434, the port of this computer's Ollama; `ss -ltnp | grep 11434` shows what holds
+  a port. Pull the model of `app_params.yaml`, `qwen2.5:7b`
   (`ollama pull qwen2.5:7b`). [MODELS.md](MODELS.md) explains which model answers each question,
   how to change it, and how to use the cloud providers.
 - simple_hri's speech models (faster-whisper or Whisper, the Piper voice of the language or

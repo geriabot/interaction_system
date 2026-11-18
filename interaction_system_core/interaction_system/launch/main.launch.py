@@ -9,6 +9,8 @@ the shared app_params.yaml. This is what the GUI starts.
   ros2 launch interaction_system main.launch.py                     # simple_hri, English
   ros2 launch interaction_system main.launch.py language:=es        # Spanish
   ros2 launch interaction_system main.launch.py speech:=none        # simulation (interaction_sim)
+  ros2 launch interaction_system main.launch.py ollama_host:=localhost:11439  # Ollama of a GPU
+                                                                   # server, through its SSH tunnel
 
 The speech capability is simple_hri: actions that listen and speak when the behaviors ask
 (faster-whisper with Silero VAD and Piper by default, or Whisper and MMS-TTS).
@@ -46,6 +48,19 @@ def configured_language(params_files) -> str:
     return language
 
 
+def ollama_address(value):
+    """The Ollama of the LLM gateway, from 'host[:port]', as parameters ('' = the files')."""
+    value = value.strip()
+    if not value:
+        return {}
+    host, sep, port = value.rpartition(':') if value.count(':') == 1 else (value, '', '')
+    if not sep:
+        return {'ollama.host': value}
+    if not host or not port.isdigit() or not 0 < int(port) < 65536:
+        raise RuntimeError(f"ollama_host must be host[:port], e.g. localhost:11439, not '{value}'")
+    return {'ollama.host': host, 'ollama.port': int(port)}
+
+
 def launch_setup(context):
     pkg_dir = get_package_share_directory('interaction_system')
     app_params = LaunchConfiguration('params_file').perform(context) or os.path.join(
@@ -59,6 +74,7 @@ def launch_setup(context):
     gui_override = os.environ.get('DIALOSTACK_GUI_PARAMS', '')
     extra = [gui_override] if gui_override and os.path.isfile(gui_override) else []
 
+    ollama = ollama_address(LaunchConfiguration('ollama_host').perform(context))
     speech = LaunchConfiguration('speech').perform(context)
     # The language: the launch argument, or else the one of the parameter files (the GUI's last)
     language = LaunchConfiguration('language').perform(context)
@@ -122,7 +138,8 @@ def launch_setup(context):
             executable='llm_manager_node',
             name='llm_manager_node',
             output='screen',
-            parameters=[app_params] + extra,
+            # ollama_host, when given, goes last: it takes precedence over the files
+            parameters=[app_params] + extra + ([ollama] if ollama else []),
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -180,5 +197,10 @@ def generate_launch_description():
             description="The microphone of simple_hri's faster_whisper (a sounddevice name or "
                         "index; empty: PortAudio's default). 'default' goes through the system's "
                         'sound server, which converts the sample rate'),
+        DeclareLaunchArgument(
+            'ollama_host', default_value='',
+            description='The Ollama of the LLM gateway, as host[:port]: empty keeps the parameter '
+                        'files (127.0.0.1:11434, Ollama on this computer); localhost:11439 is a '
+                        'GPU server through its SSH tunnel (docs/GPU_SERVER.md)'),
         OpaqueFunction(function=launch_setup),
     ])
