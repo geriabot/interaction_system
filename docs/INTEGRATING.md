@@ -90,12 +90,12 @@ goal and stays `RUNNING` until the conversation ends, then returns `SUCCESS` (ou
 Halting the node cancels the conversation. Its ports, its plugin library and a generic runner are
 in [dialostack_bt_client](../dialostack_bt_client/README.md).
 
-### From an FSM of behavior_architecture
+### From an FSM of koch2
 
 A state of the robot's orchestrator activates a runner whose tree contains `ExecuteDialog`, as for
-any other capability; behavior_architecture's runners already put the `rclcpp::Node` that
+any other capability; koch2's runners already put the `rclcpp::Node` that
 `ExecuteDialog` needs on the blackboard. Since the interaction system is itself built on
-behavior_architecture, both can run in the same robot, each with its own `mission_executor`.
+koch2, both can run in the same robot, each with its own `mission_executor`.
 
 ## Goals for every dialogue behavior
 

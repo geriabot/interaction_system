@@ -17,7 +17,7 @@ pixi global install vcstool                           # once
 
 mkdir -p <workspace>/src && cd <workspace>/src
 git clone --recurse-submodules https://github.com/geriabot/interaction_system.git
-vcs import . < interaction_system/thirdparty.repos    # behavior_architecture and simple_hri
+vcs import . < interaction_system/thirdparty.repos    # koch2 and simple_hri
 cd ..
 ./src/interaction_system/pixi/setup_workspace.sh      # once: links pixi.toml and pixi.lock here
 pixi run build
@@ -49,7 +49,7 @@ pixi shell
 source install/setup.bash
 ```
 
-For ROS 2 Lyrical, use the `lyrical` environment and behavior_architecture's `lyrical` branch
+For ROS 2 Lyrical, use the `lyrical` environment
 ([PIXI.md](PIXI.md#ros-2-lyrical)).
 
 ## The perception of the user (optional)

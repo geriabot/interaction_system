@@ -14,7 +14,7 @@
 #include "lifecycle_msgs/msg/state.hpp"
 #include "nlohmann/json.hpp"
 
-#include "behavior_architecture/orchestrator_factory.hpp"
+#include "koch2/orchestrator_factory.hpp"
 
 namespace interaction_system
 {
@@ -24,7 +24,7 @@ using std::placeholders::_2;
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 using namespace std::chrono_literals;
 
-static behavior_architecture::OrchestratorRegistrar<InteractionOrchestrator>
+static koch2::OrchestratorRegistrar<InteractionOrchestrator>
 interaction_orchestrator_registrar(INTERACTION_ORCHESTRATOR_NAME);
 
 namespace
@@ -60,7 +60,7 @@ std::string uuid_to_string(const rclcpp_action::GoalUUID & uuid)
 }  // namespace
 
 InteractionOrchestrator::InteractionOrchestrator(BT::Blackboard::Ptr blackboard)
-: behavior_architecture::BaseOrchestrator(INTERACTION_ORCHESTRATOR_NAME, blackboard)
+: koch2::BaseOrchestrator(INTERACTION_ORCHESTRATOR_NAME, blackboard)
 {
   declare_parameter<double>("wait_timeout", 15.0);
   declare_parameter<double>("max_silence", 90.0);
@@ -509,7 +509,7 @@ InteractionOrchestrator::behavior_status_callback(std_msgs::msg::String::UniqueP
     runners_.find(catalog_.at(chosen_behavior_).node_name) : runners_.end();
   // (runners_ holds every runner as the lifecycle node it is; they are all BehaviorRunners)
   if (runner == runners_.end() ||
-    std::static_pointer_cast<behavior_architecture::BehaviorRunner>(runner->second)
+    std::static_pointer_cast<koch2::BehaviorRunner>(runner->second)
     ->get_bt_status() != expected)
   {
     RCLCPP_WARN(

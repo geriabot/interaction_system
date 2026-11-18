@@ -73,7 +73,7 @@ cmd = "python -m pytest -q test --deselect test/test_flake8.py::test_flake8 --de
 
 # ---------------------------------------------------------------------------
 # ROS 2 distributions. Jazzy is the default; Lyrical builds into its own folders
-# (behavior_architecture needs its `lyrical` branch: see docs/PIXI.md)
+# (see docs/PIXI.md)
 # ---------------------------------------------------------------------------
 
 [feature.jazzy]

@@ -77,7 +77,7 @@ that the conversation publishes.
 ![The interaction system as an autonomous subsystem that follows the pattern of the robot's behavioral control architecture](./media/interaction_fractal_architecture.drawio.svg)
 
 The robot is controlled by a layered behavioral control architecture (left), built with
-[`behavior_architecture`](https://github.com/geriabot/behavior_architecture): an FSM coordinates
+[`koch2`](https://github.com/geriabot/koch2): an FSM coordinates
 the task plan and activates, phase by phase, a *behavior forest* of Behavior Trees. The robot's
 capabilities (perception, navigation, attention, interaction) are autonomous subsystems with a
 standard interface. The interaction system (right) is one of them, and has the same layers
@@ -291,7 +291,7 @@ Reference pages:
 
 | Package | Description |
 |---|---|
-| `interaction_system_core/interaction_system` | The orchestrator (the FSM of a request, a `behavior_architecture` plugin), the catalog of dialogue behaviors, the configuration and the launch files |
+| `interaction_system_core/interaction_system` | The orchestrator (the FSM of a request, a `koch2` plugin), the catalog of dialogue behaviors, the configuration and the launch files |
 | `interaction_system_core/interaction_system_interfaces` | Status, and the requests that the orchestrator and the trees send to the intelligence |
 | `interaction_system_core/interaction_intelligence` | The interaction intelligence: the skills (the questions to the LLM), the dialogue frame, the prompts |
 | `interaction_system_behaviors` | The Behavior Trees of the dialogue behaviors (XML) and their nodes (`AskIntelligence`, `Speak`, `Listen`, `WithFillers`) |
@@ -305,7 +305,7 @@ Reference pages:
 
 The root of the repository also contains:
 
-- `thirdparty.repos`: the source dependencies, `behavior_architecture` (only its base, without
+- `thirdparty.repos`: the source dependencies, `koch2` (only its base, without
   its optional LLM orchestrators) and `simple_hri`;
 - `pixi.toml` and `pixi.lock`: the environments, which `pixi/setup_workspace.sh` links at the root
   of the workspace;
@@ -343,7 +343,7 @@ pixi global install vcstool                         # once
 
 mkdir -p <workspace>/src && cd <workspace>/src
 git clone --recurse-submodules https://github.com/geriabot/interaction_system.git
-vcs import . < interaction_system/thirdparty.repos  # behavior_architecture and simple_hri
+vcs import . < interaction_system/thirdparty.repos  # koch2 and simple_hri
 cd ..
 ./src/interaction_system/pixi/setup_workspace.sh    # once: links pixi.toml and pixi.lock here
 pixi run build

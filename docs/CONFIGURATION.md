@@ -12,7 +12,7 @@ node of the system and of the subsystems around it, with their types and shipped
 | --- | --- | --- |
 | `interaction_system_core/interaction_system/config/app_params.yaml` | The LLM gateway, the intelligence and the orchestrator of `main.launch.py` (launch argument `params_file`) | Their parameters (below). simple_hri's nodes take theirs from the launch arguments |
 | `interaction_system_core/interaction_system/config/interaction_orchestrator_params.yaml` | `/interaction_orchestrator` (launch argument `catalog_file`, applied before `params_file`) | The [catalog of dialogue behaviors](#the-catalog-of-dialogue-behaviors) and the default limits |
-| `interaction_system_core/interaction_system/config/interaction_behaviors_config.yaml` | `mission_executor` (positional argument; launch argument `config_file`) | The [behavior_architecture runtime](#the-behavior-tree-runtime): the orchestrator and the runner of each tree |
+| `interaction_system_core/interaction_system/config/interaction_behaviors_config.yaml` | `mission_executor` (positional argument; launch argument `config_file`) | The [koch2 runtime](#the-behavior-tree-runtime): the orchestrator and the runner of each tree |
 | `interaction_system_core/interaction_intelligence/config/prompts.yaml` | `/interaction_intelligence` (launch argument `prompts_file`) | The prompt templates, parameters `prompts.*` ([PROMPTS.md](PROMPTS.md)) |
 | `ros2_llm_manager/config/params.yaml` | `llm_manager_node` when started by its own launch file | The gateway's parameters (the same values as `app_params.yaml`) |
 | `interaction_perception/interaction_perception/config/params.yaml` | `emotion_detector` | Its parameters |
@@ -88,7 +88,7 @@ the code, the table lists the YAML value, and
 
 The parameters are declared in
 `interaction_system_core/interaction_system/src/interaction_system/InteractionOrchestrator.cpp`,
-except `control_cycle_rate_ms`, which comes from behavior_architecture's `BaseOrchestrator`. The
+except `control_cycle_rate_ms`, which comes from koch2's `BaseOrchestrator`. The
 shipped values come from `interaction_orchestrator_params.yaml` and then `app_params.yaml`. They
 are written to the blackboard of each conversation
 ([ARCHITECTURE.md](ARCHITECTURE.md#the-blackboard)).
@@ -148,7 +148,7 @@ them are described in [docs/behaviors](behaviors/README.md).
 - `user_speaking_topic` is published by the lip activity detector of the optional perception
   subsystem. While nothing publishes it, the robot finishes every utterance.
 
-The runners of `mission_executor` (behavior_architecture's `BehaviorRunner`) also have
+The runners of `mission_executor` (koch2's `BehaviorRunner`) also have
 `enable_groot_monitoring` (`true`) and `groot_port` (`5555`), so the active tree can be watched
 with Groot2.
 
@@ -438,7 +438,7 @@ defaults.
 
 ### Orchestrator
 
-`control_cycle_rate_ms` has a code default of `100` (behavior_architecture's
+`control_cycle_rate_ms` has a code default of `100` (koch2's
 `BaseOrchestrator`); `interaction_orchestrator_params.yaml` ships `50`. The limits
 (`wait_timeout`, `max_silence`, `max_stalled`, `max_turns`, `max_attempts`, `max_off_task`) and
 the filler times (`filler_after_s`, `filler_repeat_s`) ship the same values as the code in both

@@ -11,7 +11,7 @@ dialogue behavior and each shared mechanism has its own page in
 ## Interaction as a capability with the robot's layers inside
 
 The interaction system is built with
-[`behavior_architecture`](https://github.com/geriabot/behavior_architecture), the framework of
+[`koch2`](https://github.com/geriabot/koch2), the framework of
 the behavioral control architecture of the GERIABOT robot. The robot is controlled by layers:
 deliberation and planning when the context requires them, coordination by a finite state machine
 (FSM) that manages the task plan, and action by a *behavior forest* of Behavior Trees, which the
@@ -154,7 +154,7 @@ or in VS Code with the Draw.io Integration extension, and save it to the same fi
 
 The orchestrator decides the dialogue behavior by asking the intelligence, which uses the one the
 request names or chooses it from the task, and checks the material of the request. It
-is a plugin of `behavior_architecture` (`mission_executor`), loaded from
+is a plugin of `koch2` (`mission_executor`), loaded from
 `libinteraction_system.so`. Each behavior runner ticks its tree every 50 ms
 (`control_period_ms`) and reports the result on `/behavior_status`; the tree nodes
 (`libinteraction_system_behaviors_bt_plugins.so`) share one ROS node,

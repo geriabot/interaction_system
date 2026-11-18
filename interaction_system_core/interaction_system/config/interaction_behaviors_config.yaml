@@ -1,4 +1,4 @@
-# The behavior_architecture runtime of the interaction system (positional argument of
+# The koch2 runtime of the interaction system (positional argument of
 # mission_executor): the orchestrator, and one runner per dialogue behavior with its tree.
 node_name: "interaction_system_bt_node"
 

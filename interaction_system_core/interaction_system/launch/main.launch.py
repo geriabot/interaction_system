@@ -155,7 +155,7 @@ def generate_launch_description():
             description='Parameters of the nodes (empty: config/app_params.yaml)'),
         DeclareLaunchArgument(
             'config_file', default_value='',
-            description='behavior_architecture configuration: the orchestrator and the runners '
+            description='koch2 configuration: the orchestrator and the runners '
                         '(empty: config/interaction_behaviors_config.yaml)'),
         DeclareLaunchArgument(
             'catalog_file', default_value='',

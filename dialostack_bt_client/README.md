@@ -62,5 +62,5 @@ The parameters of `bt_runner` (node `dialostack_bt_runner`) are in
 ```
 
 Any tree that uses `ExecuteDialog` must have an `rclcpp::Node` on its blackboard under the key
-`node`; `bt_runner` and behavior_architecture's runners put it there. The node is also built as a
+`node`; `bt_runner` and koch2's runners put it there. The node is also built as a
 plugin, `libdialostack_bt_client_plugin.so`, for `registerFromPlugin()`.
