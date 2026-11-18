@@ -130,6 +130,7 @@ def launch_setup(context):
                 'catalog_file': LaunchConfiguration('catalog_file').perform(context) or os.path.join(
                     pkg_dir, 'config', 'interaction_orchestrator_params.yaml'),
                 'language': language_name,
+                'ollama_host': LaunchConfiguration('ollama_host').perform(context),
             }.items(),
         ),
     ]
@@ -176,5 +177,11 @@ def generate_launch_description():
             description="The microphone of simple_hri's faster_whisper (a sounddevice name or "
                         "index; empty: PortAudio's default). 'default' goes through the system's "
                         'sound server, which converts the sample rate'),
+        DeclareLaunchArgument(
+            'ollama_host', default_value='',
+            description='The Ollama of the model binding, as host[:port]: empty keeps the '
+                        'parameter files (127.0.0.1:11434, Ollama on this computer); '
+                        'localhost:11439 is a GPU server through its SSH tunnel '
+                        '(docs/GPU_SERVER.md)'),
         OpaqueFunction(function=launch_setup),
     ])

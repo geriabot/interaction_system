@@ -280,7 +280,7 @@ listed in its [README](../ros2_llm_manager/README.md#providers).
 | `silent_mode` | bool | `false` | The former gateway's informational logs; not used. |
 | `ollama.enable` | bool | `true` | Load `ollama.model` into the Ollama server's memory at the start (`interpretation_warmup`). |
 | `ollama.host` | string | `127.0.0.1` | Ollama server host. |
-| `ollama.port` | int | `11434` | Ollama server port. |
+| `ollama.port` | int | `11434` | Ollama server port. 11434 is Ollama on this computer; a GPU server is reached through an SSH tunnel on 11439. The launch argument `ollama_host` (`host[:port]`) sets `ollama.host` and `ollama.port` without editing this file ([LAUNCH_ARGUMENTS.md](LAUNCH_ARGUMENTS.md), [GPU_SERVER.md](GPU_SERVER.md#the-tunnel)). |
 | `ollama.model` | string | `qwen2.5:7b` | Model loaded into the Ollama server's memory at the start, and the model of the questions when neither `llm_model` nor `default_model` names another. Pull it, or set the model you serve. |
 | `ollama.timeout` | float | `120.0` | Request timeout in seconds for Ollama inference calls: the route's own limit (`timeout_s`). The interaction intelligence stops waiting earlier, at its `llm_timeout`, which the request carries as its budget. |
 | `ollama.think` | bool or string | `false` | Lets reasoning models (`qwen3.5`, `deepseek-r1`…) think before answering; `false` keeps spoken replies fast. A level (`low`, `medium`, `high`) is for models that cannot switch reasoning off (`gpt-oss`). |

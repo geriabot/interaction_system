@@ -61,9 +61,11 @@ gateway did), and every request asks Ollama to keep it there (`keep_alive: -1`):
 loaded until Ollama stops or it is unloaded (`ollama stop <model>`). `ollama.think: false` keeps
 reasoning models from thinking before they answer, which keeps the spoken replies fast.
 
-The Ollama server must be reachable at `ollama.host` and `ollama.port`. For a server on another
-computer, open an SSH tunnel so that it answers at `localhost:11434`
-([GPU_SERVER.md](GPU_SERVER.md)), or set `ollama.host`.
+The Ollama server must be reachable at `ollama.host` and `ollama.port` (`127.0.0.1:11434`, Ollama
+on this computer). For a server on another computer, open an SSH tunnel on local port 11439 and
+start the stack with `ollama_host:=localhost:11439` ([GPU_SERVER.md](GPU_SERVER.md#the-tunnel),
+[LAUNCH_ARGUMENTS.md](LAUNCH_ARGUMENTS.md)); 11434 stays for an Ollama on this computer. If a port
+is taken, `ss -ltnp | grep 11434` (or `11439`) shows the process that holds it.
 
 ## One model per question: routes
 

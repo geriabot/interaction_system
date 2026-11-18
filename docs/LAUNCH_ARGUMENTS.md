@@ -24,10 +24,18 @@ file. The GUI starts it too, with `speech:=none` or with `speech:=simple_hri` an
 | `params_file` | `''` (`config/app_params.yaml` of `interaction_system`) | The parameters of the intelligence and the orchestrator, and the model binding of the interpretation server |
 | `config_file` | `''` (`config/interaction_behaviors_config.yaml`) | The koch2 runtime: the orchestrator and the runners (e.g. the trees of an ablation) |
 | `catalog_file` | `''` (`config/interaction_orchestrator_params.yaml`) | The catalog of dialogue behaviors and the default limits |
+| `ollama_host` | `''` (the parameter files: `127.0.0.1:11434`) | The Ollama of the interpretation server (the model binding's `ollama.host` and `ollama.port`), as `host[:port]`; it takes precedence over the parameter files and the GUI's. Empty: Ollama on this computer. `localhost:11439`: a GPU server through its SSH tunnel |
 
 With `speech:=simple_hri`, the launch file starts simple_hri's speech-to-text node as
 `stt_service_node` and its text-to-speech node as `tts_service_node`. With `speech:=none`, another
 node provides speech, e.g. the simulation of `interaction_sim` or your robot.
+
+Two local ports keep the two places of Ollama apart: 11434 is Ollama on this computer (the
+official installer's service, and the default), 11439 a GPU server through its SSH tunnel
+(`ssh -N -L 11439:localhost:11434 <user>@<server>`). `ollama_host:=localhost:11439` selects the
+server; without it the interpretation server uses this computer's Ollama. If a port is taken,
+`ss -ltnp | grep 11434` (or `11439`) shows the process that holds it
+([GPU_SERVER.md](GPU_SERVER.md#the-tunnel)).
 
 `input_device:=default` goes through the system's sound server, which converts the sample rate.
 Use it when the default device is a raw ALSA device that does not record at 16 kHz ("Invalid

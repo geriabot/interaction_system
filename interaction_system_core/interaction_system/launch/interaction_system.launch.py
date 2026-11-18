@@ -18,6 +18,9 @@ The speech capability (simple_hri) is started apart: main.launch.py starts every
 """
 
 import os
+import tempfile
+
+import yaml
 
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from launch import LaunchDescription
@@ -74,6 +77,21 @@ def interpretation_server(context, params_files: list[str]) -> list:
     return nodes
 
 
+def ollama_override(value: str) -> str:
+    """A parameter file that points the model binding (llm_manager_node's ollama.host and
+    ollama.port) to 'host[:port]', applied last; '' when no address is given."""
+    value = value.strip()
+    if not value:
+        return ''
+    host, sep, port = value.rpartition(':') if value.count(':') == 1 else (value, '', '')
+    if sep and (not host or not port.isdigit() or not 0 < int(port) < 65536):
+        raise RuntimeError(f"ollama_host must be host[:port], e.g. localhost:11439, not '{value}'")
+    ollama = {'host': host, 'port': int(port)} if sep else {'host': value}
+    with tempfile.NamedTemporaryFile('w', suffix='_ollama_host.yaml', delete=False) as f:
+        yaml.safe_dump({'llm_manager_node': {'ros__parameters': {'ollama': ollama}}}, f)
+    return f.name
+
+
 def launch_setup(context):
     params = [LaunchConfiguration('params_file').perform(context)]
     # When launched from the GUI, DIALOSTACK_GUI_PARAMS points to a YAML generated from the
@@ -81,6 +99,10 @@ def launch_setup(context):
     gui_override = os.environ.get('DIALOSTACK_GUI_PARAMS', '')
     if gui_override and os.path.isfile(gui_override):
         params.append(gui_override)
+    # ollama_host, when given, goes last: it takes precedence over the files
+    ollama = ollama_override(LaunchConfiguration('ollama_host').perform(context))
+    if ollama:
+        params.append(ollama)
 
     # Overrides given by the launch arguments (empty: the value of the parameter files)
     language = LaunchConfiguration('language').perform(context)
@@ -139,5 +161,11 @@ def generate_launch_description():
             'language', default_value='',
             description='Language of the conversation for the LLM, e.g. English, Spanish '
                         '(empty: language of the parameter files)'),
+        DeclareLaunchArgument(
+            'ollama_host', default_value='',
+            description='The Ollama of the model binding, as host[:port]: empty keeps the '
+                        'parameter files (127.0.0.1:11434, Ollama on this computer); '
+                        'localhost:11439 is a GPU server through its SSH tunnel '
+                        '(docs/GPU_SERVER.md)'),
         OpaqueFunction(function=launch_setup),
     ])
