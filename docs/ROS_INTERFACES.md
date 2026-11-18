@@ -153,9 +153,6 @@ simple_hri ([SPEECH.md](SPEECH.md)).
 | `/transcription` | topic `std_msgs/String` | typed text (the GUI's composer, tests) | `/interaction_intelligence` |
 | `/is_speaking` | topic `std_msgs/Bool` (reliable, transient local) | `Speak`, `WithFillers` | the NAO's gesture managers and eye LEDs, the GUI |
 
-simple_hri also offers the services `/stt_service` and `/tts_service`, which the interaction
-system does not use.
-
 ## The perception of the user
 
 | Name | Type | Server / publisher | Used by |
