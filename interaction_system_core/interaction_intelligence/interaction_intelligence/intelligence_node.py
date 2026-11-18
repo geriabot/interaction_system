@@ -9,7 +9,7 @@ InteractionIntelligence: the node that runs the skills of the interaction system
 The orchestrator asks it, before any conversation, which dialogue behavior a request needs and
 whether the request carries its material (selection.py); the Behavior Trees ask it their skills
 (understand an utterance, phrase a reply, apply what was understood to the data of the
-dialogue). Every question to the model is asked to behavior_architecture's
+dialogue). Every question to the model is asked to koch2's
 interpretation server, which the interaction system launches with its own questions
 (config/interpretation/questions.yaml), templates (prompts.yaml) and question module
 (interpretation_questions.py): the server builds the prompt and asks the model; the node reads
@@ -41,9 +41,9 @@ Topics published:
 Downstream clients:
   /interaction_perception/get_user_state (GetUserState service, optional) — the state of
                          the user (emotion) for the context of the questions
-  /interaction/interpretation/interpret (behavior_architecture/srv/Interpret) — the questions
+  /interaction/interpretation/interpret (koch2/srv/Interpret) — the questions
                          to the model (parameter interpretation_service)
-  /interaction/interpretation/cancel    (behavior_architecture/srv/CancelInterpretation) — the
+  /interaction/interpretation/cancel    (koch2/srv/CancelInterpretation) — the
                          questions in progress of a dialogue that has ended
 """
 
@@ -66,7 +66,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 from std_msgs.msg import String
 
-from behavior_architecture.srv import CancelInterpretation, Interpret
+from koch2.srv import CancelInterpretation, Interpret
 from ros2_llm_interfaces.msg import LlmError
 from interaction_system_interfaces.srv import AskForDialogueBehavior, AskIntelligence
 from interaction_perception_msgs.srv import GetUserState
@@ -182,7 +182,7 @@ class InteractionIntelligence(Node):
             # file, which configures the interpretation server's routes with them
             "llm_provider": "",
             "llm_model": "",
-            # The interpretation server's services (behavior_architecture/srv/Interpret, and
+            # The interpretation server's services (koch2/srv/Interpret, and
             # CancelInterpretation; "": the one next to interpretation_service)
             "interpretation_service": "/interaction/interpretation/interpret",
             "interpretation_cancel_service": "",

@@ -22,7 +22,7 @@ file. The GUI starts it too, with `speech:=none` or with `speech:=simple_hri` an
 | `input_device` | `''` | The microphone of `stt_faster_whisper` (its `input_device`): a sounddevice device name; empty: PortAudio's default. `stt_whisper` ignores it |
 | `language` | `''` | The language of the conversation: a language file, by code or name (`en`, `es`, `English`, `Spanish`). Empty: the intelligence's `language` of the parameter files, or English if none |
 | `params_file` | `''` (`config/app_params.yaml` of `interaction_system`) | The parameters of the intelligence and the orchestrator, and the model binding of the interpretation server |
-| `config_file` | `''` (`config/interaction_behaviors_config.yaml`) | The behavior_architecture runtime: the orchestrator and the runners (e.g. the trees of an ablation) |
+| `config_file` | `''` (`config/interaction_behaviors_config.yaml`) | The koch2 runtime: the orchestrator and the runners (e.g. the trees of an ablation) |
 | `catalog_file` | `''` (`config/interaction_orchestrator_params.yaml`) | The catalog of dialogue behaviors and the default limits |
 
 With `speech:=simple_hri`, the launch file starts simple_hri's speech-to-text node as
@@ -46,7 +46,7 @@ sets the intelligence's `language` whatever the files say.
 ### Only the interaction system: `interaction_system interaction_system.launch.py`
 
 This launch file starts `mission_executor` (the orchestrator and the runners of the dialogue
-behaviors, in one process), `/interaction_intelligence` and behavior_architecture's
+behaviors, in one process), `/interaction_intelligence` and koch2's
 `/interaction/interpretation_server`, which asks the model the intelligence's questions, with
 its parameters written from the parameter files
 ([CONFIGURATION.md](CONFIGURATION.md#the-interpretation-server)). When the Ollama provider is
@@ -56,7 +56,7 @@ enabled, `interpretation_warmup` loads `ollama.model` into the server's memory a
 | Argument | Default value | Description |
 |---|---|---|
 | `params_file` | `config/app_params.yaml` | The parameters of the orchestrator and the intelligence |
-| `config_file` | `config/interaction_behaviors_config.yaml` | The behavior_architecture runtime (positional argument of `mission_executor`) |
+| `config_file` | `config/interaction_behaviors_config.yaml` | The koch2 runtime (positional argument of `mission_executor`) |
 | `catalog_file` | `config/interaction_orchestrator_params.yaml` | The catalog and the default limits of the orchestrator; `params_file` is applied after it |
 | `prompts_file` | `config/prompts.yaml` of `interaction_intelligence` | The prompt templates ([PROMPTS.md](PROMPTS.md)) |
 | `language` | `''` | The language of the conversation for the LLM, e.g. `English`, `Spanish` (empty: `language` of the parameter files) |

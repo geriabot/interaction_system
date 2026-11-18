@@ -15,12 +15,12 @@ find_package(rclcpp_action REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
-find_package(behavior_architecture REQUIRED)
+find_package(koch2 REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(ros2_dialog_interfaces REQUIRED)
 find_package(interaction_system_interfaces REQUIRED)
 
-# The orchestrator, a plugin of behavior_architecture's mission_executor (loaded by name from
+# The orchestrator, a plugin of koch2's mission_executor (loaded by name from
 # config/interaction_behaviors_config.yaml)
 add_library(${PROJECT_NAME} SHARED
   src/interaction_system/InteractionOrchestrator.cpp
@@ -28,9 +28,9 @@ add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${behavior_architecture_INCLUDE_DIRS})
+  ${koch2_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME}
-  ${behavior_architecture_LIBRARIES}
+  ${koch2_LIBRARIES}
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
   rclcpp_action::rclcpp_action

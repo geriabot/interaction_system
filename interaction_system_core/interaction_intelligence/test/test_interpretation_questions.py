@@ -150,7 +150,7 @@ def test_the_templates_are_found_in_the_parameters_file():
 
 
 def test_the_server_asks_with_the_prompt_of_prompt_builder(tmp_path):
-    server_module = pytest.importorskip("behavior_interpretation")
+    server_module = pytest.importorskip("koch2_interpretation")
     route = {"backend": "fake", "answers": ['{"intent": "confirms"}']}
     server = server_module.InterpretationServer(
         questions_file=_QUESTIONS, templates_file=_PROMPTS,
@@ -176,7 +176,7 @@ def test_the_server_asks_with_the_prompt_of_prompt_builder(tmp_path):
 
 
 def test_a_malformed_context_is_a_malformed_request():
-    server_module = pytest.importorskip("behavior_interpretation")
+    server_module = pytest.importorskip("koch2_interpretation")
     server = server_module.InterpretationServer(
         questions_file=_QUESTIONS, templates_file=_PROMPTS,
         question_modules=["interaction_intelligence.interpretation_questions"],

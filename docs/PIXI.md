@@ -73,15 +73,12 @@ needs) are not in the environment
 ## ROS 2 Lyrical
 
 ```sh
-git -C src/third_party/behavior_architecture checkout lyrical   # once
 pixi run build-lyrical
 pixi shell -e lyrical
 source install_lyrical/setup.bash
 ```
 
-On Lyrical, behavior_architecture must be on its `lyrical` branch (its build no longer uses
-`ament_target_dependencies`, removed from Lyrical's `ament_cmake`, and it takes service futures
-explicitly); that branch also builds on Jazzy. `thirdparty.repos` fetches `main`, for Jazzy. The two
+The commit of koch2 that `thirdparty.repos` fetches builds on both Jazzy and Lyrical. The two
 environments build into different folders, so both can be built at the same time; source the
 `setup.bash` of the one you use.
 

@@ -66,7 +66,7 @@ The system rests on five design decisions.
    behavioral control architecture: a finite state machine (FSM) coordinates each request and
    activates the tree of the chosen dialogue behavior. The rest of the robot sees one action and
    one status topic. Speech (a sub-capability that the trees call), user perception and the LLM
-   (an external service, asked through behavior_architecture's interpretation server) are
+   (an external service, asked through koch2's interpretation server) are
    separate from the interaction system, and each can be replaced.
 
 The interaction system only holds the conversation. Other robot capabilities move, point or
@@ -78,7 +78,7 @@ that the conversation publishes.
 ![The interaction system as an autonomous subsystem that follows the pattern of the robot's behavioral control architecture](./media/interaction_fractal_architecture.drawio.svg)
 
 The robot is controlled by a layered behavioral control architecture (left), built with
-[`behavior_architecture`](https://github.com/geriabot/behavior_architecture): an FSM coordinates
+[`koch2`](https://github.com/geriabot/koch2): an FSM coordinates
 the task plan and activates, phase by phase, a *behavior forest* of Behavior Trees. The robot's
 capabilities (perception, navigation, attention, interaction) are autonomous subsystems with a
 standard interface. The interaction system (right) is one of them, and has the same layers
@@ -90,7 +90,7 @@ inside:
 | Coordination | An FSM, the task plan | An FSM, the life of a request: `IDLE`, `SETTING_BEHAVIOR_ACTION`, `SETTING_BEHAVIOR_INPUT`, `ACTING` |
 | Action | The behavior forest | One tree per dialogue behavior; only the chosen one is active |
 | Capabilities | Perception, navigation, attention, interaction... | User perception (lip activity for barge-in, experimental; emotion, preliminary) and, planned, emotion expression; speaking and listening go through speech (simple_hri), a low-level sub-capability that the trees call |
-| Interpretation | Narrow questions about unstructured input, beside the layers that ask them | behavior_architecture's interpretation server, with the system's questions: asked for the FSM (which dialogue behavior, and whether the request can run) and for the trees (understanding, phrasing); it asks the LLM |
+| Interpretation | Narrow questions about unstructured input, beside the layers that ask them | koch2's interpretation server, with the system's questions: asked for the FSM (which dialogue behavior, and whether the request can run) and for the trees (understanding, phrasing); it asks the LLM |
 | External service | — | The LLM behind the interpretation server |
 
 The next figure shows the nodes of the interaction system and, around them, the behavioral
@@ -102,7 +102,7 @@ For the rest of the robot, the interaction system is one more capability. `missi
 configures and activates it through the lifecycle of `/interaction_orchestrator`. The system
 receives the task as the goal of an action, reports every utterance as feedback, and returns the
 result of the conversation ([Using it from robot behaviors](#using-it-from-robot-behaviors)).
-The questions reach the LLM through behavior_architecture's interpretation server, which the
+The questions reach the LLM through koch2's interpretation server, which the
 system launches; the LLM is served by Ollama, locally or on a GPU server, or by a cloud provider
 ([MODELS.md](docs/MODELS.md)). [ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the design and
 the reasons for it.
@@ -284,12 +284,12 @@ Reference pages:
 
 | Package | Description |
 |---|---|
-| `interaction_system_core/interaction_system` | The orchestrator (the FSM of a request, a `behavior_architecture` plugin), the catalog of dialogue behaviors, the configuration and the launch files |
+| `interaction_system_core/interaction_system` | The orchestrator (the FSM of a request, a `koch2` plugin), the catalog of dialogue behaviors, the configuration and the launch files |
 | `interaction_system_core/interaction_system_interfaces` | Status, and the requests that the orchestrator and the trees send to the intelligence |
 | `interaction_system_core/interaction_intelligence` | The interaction intelligence: the skills (the questions to the LLM and what is done with their answers), the dialogue frame, the prompts, and the questions and question module of the interpretation server (`config/interpretation/`) |
 | `interaction_system_behaviors` | The Behavior Trees of the dialogue behaviors (XML) and their nodes (`AskIntelligence`, `Speak`, `Listen`, `WithFillers`) |
 | `ros2_dialog_interfaces` | The public interface: the `DialogTask` action and the `BargeIn` message |
-| `ros2_llm_manager`, `ros2_llm_interfaces` | The former LLM gateway, no longer started: the questions are asked to behavior_architecture's interpretation server |
+| `ros2_llm_manager`, `ros2_llm_interfaces` | The former LLM gateway, no longer started: the questions are asked to koch2's interpretation server |
 | `interaction_perception/*` | User perception: lip activity (barge-in, experimental), facial emotion (preliminary, not validated), and the user-state service |
 | `dialostack_gui` | Web GUI to configure, launch and monitor conversations |
 | `dialostack_bt_client` | BehaviorTree.CPP node that runs a conversation as a step of a robot's tree |
@@ -298,7 +298,7 @@ Reference pages:
 
 The root of the repository also contains:
 
-- `thirdparty.repos`: the source dependencies, `behavior_architecture` (only its base, without
+- `thirdparty.repos`: the source dependencies, `koch2` (only its base, without
   its optional LLM orchestrators) and `simple_hri`;
 - `pixi.toml` and `pixi.lock`: the environments, which `pixi/setup_workspace.sh` links at the root
   of the workspace;
@@ -336,7 +336,7 @@ pixi global install vcstool                         # once
 
 mkdir -p <workspace>/src && cd <workspace>/src
 git clone --recurse-submodules https://github.com/geriabot/interaction_system.git
-vcs import . < interaction_system/thirdparty.repos  # behavior_architecture and simple_hri
+vcs import . < interaction_system/thirdparty.repos  # koch2 and simple_hri
 cd ..
 ./src/interaction_system/pixi/setup_workspace.sh    # once: links pixi.toml and pixi.lock here
 pixi run build

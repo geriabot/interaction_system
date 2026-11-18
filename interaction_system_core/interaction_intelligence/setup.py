@@ -18,7 +18,7 @@ setup(
         # One file per language: the language-dependent resources (docs/ADDING_A_LANGUAGE.md)
         (os.path.join("share", package_name, "config", "languages"),
          glob(os.path.join("config", "languages", "*.yaml"))),
-        # The questions for behavior_architecture's interpretation server
+        # The questions for koch2's interpretation server
         (os.path.join("share", package_name, "config", "interpretation"),
          glob(os.path.join("config", "interpretation", "*.yaml"))),
     ],

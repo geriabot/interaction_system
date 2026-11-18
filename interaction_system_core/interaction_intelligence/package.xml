@@ -3,7 +3,7 @@
 <package format="3">
   <name>interaction_intelligence</name>
   <version>0.1.0</version>
-  <description>The interaction intelligence: runs the skills of the interaction system: asks its questions to the model through behavior_architecture's interpretation server (choosing the dialogue behavior, understanding the user, phrasing the replies), reads the answers, applies them and falls back when the model fails. Keeps no dialogue state.</description>
+  <description>The interaction intelligence: runs the skills of the interaction system: asks its questions to the model through koch2's interpretation server (choosing the dialogue behavior, understanding the user, phrasing the replies), reads the answers, applies them and falls back when the model fails. Keeps no dialogue state.</description>
   <maintainer email="rodrigo.perez@urjc.es">Rodrigo Pérez-Rodríguez</maintainer>
   <license>MIT</license>
   <author email="aquintana.camacho@proton.me">Álvaro Quintana</author>
@@ -11,9 +11,9 @@
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <!-- The interpretation server's services (Interpret, CancelInterpretation); the server
-       (behavior_interpretation) loads the question module
+       (koch2_interpretation) loads the question module
        interaction_intelligence.interpretation_questions -->
-  <depend>behavior_architecture</depend>
+  <depend>koch2</depend>
   <depend>interaction_system_interfaces</depend>
   <!-- LlmError: a question the model could not answer, published on /llm/error -->
   <depend>ros2_llm_interfaces</depend>

@@ -174,16 +174,16 @@ system does not use.
 ## The interpretation server
 
 Every question of the interaction intelligence to the model is a request to
-behavior_architecture's interpretation server, which the interaction system launches in the
+koch2's interpretation server, which the interaction system launches in the
 namespace `interaction` ([CONFIGURATION.md](CONFIGURATION.md#the-interpretation-server)).
 
 | Name | Type | Server | Client |
 |---|---|---|---|
-| `/interaction/interpretation/interpret` | service `behavior_architecture/srv/Interpret` | `/interaction/interpretation_server` | `/interaction_intelligence` |
-| `/interaction/interpretation/cancel` | service `behavior_architecture/srv/CancelInterpretation` | `/interaction/interpretation_server` | `/interaction_intelligence`, when a dialogue ends |
+| `/interaction/interpretation/interpret` | service `koch2/srv/Interpret` | `/interaction/interpretation_server` | `/interaction_intelligence` |
+| `/interaction/interpretation/cancel` | service `koch2/srv/CancelInterpretation` | `/interaction/interpretation_server` | `/interaction_intelligence`, when a dialogue ends |
 
-`Interpret` (behavior_architecture's
-[INTERPRETATION.md](https://github.com/geriabot/behavior_architecture/blob/devel/docs/INTERPRETATION.md#the-service)):
+`Interpret` (koch2's
+[INTERPRETATION.md](https://github.com/geriabot/koch2/blob/devel/docs/INTERPRETATION.md#the-service)):
 request `question`, `request_id`, `context`, `text`, `images`, `budget_s`, `variant`,
 `max_tokens`; response `success`, `answer`, `source`, `fallback_reason`, `message`. The
 intelligence sends:

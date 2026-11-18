@@ -20,7 +20,7 @@ the documents it links to.
 | Fetch the sources | `cd src && vcs import . < interaction_system/thirdparty.repos` |
 | Prepare the workspace for pixi (once) | `./src/interaction_system/pixi/setup_workspace.sh` |
 | Build | `pixi run build` |
-| Build for ROS 2 Lyrical | `git -C src/third_party/behavior_architecture checkout lyrical`, then `pixi run build-lyrical` (into `install_lyrical/`; [PIXI.md](docs/PIXI.md#ros-2-lyrical)) |
+| Build for ROS 2 Lyrical | `pixi run build-lyrical` (into `install_lyrical/`; [PIXI.md](docs/PIXI.md#ros-2-lyrical)) |
 | Rebuild some packages | `pixi run build --packages-select interaction_system interaction_system_behaviors` |
 | Build the NAO embodiment | `colcon build --symlink-install --packages-select nao_description nao_pose_manager` |
 | Without pixi | [INSTALL_NATIVE.md](docs/INSTALL_NATIVE.md) |

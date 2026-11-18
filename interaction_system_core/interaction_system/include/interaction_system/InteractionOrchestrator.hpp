@@ -17,7 +17,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "std_msgs/msg/string.hpp"
 
-#include "behavior_architecture/base_orchestrator.hpp"
+#include "koch2/base_orchestrator.hpp"
 
 #include "ros2_dialog_interfaces/action/dialog_task.hpp"
 #include "interaction_system_interfaces/msg/interaction_system_status.hpp"
@@ -63,7 +63,7 @@ struct DialogueBehavior
  * request is rejected while one runs (one microphone, one voice). Publishes
  * /interaction_system/status.
  */
-class InteractionOrchestrator : public behavior_architecture::BaseOrchestrator
+class InteractionOrchestrator : public koch2::BaseOrchestrator
 {
 public:
   using DialogTask = ros2_dialog_interfaces::action::DialogTask;

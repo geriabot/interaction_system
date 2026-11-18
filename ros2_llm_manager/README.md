@@ -4,7 +4,7 @@ One ROS 2 node that puts LLM inference behind a single action and a few session 
 serves local models through Ollama and cloud models through Google Gemini, Anthropic Claude,
 OpenAI or any OpenAI-compatible server, with optional stateful (history-keeping) sessions and
 JSON-schema-constrained output. The interaction system no longer starts it: its questions are
-asked to behavior_architecture's interpretation server
+asked to koch2's interpretation server
 ([ARCHITECTURE.md](../docs/ARCHITECTURE.md#the-interpretation-server)), whose routes are written
 from this node's parameters (the model binding,
 [CONFIGURATION.md](../docs/CONFIGURATION.md#llm_manager_node)). Any node can still use the

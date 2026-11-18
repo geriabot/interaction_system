@@ -11,7 +11,7 @@ that asks the model. Each dialogue behavior and each shared mechanism has its ow
 ## Interaction as a capability with the robot's layers inside
 
 The interaction system is built with
-[`behavior_architecture`](https://github.com/geriabot/behavior_architecture), the framework of
+[`koch2`](https://github.com/geriabot/koch2), the framework of
 the behavioral control architecture of the GERIABOT robot. The robot is controlled by layers:
 deliberation and planning when the context requires them, coordination by a finite state machine
 (FSM) that manages the task plan, and action by a *behavior forest* of Behavior Trees, which the
@@ -39,7 +39,7 @@ that is going nowhere instead of prolonging it.
 | Coordination | An FSM, the task plan | An FSM, the life of a request (below) | `/interaction_orchestrator`, a `BaseOrchestrator` |
 | Action | The behavior forest: one tree per phase of the task | One tree per dialogue behavior, each in its own `BehaviorRunner` (a lifecycle node); only the chosen one is active | `interaction_system_behaviors/behavior_tree_xml/*.xml` |
 | Capabilities | Perception, navigation, attention, interaction; a task tree such as finding a person uses several of them | User perception (lip activity; emotion, preliminary) and, planned, emotion expression while the robot talks. Speaking and listening go through speech (simple_hri: speech-to-text and text-to-speech), a low-level sub-capability that the trees' own nodes call | simple_hri, `interaction_perception`, `robots/nao` |
-| Interpretation | A column beside the layers that consult it: it answers narrow questions about unstructured input and commands nothing | behavior_architecture's interpretation server, configured with the system's questions: which dialogue behavior fits a request (asked for the FSM) and the narrow questions of the dialogue behaviors (asked for the trees). It asks the model; what to do with the answer is decided by the skill that asked | `/interaction/interpretation_server`, `config/interpretation/` of `interaction_intelligence` |
+| Interpretation | A column beside the layers that consult it: it answers narrow questions about unstructured input and commands nothing | koch2's interpretation server, configured with the system's questions: which dialogue behavior fits a request (asked for the FSM) and the narrow questions of the dialogue behaviors (asked for the trees). It asks the model; what to do with the answer is decided by the skill that asked | `/interaction/interpretation_server`, `config/interpretation/` of `interaction_intelligence` |
 | External service | — | The LLM behind the interpretation server, interchangeable (Ollama, OpenAI-compatible APIs, Gemini, Claude) | — |
 
 A capability, in this sense, is a high-level, orchestrated subsystem of the robot, built with
@@ -133,12 +133,12 @@ or in VS Code with the Draw.io Integration extension, and save it to the same fi
 | Interaction system (`interaction_system`) | `/interaction_orchestrator` | Serves `/dialog/execute_task`, decides the dialogue behavior (or refuses the request), activates its runner, writes the request to the blackboard, sends the feedback and the result, and publishes `/interaction_system/status` |
 | | Behavior runners (`/interaction_slot_filling`, `/interaction_explanation`, `/interaction_quiz`, `/interaction_procedure`, `/interaction_roleplay`, `/interaction_grounded_qa`, `/interaction_questionnaire`, `/interaction_topic_chat`) | One lifecycle node per dialogue behavior, which ticks its Behavior Tree while active |
 | | `/interaction_intelligence` | Answers the skills of the trees and the choice of the dialogue behavior: asks their questions to the interpretation server, checks the material of the request, applies the answers to the state of the conversation, and writes the transcript. It talks to no model itself |
-| | `/interaction/interpretation_server` (behavior_architecture) | Builds the prompt of each question from the system's templates and the arguments it receives, asks the model of the question's route, and returns its text |
+| | `/interaction/interpretation_server` (koch2) | Builds the prompt of each question from the system's templates and the arguments it receives, asks the model of the question's route, and returns its text |
 | Speech sub-capability | simple_hri (`stt_faster_whisper` or `stt_whisper`, `tts_piper` or `tts_mms`) | Listens and speaks on request ([SPEECH.md](SPEECH.md)) |
 | Perception (`interaction_perception`) | `/user_state_server`, `/emotion_detector`, `/lip_activity_detector_node` | The state of the user, served on request; the lip activity as a stream for barge-in |
 
 The orchestrator decides the dialogue behavior by asking the intelligence, which uses the one the
-request names or chooses it from the task, and checks the material of the request. It is a plugin of `behavior_architecture` (`mission_executor`), loaded from
+request names or chooses it from the task, and checks the material of the request. It is a plugin of `koch2` (`mission_executor`), loaded from
 `libinteraction_system.so`. Each behavior runner ticks its tree every 50 ms
 (`control_period_ms`) and reports the result on `/behavior_status`; the tree nodes
 (`libinteraction_system_behaviors_bt_plugins.so`) share one ROS node,
@@ -493,8 +493,8 @@ than in a loop or in silence ([Endings and outcome](behaviors/endings.md)).
 
 ## The interpretation server
 
-The questions to the model are answered by behavior_architecture's interpretation server
-([INTERPRETATION.md](https://github.com/geriabot/behavior_architecture/blob/devel/docs/INTERPRETATION.md)),
+The questions to the model are answered by koch2's interpretation server
+([INTERPRETATION.md](https://github.com/geriabot/koch2/blob/devel/docs/INTERPRETATION.md)),
 which `interaction_system.launch.py` starts in the namespace `interaction` with the interaction
 system's own configuration:
 

@@ -18,11 +18,11 @@ rosdep update
 
 mkdir -p <workspace>/src && cd <workspace>/src
 git clone --recurse-submodules https://github.com/geriabot/interaction_system.git
-vcs import . < interaction_system/thirdparty.repos    # behavior_architecture and simple_hri
+vcs import . < interaction_system/thirdparty.repos    # koch2 and simple_hri
 cd ..
 source /opt/ros/jazzy/setup.bash
 rosdep install --from-paths src --ignore-src -r -y \
-  --skip-keys "llm_planner_interfaces llm_bt_builder"   # optional dependencies of behavior_architecture
+  --skip-keys "llm_planner_interfaces llm_bt_builder"   # optional dependencies of koch2
 pip install --break-system-packages -r src/interaction_system/requirements.txt
 colcon build --symlink-install \
   --packages-up-to interaction_system interaction_system_behaviors interaction_intelligence \

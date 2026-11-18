@@ -1,4 +1,4 @@
-# The questions of the interaction system to the model, for behavior_architecture's
+# The questions of the interaction system to the model, for koch2's
 # interpretation server (its parameter questions_file). Each one is a method of LLMDialogClient
 # that asks the model; the server builds its prompt and schema with PromptBuilder, from the
 # templates of prompts.yaml (the server's templates_file) and the arguments that the client

@@ -3,7 +3,7 @@
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
 """
-The question module of the interaction system for behavior_architecture's interpretation
+The question module of the interaction system for koch2's interpretation
 server (its parameter question_modules: ["interaction_intelligence.interpretation_questions"]).
 
 Each question of config/interpretation/questions.yaml is answered with the class
@@ -19,8 +19,8 @@ JSON. The client reads the text itself (its parsing, validation, retries and fal
 those it applied to the gateway's answers), so that the same answer leads to the same decision.
 """
 
-from behavior_interpretation import Question
-from behavior_interpretation.questions import RequestError
+from koch2_interpretation import Question
+from koch2_interpretation.questions import RequestError
 
 from .interpretation_context import (QUESTIONS, TEXT_FIELD, ContextError, build_prompt,
                                      decode_context, max_tokens_of, prompt_templates)

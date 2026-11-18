@@ -3,8 +3,8 @@
 # Licensed under the MIT License. See the LICENSE file of the repository.
 
 """The interaction system: the orchestrator and the dialogue behaviors (one process,
-behavior_architecture's mission_executor), the interaction intelligence and the interpretation
-server that asks the model its questions (behavior_architecture's interpretation_server, in the
+koch2's mission_executor), the interaction intelligence and the interpretation
+server that asks the model its questions (koch2's interpretation_server, in the
 namespace `interaction`: /interaction/interpretation/interpret).
 
 The server is configured from the same parameter files (interaction_intelligence's
@@ -49,7 +49,7 @@ def interpretation_server(context, params_files: list[str]) -> list:
     if parameters is None:
         return messages
     server = Node(
-        package='behavior_architecture',
+        package='koch2',
         executable='interpretation_server',
         name='interpretation_server',
         namespace='interaction',
@@ -87,7 +87,7 @@ def launch_setup(context):
     intelligence_override = [{'language': language}] if language else []
 
     mission_executor = Node(
-        package='behavior_architecture',
+        package='koch2',
         executable='mission_executor',
         output='screen',
         emulate_tty=True,
@@ -119,7 +119,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'config_file',
             default_value=os.path.join(pkg_dir, 'config', 'interaction_behaviors_config.yaml'),
-            description='behavior_architecture configuration: the orchestrator and the runners'),
+            description='koch2 configuration: the orchestrator and the runners'),
         DeclareLaunchArgument(
             'catalog_file',
             default_value=os.path.join(pkg_dir, 'config', 'interaction_orchestrator_params.yaml'),
