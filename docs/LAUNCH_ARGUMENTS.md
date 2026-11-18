@@ -32,7 +32,7 @@ node provides speech, e.g. the simulation of `interaction_sim` or your robot.
 
 Two local ports keep the two places of Ollama apart: 11434 is Ollama on this computer (the
 official installer's service, and the default), 11439 a GPU server through its SSH tunnel
-(`ssh -N -L 11439:localhost:11434 <user>@<server>`). `ollama_host:=localhost:11439` selects the
+(`ssh -N -L 11439:localhost:11436 <user>@<server>`). `ollama_host:=localhost:11439` selects the
 server; without it the interpretation server uses this computer's Ollama. If a port is taken,
 `ss -ltnp | grep 11434` (or `11439`) shows the process that holds it
 ([GPU_SERVER.md](GPU_SERVER.md#the-tunnel)).
