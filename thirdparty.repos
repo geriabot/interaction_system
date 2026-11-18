@@ -10,4 +10,4 @@ repositories:
   third_party/simple_hri:
     type: git
     url: https://github.com/rodperex/simple_hri.git
-    version: main
+    version: a62279178708465ddff38e9005c36758c8cdd8fa  # simple_hri main, the commit this version was tested with
