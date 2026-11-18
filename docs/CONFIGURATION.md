@@ -150,8 +150,10 @@ them are described in [docs/behaviors](behaviors/README.md).
   subsystem. While nothing publishes it, the robot finishes every utterance.
 
 The runners of `mission_executor` (koch2's `BehaviorRunner`) also have
-`enable_groot_monitoring` (`true`) and `groot_port` (`5555`), so the active tree can be watched
-with Groot2.
+`enable_groot_monitoring` and `groot_port` (`5555`). `app_params.yaml` sets
+`enable_groot_monitoring: false` for every runner (its `/**` entry): the Groot2 live monitor only
+serves to watch the active tree while debugging, and each runner opens it again on the same port
+at every activation. Set it to `true` to watch the trees with Groot2.
 
 ## interaction_intelligence
 

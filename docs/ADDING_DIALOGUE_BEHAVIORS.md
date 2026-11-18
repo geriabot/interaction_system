@@ -256,7 +256,8 @@ need that is not there is never provided, so every request for the behavior is t
   (`evaluation/simulation/interaction_sim`): `DialogueHarness.run(goal, ScriptedUser([...]))`
   plays the user and the speech package; with `llm_client_factory` the intelligence can use a
   deterministic stand-in for the LLM ([evaluation/README.md](../evaluation/README.md)).
-- Watch the tree in Groot2 (port 5555 of the active runner).
+- Watch the tree in Groot2 (port 5555 of the active runner), with `enable_groot_monitoring: true`
+  in `app_params.yaml` (off by default).
 - Draw the tree for the documentation. This command writes one SVG per tree file (the folder of
   the trees must hold `common.xml` too):
 

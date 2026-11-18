@@ -1,3 +1,10 @@
+# koch2's behavior runners (one per dialogue behavior, inside mission_executor) without the Groot2
+# live monitor: it only serves to watch a tree while debugging, and each runner would open it again
+# on the same port at every activation. Set it to true to watch the trees with Groot2.
+/**:
+  ros__parameters:
+    enable_groot_monitoring: false
+
 llm_manager_node:
   ros__parameters:
     default_provider: "ollama"

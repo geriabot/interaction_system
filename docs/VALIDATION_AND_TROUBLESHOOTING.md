@@ -26,7 +26,8 @@ ros2 topic echo /behavior_status                  # the active tree: RUNNING, SU
 tail -f /tmp/dialog_conversations.log             # the transcript (conversation_log_path)
 ```
 
-The active tree can be watched in Groot2 (port 5555).
+The active tree can be watched in Groot2 (port 5555) after setting `enable_groot_monitoring: true`
+in `app_params.yaml` ([CONFIGURATION.md](CONFIGURATION.md)).
 
 ## The interaction system without speech or LLM
 
