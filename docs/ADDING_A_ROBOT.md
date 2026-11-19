@@ -64,7 +64,7 @@ Optional. It gives the visual barge-in (experimental, not validated) and the emo
 (experimental, off by default), from the perception system ([`perception_system`](https://github.com/geriabot/perception_system)):
 
 - With the perception system, from its workspace, on the robot's camera topic:
-  `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>`.
+  `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true body:=false markers:=false autostart_skills:=lip_activity image_topic:=<camera topic>`.
 - With the robot's own detector: publish `/user_speaking` (`std_msgs/Bool`, true while the user
   speaks), the topic `Speak` reads (`user_speaking_topic` of `interaction_orchestrator`,
   [CONFIGURATION.md](CONFIGURATION.md#interaction_orchestrator)).

@@ -12,7 +12,7 @@ robot stops and listens, and what the person says becomes the next turn of the c
 Shared by every behavior: the `Speak` node of the trees (`interaction_system_behaviors`), which
 says every utterance of the robot. The mechanism is optional and visual. It needs a signal that
 the user is speaking while the robot speaks, such as the lip activity detected by the perception
-system (`perception_system`, its skill `speaking`, which processes a camera image live and stores
+system (`perception_system`, its skill `lip_activity`, which processes a camera image live and stores
 no images).
 [Index](README.md).
 

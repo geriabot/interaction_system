@@ -200,7 +200,7 @@ commit) and asks it for two things, both optional and off by default:
 
 | What | Through | Used for |
 |---|---|---|
-| The lip activity of the user (its skill `speaking`) | the topic `/user_speaking` | [Barge-in](docs/behaviors/barge_in.md) *(experimental)* |
+| The lip activity of the user (its skill `lip_activity`) | the topic `/user_speaking` | [Barge-in](docs/behaviors/barge_in.md) *(experimental)* |
 | The state of the user (the emotion) | the service `/perception_system/get_user_state` (`user_state_service` of the intelligence) | The context of the questions to the model *(preliminary)* |
 
 How to start it and what it offers are in its
@@ -418,7 +418,7 @@ every utterance; `ros2 topic echo /interaction_system/status` shows the state of
 | The whole stack | `ros2 launch interaction_system main.launch.py [speech:=simple_hri\|none] [stt:=faster_whisper\|whisper] [tts:=piper\|mms] [language:=en\|es]` ([languages](#languages)) |
 | Only the interaction system (speech and LLM started separately) | `ros2 launch interaction_system interaction_system.launch.py` |
 | The LLM gateway alone | `ros2 launch ros2_llm_manager llm_manager.launch.py` |
-| User perception (optional; the perception system, from its workspace) | `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>` |
+| User perception (optional; the perception system, from its workspace) | `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true body:=false markers:=false autostart_skills:=lip_activity image_topic:=<camera topic>` |
 | The web GUI | `./src/interaction_system/gui.sh`, then open <http://localhost:5173> ([INSTALLATION.md](docs/INSTALLATION.md#the-web-gui)) |
 
 `speech:=none` starts no speech nodes, for the simulation or for a robot that serves the speech
