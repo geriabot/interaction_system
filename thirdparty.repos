@@ -18,4 +18,4 @@ repositories:
   third_party/perception_system:
     type: git
     url: https://github.com/geriabot/perception_system.git
-    version: 588d680b11b0d9090261c98a7253bee48d6a8405  # perception_system main, the commit this version was tested with
+    version: b1b54bd1847554b9ffc629d92d486360ddb4db2a  # perception_system main, the commit this version was tested with

@@ -46,7 +46,7 @@ the documents it links to.
 | Without speech nodes (simulation, or the robot's own speech) | `ros2 launch interaction_system main.launch.py speech:=none` |
 | Only the interaction system | `ros2 launch interaction_system interaction_system.launch.py` |
 | The LLM-led conversation (the baseline of the evaluation) | `ros2 launch interaction_ablations llm_led.launch.py` |
-| User perception (the perception system, from its workspace) | `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>` |
+| User perception (the perception system, from its workspace) | `ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true body:=false markers:=false autostart_skills:=lip_activity image_topic:=<camera topic>` |
 | The web GUI | `./src/interaction_system/gui.sh` (<http://localhost:5173>) |
 | NAO gestures and eye LEDs | `ros2 launch nao_pose_manager arm_gesture_manager.launch.py` ([ADDING_A_ROBOT.md](docs/ADDING_A_ROBOT.md#the-worked-example-nao)) |
 

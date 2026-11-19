@@ -13,7 +13,7 @@ optionally with embodiment and user perception ([ADDING_A_ROBOT.md](ADDING_A_ROB
 
 ```sh
 ros2 launch interaction_system main.launch.py                 # speech (simple_hri), interaction system
-ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<your camera>   # optional, from the perception system's workspace
+ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true body:=false markers:=false autostart_skills:=lip_activity image_topic:=<your camera>   # optional, from the perception system's workspace
 ```
 
 If the robot serves its own speech recognition and synthesis through simple_hri's actions, start

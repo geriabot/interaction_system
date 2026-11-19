@@ -60,7 +60,7 @@ capability of its own, installed in its own workspace with its own environment (
 built here. Start it from its workspace with the robot's camera:
 
 ```bash
-ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>
+ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true body:=false markers:=false autostart_skills:=lip_activity image_topic:=<camera topic>
 ```
 
 A camera driver is not in the environment; [REAL_SESSIONS.md](../evaluation/doc/REAL_SESSIONS.md#barge-in)

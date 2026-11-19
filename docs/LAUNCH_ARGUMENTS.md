@@ -88,13 +88,13 @@ Its `params.yaml` ships the same values as the `llm_manager_node` section of `ap
 ## The perception of the user
 
 It is the perception system ([`perception_system`](https://github.com/geriabot/perception_system)), started from its own workspace. For barge-in, its lip activity (the skill
-`speaking`) on the robot's camera, without its orchestrator or a detection model:
+`lip_activity`) on the robot's camera, without its orchestrator or a detection model:
 
 ```bash
-ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true autostart_skills:=speaking image_topic:=<camera topic>
+ros2 launch perception_system perception_system.launch.py orchestrator:=false user:=true body:=false markers:=false autostart_skills:=lip_activity image_topic:=<camera topic>
 ```
 
-`autostart_skills:=speaking,emotion` also starts the emotion (experimental, not validated). Every
+`autostart_skills:=lip_activity,facial_expression` also starts the facial expression, the source of the emotion estimate (experimental, not validated). Every
 argument is in its `docs/LAUNCH_ARGUMENTS.md`.
 
 The emotion estimate reaches the conversation only if the intelligence's `user_state_service`
