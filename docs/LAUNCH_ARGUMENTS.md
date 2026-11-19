@@ -20,6 +20,7 @@ file. The GUI starts it too, with `speech:=none` or with `speech:=simple_hri` an
 | `tts` | `piper` | simple_hri's text-to-speech: `piper` (`tts_piper`: the Piper voice of the language) or `mms` (`tts_mms`: MMS-TTS) |
 | `whisper_model` | `small` | Whisper model of simple_hri: `tiny`, `base`, `small`, `medium`, `large-v3` |
 | `input_device` | `''` | The microphone of `stt_faster_whisper` (its `input_device`): a sounddevice device name; empty: PortAudio's default. `stt_whisper` ignores it |
+| `background_noise` | `medium` | The noise of the room for simple_hri's speech recognition (its `noise_margin`): a sound is voice only if it is `low` 4, `medium` 6 or `high` 8 dB louder than the background measured while waiting for the person, or a number of dB. Low for a quiet room, high for a noisy one, where the person must speak close to the microphone ([how listening works in a noisy room](https://github.com/rodperex/simple_hri#how-listening-works-in-a-noisy-room)) |
 | `language` | `''` | The language of the conversation: a language file, by code or name (`en`, `es`, `English`, `Spanish`). Empty: the intelligence's `language` of the parameter files, or English if none |
 | `params_file` | `''` (`config/app_params.yaml` of `interaction_system`) | The parameters of the intelligence and the orchestrator, and the model binding of the interpretation server |
 | `config_file` | `''` (`config/interaction_behaviors_config.yaml`) | The koch2 runtime: the orchestrator and the runners (e.g. the trees of an ablation) |
@@ -134,6 +135,6 @@ ablation's skills module (`interaction_ablations.skills`) is added to the intell
 
 | Argument | Default value | Description |
 |---|---|---|
-| `speech`, `stt`, `tts`, `whisper_model`, `input_device`, `language` | as `main.launch.py` | Passed to `main.launch.py` |
+| `speech`, `stt`, `tts`, `whisper_model`, `input_device`, `background_noise`, `language` | as `main.launch.py` | Passed to `main.launch.py` |
 | `params_file` | `''` (`interaction_system`'s `config/app_params.yaml`) | Parameters of the nodes; the skills module is added to a copy, written to a temporary file |
 | `catalog_file` | `''` (as `main.launch.py`) | The catalog of dialogue behaviors |
