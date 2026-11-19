@@ -61,6 +61,21 @@ def ollama_address(value):
     return {'ollama.host': host, 'ollama.port': int(port)}
 
 
+# The noise of the room as simple_hri's levels (its launch file, background_noise): a sound is
+# voice only if it is this many dB above the background measured while waiting for the person
+BACKGROUND_NOISE = {'low': 4.0, 'medium': 6.0, 'high': 8.0}
+
+
+def noise_margin(value):
+    """background_noise (low, medium, high, or a number of dB) as simple_hri's noise_margin."""
+    if value in BACKGROUND_NOISE:
+        return BACKGROUND_NOISE[value]
+    try:
+        return float(value)
+    except ValueError:
+        raise RuntimeError(f'background_noise: low, medium, high or a number of dB, not {value!r}')
+
+
 def launch_setup(context):
     pkg_dir = get_package_share_directory('interaction_system')
     app_params = LaunchConfiguration('params_file').perform(context) or os.path.join(
@@ -108,6 +123,8 @@ def launch_setup(context):
         if input_device:
             stt_params['input_device'] = input_device
         stt_params['device'] = LaunchConfiguration('stt_device').perform(context)
+        stt_params['noise_margin'] = noise_margin(
+            LaunchConfiguration('background_noise').perform(context))
         speech_nodes = [
             Node(
                 package='simple_hri',
@@ -197,6 +214,11 @@ def generate_launch_description():
             description="The microphone of simple_hri's faster_whisper (a sounddevice name or "
                         "index; empty: PortAudio's default). 'default' goes through the system's "
                         'sound server, which converts the sample rate'),
+        DeclareLaunchArgument(
+            'background_noise', default_value='medium',
+            description="The noise of the room for simple_hri's speech recognition: low, medium "
+                        'or high (a sound is voice only 4, 6 or 8 dB above the background '
+                        'measured while waiting), or a number of dB'),
         DeclareLaunchArgument(
             'ollama_host', default_value='',
             description='The Ollama of the LLM gateway, as host[:port]: empty keeps the parameter '

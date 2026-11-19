@@ -10,7 +10,7 @@ repositories:
   third_party/simple_hri:
     type: git
     url: https://github.com/rodperex/simple_hri.git
-    version: a62279178708465ddff38e9005c36758c8cdd8fa  # simple_hri main, the commit this version was tested with
+    version: 301011a903373778d9c2627864a0fe2909b93a52  # simple_hri main, the commit this version was tested with
   # The perception system: only its interfaces (perception_system_interfaces) are built here, for
   # the state of the user (get_user_state). The perception system itself (lip activity for
   # barge-in, the emotion) runs from its own workspace, with its own dependencies

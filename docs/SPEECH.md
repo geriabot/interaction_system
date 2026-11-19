@@ -27,7 +27,7 @@ speech package.
 
 `main.launch.py` starts simple_hri's speech-to-text and text-to-speech nodes with the language of
 the conversation, the engines, the Whisper model and the microphone given by its arguments
-`language`, `stt`, `tts`, `whisper_model` and `input_device`
+`language`, `stt`, `tts`, `whisper_model`, `input_device` and `background_noise`
 ([LAUNCH_ARGUMENTS.md](LAUNCH_ARGUMENTS.md#the-whole-stack-interaction_system-mainlaunchpy)).
 [CONFIGURATION.md](CONFIGURATION.md#simple_hris-speech-nodes) lists the parameters it gives each
 node, including the voice of each language. The recognition language and the voices of a

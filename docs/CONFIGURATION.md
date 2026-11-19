@@ -309,6 +309,7 @@ simple_hri's defaults; its README lists every parameter of every backend.
 | `stt_faster_whisper` or `stt_whisper` (`stt_service_node`) | `model` | `whisper_model` (`small`) |
 | | `language` | `speech.stt_language` of the language file (`en`, `es`) |
 | | `input_device` | `input_device`, only when it is not empty (`stt_faster_whisper` only) |
+| | `noise_margin` | `background_noise`: `low` 4, `medium` 6 (default), `high` 8 dB, or the number given |
 | `tts_piper` (`tts_service_node`) | `lang_code` | `speech.stt_language` of the language file (`en`, `es`) |
 | | `voice` | `speech.piper_voice` of the language file (`en_US-lessac-medium`, `es_ES-sharvard-medium`) |
 | | `speaker` | `speech.piper_speaker`, only when it is 0 or more (a voice with several speakers); `-1`: not passed, the voice's own |
